@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  name           String
+  email          String    @unique
+  password       String
+  role           Role      @default(VENDOR)
+  company        String?
+  phone          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  tenders        Tender[]
+  bids           Bid[]
+  documents      Document[]
+  notifications  Notification[]
+  feedbacks      Feedback[]
+  supportTickets SupportTicket[]
+}
+
+model Tender {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  sector      String
+  location    String
+  budget      Float
+  issuer      User      @relation(fields: [issuerId], references: [id])
+  issuerId    Int
+  status      TenderStatus @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  closingDate DateTime
+  bids        Bid[]
+  documents   Document[]
+  feedbacks   Feedback[]
+}
+
+model Bid {
+  id               String    @id @default(uuid())
+  tender           Tender    @relation(fields: [tenderId], references: [id])
+  tenderId         String
+  bidder           User      @relation(fields: [bidderId], references: [id])
+  bidderId         Int
+  amount           Float
+  technicalProposal String
+  status           BidStatus @default(PENDING)
+  submissionDate   DateTime  @default(now())
+  evaluationScore  Float?
+  documents        Document[]
+}
+
+model Document {
+  id        String    @id @default(uuid())
+  fileName  String
+  fileSize  Int
+  fileType  String
+  url       String
+  uploadDate DateTime @default(now())
+  tender    Tender?   @relation(fields: [tenderId], references: [id])
+  tenderId  String?
+  bid       Bid?      @relation(fields: [bidId], references: [id])
+  bidId     String?
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  message   String
+  type      NotificationType
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model Feedback {
+  id        String    @id @default(uuid())
+  tender    Tender    @relation(fields: [tenderId], references: [id])
+  tenderId  String
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  rating    Int
+  comment   String
+  createdAt DateTime  @default(now())
+}
+
+model SupportTicket {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  subject   String
+  message   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum Role {
+  ADMIN
+  PROCUREMENT
+  VENDOR
+  CITIZEN
+}
+
+enum TenderStatus {
+  OPEN
+  CLOSED
+  AWARDED
+  CANCELLED
+}
+
+enum BidStatus {
+  PENDING
+  EVALUATED
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
