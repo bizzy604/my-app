@@ -4,25 +4,8 @@ import Image from "next/image"
 import { LayoutDashboard, FileText, History, BookOpen, Bell, Settings, HelpCircle, MessageSquare } from 'lucide-react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardCard } from "@/components/dashboard-card"
-import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-  const [tenders, setTenders] = useState([]);
-
-  useEffect(() => {
-    const fetchTenders = async () => {
-      try {
-        const response = await fetch('/api/tenders');
-        const data = await response.json();
-        setTenders(data);
-      } catch (error) {
-        console.error('Error fetching tenders:', error);
-      }
-    };
-
-    fetchTenders();
-  }, []);
-
   return (
     <DashboardLayout>
       {/* Header */}
@@ -58,43 +41,49 @@ export default function DashboardPage() {
         />
         <DashboardCard
           title="Tenders"
-          description="See relevant insights about available tenders"
+          description="Manage and view tenders"
           href="/procurement-officer/tenders"
           icon={FileText}
         />
         <DashboardCard
           title="Tender History"
-          description="See relevant insights about available tenders"
+          description="Review past tenders"
           href="/procurement-officer/tenders-history"
           icon={History}
         />
         <DashboardCard
           title="Resource Center"
-          description="See relevant insights about available tenders"
+          description="Access procurement resources"
           href="/procurement-officer/resource-center"
           icon={BookOpen}
         />
         <DashboardCard
+          title="Profile"
+          description="Manage your profile"
+          href="/procurement-officer/profile"
+          icon={BookOpen}
+        />
+        <DashboardCard
           title="Notifications"
-          description="See relevant insights about available tenders"
+          description="View your notifications"
           href="/procurement-officer/notifications"
           icon={Bell}
         />
         <DashboardCard
           title="Settings"
-          description="See relevant insights about available tenders"
+          description="Configure your preferences"
           href="/procurement-officer/settings"
           icon={Settings}
         />
         <DashboardCard
           title="Help"
-          description="See relevant insights about available tenders"
+          description="Get support and guidance"
           href="/procurement-officer/help"
           icon={HelpCircle}
         />
         <DashboardCard
           title="Give Feedback"
-          description="See relevant insights about available tenders"
+          description="Share your thoughts"
           href="/procurement-officer/feedback"
           icon={MessageSquare}
         />

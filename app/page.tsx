@@ -63,6 +63,10 @@ export default function Home() {
               <h1 className="text-5xl font-bold text-[#4B0082]">
                 Transform Your Procurement Process
               </h1>
+              <p className="text-lg text-gray-600 mb-6">
+                Welcome to the E-Procurement Portal, where efficiency meets transparency. 
+                We're transforming how governments and businesses procure goods and services.
+              </p>
               <p className="text-xl text-gray-600">
                 Streamline your tendering process with InnoBid's comprehensive e-procurement platform.
                 Secure, efficient, and transparent.
@@ -215,7 +219,7 @@ export default function Home() {
                 height={30}
               />
               <span className="text-sm text-gray-600">
-                © 2025 InnoBid. All rights reserved.
+                &copy; 2025 InnoBid. All rights reserved.
               </span>
             </div>
             <div className="flex gap-6">

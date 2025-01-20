@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import { Notification, NotificationType } from '@prisma/client'
 import { sendEmail } from './email-actions'
 

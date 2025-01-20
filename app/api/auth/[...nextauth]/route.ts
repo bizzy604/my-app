@@ -1,43 +1,43 @@
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { hash, compare } from "bcryptjs"
-import { users } from "@/lib/db"
-import { NextAuthOptions } from "next-auth"
+import NextAuth from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
-export const authOptions = {
+const prisma = new PrismaClient()
+
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "email", placeholder: "email@example.com" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
             console.log("Missing credentials")
-            throw new Error("Email and password required")
+            throw new Error("Email and password are required")
           }
 
-          const user = users.find(user => user.email === credentials.email)
+          // Normalize email to lowercase
+          const normalizedEmail = credentials.email.toLowerCase()
+          console.log("Attempting to authorize user with email:", normalizedEmail)
+
+          // Fetch user from the database
+          const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+          })
+
           console.log("Found user:", user)
-          
+
           if (!user) {
             console.log("User not found")
             throw new Error("User not found")
           }
 
-          // For testing - hash the stored plain password first
-          if (!user.password.startsWith('$2')) {
-            user.password = await hash(user.password, 10)
-          }
-
-          // Debug password comparison
-          console.log("Comparing passwords:")
-          console.log("Input password:", credentials.password)
-          console.log("Stored hash:", user.password)
-          
-          const isValid = await compare(credentials.password, user.password)
+          // Compare the hashed password
+          const isValid = await bcrypt.compare(credentials.password, user.password)
           console.log("Password valid:", isValid)
 
           if (!isValid) {
@@ -45,38 +45,41 @@ export const authOptions = {
             throw new Error("Invalid password")
           }
 
+          // Return user object without password
           return {
             id: user.id.toString(),
+            name: user.name,
             email: user.email,
-            role: user.role
+            role: user.role,
           }
         } catch (error) {
           console.error("Auth error:", error)
           throw error
         }
-      }
-    })
+      },
+    }),
   ],
-
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.id = user.id
+        token.email = user.email
         token.role = user.role
       }
       return token
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.role = token.role as string
+      if (token) {
+        session.user.id = token.id
+        session.user.email = token.email
+        session.user.role = token.role
       }
       return session
-    }
+    },
   },
+})
 
-  pages: {
-    signIn: '/login',
-  }
-}
-
-const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }

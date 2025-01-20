@@ -1,9 +1,9 @@
-import { DashboardLayout } from "@/components/dashboard-layout"
+import { VendorLayout } from "@/components/vendor-layout"
 import { BookOpen } from 'lucide-react'
 
 export default function ResourceCenterPage() {
   return (
-    <DashboardLayout>
+    <VendorLayout>
       <header className="flex items-center justify-between border-b bg-white px-8 py-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Resource Center</h1>
@@ -16,7 +16,7 @@ export default function ResourceCenterPage() {
           <p className="text-gray-600">No resources available at the moment.</p>
         </div>
       </main>
-    </DashboardLayout>
+    </VendorLayout>
   )
 }
 

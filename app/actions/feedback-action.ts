@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import { Feedback } from '@prisma/client'
 
 export async function submitFeedback(data: Omit<Feedback, 'id' | 'createdAt'>) {

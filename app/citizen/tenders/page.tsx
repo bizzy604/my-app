@@ -5,22 +5,33 @@ import { useRouter } from 'next/navigation'
 import { CitizenLayout } from "@/components/citizen-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, MapPin, Calendar } from 'lucide-react'
+import { FileText, MapPin, Calendar, Building2 } from 'lucide-react'
 import { getTenders } from "@/app/actions/tender-actions"
+import { TenderStatus } from '@prisma/client'
 
-
-interface Tender {
+type Tender = {
   id: string;
   title: string;
   sector: string;
   location: string;
-  issuer: string;
   description: string;
-  closingDate: string;
-  status: string;
-  awardedTo: string;
-  amount: number;
-  awardDate: string;
+  closingDate: Date;
+  status: TenderStatus;
+  awardedTo?: string | null;
+  amount?: number | null;
+  awardDate?: Date | null;
+  issuer: {
+    id: number;
+    name: string;
+    company: string | null;
+  };
+  bids: Array<{
+    id: string;
+    status: string;
+    amount: number;
+    submissionDate: Date;
+    evaluationScore: number | null;
+  }>;
 }
 
 export default function CitizenTendersPage() {
@@ -28,7 +39,17 @@ export default function CitizenTendersPage() {
   const router = useRouter()
 
   useEffect(() => {
-    getTenders().then(setTenders)
+    getTenders({ status: TenderStatus.OPEN }).then((fetchedTenders) => {
+      const transformedTenders: Tender[] = fetchedTenders.map(tender => ({
+        ...tender,
+        closingDate: new Date(tender.closingDate),
+        // Provide default values for optional fields
+        awardedTo: null,
+        amount: null,
+        awardDate: null
+      }));
+      setTenders(transformedTenders);
+    })
   }, [])
 
   return (
@@ -50,20 +71,22 @@ export default function CitizenTendersPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Sector: {tender.sector}</p>
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    {tender.location}
-                  </div>
-                  <p className="text-sm font-medium">Issuer: {tender.issuer}</p>
+                  <div className="flex items-center gap-1 text-sm">
+                    <Building2 className="h-4 w-4 text-gray-600" />
+                    <span className="font-medium">Issuer: </span>
+                    {tender.issuer.name} ({tender.issuer.company || 'No company'})</div>
+                  <div className="flex items-center gap-1 text-sm">
+                    <MapPin className="h-4 w-4 text-gray-600" />
+                    <span className="font-medium">Location: </span>
+                    {tender.location}</div>
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
-                    Closing: {new Date(tender.closingDate).toLocaleString()}
-                  </div>
+                    <span className="font-medium">Closing Date: </span>
+                    {tender.closingDate.toLocaleDateString()}</div>
                 </div>
                 <Button 
-                  className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]"
-                  onClick={() => router.push(`/citizen/tenders/${tender.id}`)}
+                  onClick={() => router.push(`/tenders/${tender.id}`)} 
+                  className="mt-4 w-full"
                 >
                   View Details
                 </Button>

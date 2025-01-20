@@ -1,64 +1,39 @@
 import { NextResponse } from 'next/server'
-import { hash } from 'bcryptjs'
+import { CreateUser } from '@/app/actions/auth-actions'
+import bcrypt from 'bcryptjs'
+import { prisma } from '@/lib/prisma' // Ensure correct import path
 
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    password: string;
-    role: string;
-  }
-  
-let users: User[] = [
-  {
-    id: 1,
-    name: "Alice Johnson",
-    email: "vendor@example.com",
-    password: "password",
-    role: "vendor"
-  },
-  {
-    id: 2,
-    name: "John Smith",
-    email: "citizen@example.com",
-    password: "password",
-    role: "citizen"
-  },
-  {
-    id: 3,
-    name: "Sarah Wilson",
-    email: "procurement@example.com",
-    password: "password", //Hashed password
-    role: "procurement"
-  }
-];
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { name, email, password, role } = await req.json()
+    const { name, email, password, role } = await request.json()
+    
+    console.log("Received registration data:", { name, email, role })
+
+    if (!name || !email || !password || !role) {
+      return NextResponse.json({ message: 'All fields are required.' }, { status: 400 })
+    }
+
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase()
 
     // Check if user already exists
-    if (users.find(user => user.email === email)) {
-      return NextResponse.json({ message: "User already exists" }, { status: 400 })
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+    if (existingUser) {
+      return NextResponse.json({ message: 'User already exists.' }, { status: 400 })
     }
 
     // Hash the password
-    const hashedPassword = await hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10)
+    console.log("Hashed password:", hashedPassword)
 
-    // Create new user
-    const newUser = {
-      id: users.length + 1,
-      name,
-      email,
-      password: hashedPassword,
-      role
-    }
+    // Create the user with hashed password and normalized email
+    const user = await CreateUser(name, normalizedEmail, hashedPassword, role)
 
-    // Add user to "database"
-    users.push(newUser)
+    console.log("User created:", user)
 
-    return NextResponse.json({ message: "User created successfully" }, { status: 201 })
+    return NextResponse.json({ message: 'User created successfully.', user }, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ message: "Failed to register" }, { status: 500 })
+    console.error('Registration Error:', error)
+    return NextResponse.json({ message: 'Internal Server Error.' }, { status: 500 })
   }
 }

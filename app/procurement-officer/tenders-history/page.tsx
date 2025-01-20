@@ -1,127 +1,89 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import Image from "next/image"
-import { ArrowUpDown, MoreHorizontal, ThumbsUp, ThumbsDown, Clock, Building2 } from 'lucide-react'
+import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-interface Bid {
-  id: string
-  applicant: string
-  proposedPrice: number
-  status: 'approved' | 'rejected' | 'pending'
-  profileImage: string
-}
-
-const bids: Bid[] = [
-  {
-    id: '1',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'approved',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'rejected',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'pending',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '4',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'approved',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '5',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'pending',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '6',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'rejected',
-    profileImage: '/placeholder.svg'
-  },
-]
+import { getTenders } from "@/app/actions/tender-actions"
+import { useToast } from "@/hooks/use-toast"
+import { TenderStatus } from '@prisma/client'
+import { Search } from 'lucide-react'
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 export default function TendersHistoryPage() {
-  const [selectedBids, setSelectedBids] = useState<Set<string>>(new Set())
-  const [selectAll, setSelectAll] = useState(false)
+  const { data: session } = useSession()
+  const { toast } = useToast()
+  const [tenders, setTenders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedBids(new Set())
-    } else {
-      setSelectedBids(new Set(bids.map(bid => bid.id)))
+  useEffect(() => {
+    const loadTenders = async () => {
+      try {
+        const data = await getTenders()
+        setTenders(data)
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load tenders",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-    setSelectAll(!selectAll)
-  }
 
-  const handleSelectBid = (bidId: string) => {
-    const newSelected = new Set(selectedBids)
-    if (newSelected.has(bidId)) {
-      newSelected.delete(bidId)
-    } else {
-      newSelected.add(bidId)
-    }
-    setSelectedBids(newSelected)
-    setSelectAll(newSelected.size === bids.length)
-  }
+    loadTenders()
+  }, [toast])
 
-  const handleAcceptSelected = () => {
-    // Implement accept logic here
-    console.log('Accepting bids:', Array.from(selectedBids))
-  }
+  const filteredTenders = tenders.filter(tender => {
+    const searchLower = searchQuery.toLowerCase()
+    return (
+      tender.title.toLowerCase().includes(searchLower) ||
+      tender.description.toLowerCase().includes(searchLower) ||
+      tender.sector.toLowerCase().includes(searchLower) ||
+      tender.category.toLowerCase().includes(searchLower) ||
+      tender.location.toLowerCase().includes(searchLower)
+    )
+  })
 
-  const handleRejectSelected = () => {
-    // Implement reject logic here
-    console.log('Rejecting bids:', Array.from(selectedBids))
-  }
-
-  const getStatusIcon = (status: Bid['status']) => {
+  const getStatusColor = (status: TenderStatus) => {
     switch (status) {
-      case 'approved':
-        return <ThumbsUp className="h-4 w-4 text-green-500" />
-      case 'rejected':
-        return <ThumbsDown className="h-4 w-4 text-red-500" />
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+      case TenderStatus.OPEN:
+        return 'bg-green-100 text-green-800'
+      case TenderStatus.CLOSED:
+        return 'bg-red-100 text-red-800'
+      case TenderStatus.AWARDED:
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Loading...</p>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout>
       <header className="flex items-center justify-between border-b bg-white px-8 py-4">
         <div>
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Tenders</h1>
-          <p className="text-sm text-gray-600">View all tender offers made for tenders here</p>
+          <h1 className="text-2xl font-semibold text-[#4B0082]">Tender History</h1>
+          <p className="text-sm text-gray-600">View and manage all past tenders</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="font-medium text-gray-900">John Mwangi</p>
-            <p className="text-sm text-gray-600">Procurement Officer, Ministry of Finance</p>
+            <p className="font-medium text-gray-900">{session?.user?.name}</p>
+            <p className="text-sm text-gray-600">Procurement Officer</p>
           </div>
           <div className="relative h-12 w-12">
             <Image
@@ -134,107 +96,109 @@ export default function TendersHistoryPage() {
           </div>
         </div>
       </header>
+
       <main className="p-8">
-        <div className="space-y-4">
-          <div className="rounded-md border">
-            <div className="border-b bg-gray-50/50 px-4 py-3">
-              <h2 className="text-lg font-semibold text-[#4B0082]">
-                Provision of Short-Term Insurance Brokerage Services
-              </h2>
-            </div>
-            <div className="p-0">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-gray-50/50">
-                    <th className="px-4 py-3 text-left">
-                      <Checkbox
-                        checked={selectAll}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      Applicant
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      <div className="flex items-center gap-2">
-                        Proposed Price
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      Flag
-                    </th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bids.map((bid) => (
-                    <tr 
-                      key={bid.id} 
-                      className="border-b cursor-pointer hover:bg-gray-50"
-                      onClick={() => window.location.href = `/procurement-officer/tenders-history/${bid.id}`}
-                    >
-                      <td className="px-4 py-3">
-                        <Checkbox
-                          checked={selectedBids.has(bid.id)}
-                          onCheckedChange={() => handleSelectBid(bid.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-gray-600" />
-                          </div>
-                          <span className="text-sm">{bid.applicant}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">Rs. {bid.proposedPrice.toLocaleString()}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusIcon(bid.status)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View details</DropdownMenuItem>
-                            <DropdownMenuItem>Accept bid</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Reject bid
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleAcceptSelected}
-              disabled={selectedBids.size === 0}
-              className="bg-purple-100 text-[#4B0082] hover:bg-purple-200"
-            >
-              Accept Selected
-            </Button>
-            <Button
-              onClick={handleRejectSelected}
-              disabled={selectedBids.size === 0}
-              variant="outline"
-              className="border-red-200 text-red-600 hover:bg-red-50"
-            >
-              Reject Selected
-            </Button>
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Input
+              className="pl-10"
+              placeholder="Search tenders by title, description, sector, or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
+
+        {filteredTenders.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">
+              {searchQuery ? "No tenders found matching your search" : "No tenders found in the history"}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tender Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Budget
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bids
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Closing Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTenders.map((tender) => (
+                  <tr key={tender.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {tender.title}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {tender.description.substring(0, 100)}
+                          {tender.description.length > 100 ? '...' : ''}
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                            {tender.category}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                            {tender.location}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tender.status)}`}>
+                        {tender.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {formatCurrency(tender.budget)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{tender.bidCount}</span>
+                        <span className="text-xs text-gray-500">
+                          Total: {formatCurrency(tender.totalBidAmount)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {formatDate(tender.closingDate)}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <Link href={`/procurement-officer/tenders-history/${tender.id}`}>
+                          View Details
+                        </Link>
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </DashboardLayout>
   )

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Award, AlertTriangle, BarChart } from 'lucide-react'
 import { getTenders } from "@/app/actions/tender-actions"
+import { getReports } from "@/app/actions/report-actions"
 
 export default function CitizenDashboardPage() {
   const [dashboardData, setDashboardData] = useState({
@@ -19,12 +20,24 @@ export default function CitizenDashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const tenders = await getTenders()
-      setDashboardData({
-        activeTenders: tenders.length,
-        recentlyAwarded: tenders.filter(t => t.status === 'awarded').length,
-        reportedIrregularities: 2, // This would typically come from a separate API call
-      })
+      try {
+        // Fetch active tenders
+        const activeTenders = await getTenders({ status: 'OPEN' })
+        
+        // Fetch awarded tenders
+        const awardedTenders = await getTenders({ status: 'AWARDED' })
+        
+        // Fetch reports
+        const reports = await getReports()
+        
+        setDashboardData({
+          activeTenders: activeTenders.length,
+          recentlyAwarded: awardedTenders.length,
+          reportedIrregularities: reports.length,
+        })
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      }
     }
     fetchData()
   }, [])

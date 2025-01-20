@@ -1,14 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mail, Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+
+import { getBidById, updateBidStatus } from "@/app/actions/tender-actions"
+import { sendAwardNotification } from "@/app/actions/tender-actions"
+import { formatDate, formatCurrency } from "@/lib/utils"
+import { BidStatus } from '@prisma/client'
+import { prisma } from '@/lib/prisma';
 
 interface BidderInfo {
   name: string
@@ -17,35 +27,110 @@ interface BidderInfo {
   bidAmount: number
 }
 
-// This would normally come from your API/database
-const getBidderInfo = (id: string): BidderInfo => ({
-  name: "John Smith",
-  email: "blackblock@gmail.com",
-  company: "Nelson Mandela University Business School",
-  bidAmount: 16789123
-})
-
 export default function AwardTenderPage({ params }: { params: { id: string } }) {
-  const bidder = getBidderInfo(params.id)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const bidId = searchParams.get('bidId')
+  const { data: session } = useSession()
+  const { toast } = useToast()
+
+  const [bid, setBid] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [message, setMessage] = useState(
-    `Congratulations on getting this tender, looking forward to working with you. Your bid of Rs. ${bidder.bidAmount.toLocaleString()} has been accepted.`
-  )
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    const loadBidData = async () => {
+      try {
+        if (!bidId) {
+          // If no bid ID is provided, try to find the most recent bid for the tender
+          const bids = await prisma.bid.findMany({
+            where: { 
+              tenderId: params.id,
+              status: BidStatus.PENDING 
+            },
+            orderBy: { submissionDate: 'desc' },
+            take: 1,
+            include: {
+              tender: true,
+              bidder: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  company: true,
+                }
+              },
+              documents: true
+            }
+          })
+
+          if (bids.length === 0) {
+            throw new Error('No pending bids found for this tender')
+          }
+
+          const bidData = bids[0]
+          setBid(bidData)
+
+          // Set default message
+          setMessage(`Congratulations on getting this tender, looking forward to working with you. Your bid of ${formatCurrency(bidData.amount)} has been accepted.`)
+        } else {
+          // If bid ID is provided, fetch that specific bid
+          const bidData = await getBidById(bidId)
+          setBid(bidData)
+
+          // Set default message
+          setMessage(`Congratulations on getting this tender, looking forward to working with you. Your bid of ${formatCurrency(bidData.amount)} has been accepted.`)
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load bid details",
+          variant: "destructive",
+        })
+        router.push('/procurement-officer/tenders-history')
+      }
+    }
+
+    loadBidData()
+  }, [bidId, params.id, router, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      // Simulate API call to award tender and send notification
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // TODO: Implement actual email sending logic
+      await sendAwardNotification({
+        bidId: bid.id,
+        message,
+        recipientEmail: bid.bidder.email,
+        recipientName: bid.bidder.name,
+      })
+
+      // Update bid status to ACCEPTED
+      await updateBidStatus(bid.id, BidStatus.ACCEPTED)
+
       setIsSuccess(true)
-    } catch (error) {
-      console.error('Error awarding tender:', error)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send award notification",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (!bid) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Loading...</p>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (isSuccess) {
@@ -69,12 +154,12 @@ export default function AwardTenderPage({ params }: { params: { id: string } }) 
                 <div>
                   <p className="text-sm text-gray-500">Recipient(s):</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{bidder.email}</p>
+                    <p className="text-sm font-medium">{bid.bidder.email}</p>
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                       Winning Bidder
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">{bidder.company}</p>
+                  <p className="text-sm text-gray-600">{bid.bidder.company}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Message</p>
@@ -125,20 +210,20 @@ export default function AwardTenderPage({ params }: { params: { id: string } }) 
                   <dl className="mt-3 space-y-1">
                     <div className="grid grid-cols-3 gap-4">
                       <dt className="text-sm text-gray-500">Name:</dt>
-                      <dd className="col-span-2 text-sm font-medium">{bidder.name}</dd>
+                      <dd className="col-span-2 text-sm font-medium">{bid.bidder.name}</dd>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <dt className="text-sm text-gray-500">Company:</dt>
-                      <dd className="col-span-2 text-sm font-medium">{bidder.company}</dd>
+                      <dd className="col-span-2 text-sm font-medium">{bid.bidder.company}</dd>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <dt className="text-sm text-gray-500">Email:</dt>
-                      <dd className="col-span-2 text-sm font-medium">{bidder.email}</dd>
+                      <dd className="col-span-2 text-sm font-medium">{bid.bidder.email}</dd>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <dt className="text-sm text-gray-500">Bid Amount:</dt>
                       <dd className="col-span-2 text-sm font-medium">
-                        KES. {bidder.bidAmount.toLocaleString()}
+                        {formatCurrency(bid.amount)}
                       </dd>
                     </div>
                   </dl>

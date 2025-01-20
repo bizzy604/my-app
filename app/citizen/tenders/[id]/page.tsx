@@ -1,116 +1,156 @@
-import Link from "next/link"
-import { Bookmark, FileText } from 'lucide-react'
+import { getTenderById } from "@/app/actions/tender-actions"
 import { CitizenLayout } from "@/components/citizen-layout"
 import { Button } from "@/components/ui/button"
+import { 
+  FileText, 
+  MapPin, 
+  Calendar, 
+  Building2, 
+  DollarSign,
+  AlertTriangle
+} from 'lucide-react'
+import Link from "next/link"
+import { notFound } from 'next/navigation'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
-export default function TenderDetailsPage({ params }: { params: { id: string } }) {
-  // This would normally come from an API call using the ID
-  const tender = {
-    title: "Provision of Short-Term Insurance Brokerage Services",
-    issueDate: "Friday, July 22, 2022 - 09:00",
-    closingDate: "Friday, August 12, 2022 - 12:00",
-    reference: "TOO2/2023",
-    location: "Munich, Germany",
-    description: `MANAGEMENT OF SHORT-TERM INSURANCE PORTFOLIO
+export default async function TenderDetailsPage({ params }: { params: { id: string } }) {
+  try {
+    const tender = await getTenderById(params.id)
 
-Tenders are hereby invited from insurance brokers to manage the short-term insurance portfolio of the Kai !Garib Municipality for a period of 24 months, with the option to extend the contract on an annual basis up to a maximum period of 36 months.
+    return (
+      <CitizenLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Main Tender Details */}
+            <div className="md:col-span-2 space-y-6">
+              <div className="bg-white shadow-md rounded-lg p-6">
+                <div className="flex items-start justify-between">
+                  <h1 className="text-2xl font-bold text-[#4B0082] flex items-center gap-3">
+                    <FileText className="h-6 w-6" />
+                    {tender.title}
+                  </h1>
+                  <span className="text-sm text-gray-500 font-medium">
+                    Ref: {tender.id.slice(-6).toUpperCase()}
+                  </span>
+                </div>
 
-Tenders must be submitted on the original documents and remain valid for ninety (90) days after the closing date of the tender.
+                <div className="mt-4 space-y-3 text-gray-700">
+                  <p className="text-sm">{tender.description}</p>
 
-A set of tender documents can be obtained from Mr. Gavin Matthews who may be contacted at telephone (079) 590 2053 OR it can be obtained via gmholdings21@gmail.com/matthewsg@kaigarib.gov.za if after a non-refundable fee of R500.00 is paid.
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-gray-600" />
+                      <span>
+                        <span className="font-medium">Issuer:</span> {tender.issuer.name} 
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-gray-600" />
+                      <span>
+                        <span className="font-medium">Location:</span> {tender.location}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-gray-600" />
+                      <span>
+                        <span className="font-medium">Closing Date:</span> {new Date(tender.closingDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-gray-600" />
+                      <span>
+                        <span className="font-medium">Budget:</span> Rs. {tender.budget?.toLocaleString() || 'Not specified'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-Fully completed tender documents must be placed in a sealed envelope and placed in the tender box at the Kai !Garib Municipal Building,09 Main Road, Keimoes, Northern Cape by no later than 12:00 on Friday, 12 August 2022 or at Archive Date. The envelopes must be endorsed clearly with the number, title, and closing date of the tender as above.
+              {/* Public Accountability Section */}
+              <div className="bg-white shadow-md rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 text-[#4B0082] flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Report Irregularities
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  If you notice any suspicious activities or potential misconduct related to this tender, 
+                  please report it confidentially. Your input helps maintain transparency and integrity 
+                  in the procurement process.
+                </p>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                      <AlertTriangle className="mr-2 h-4 w-4" /> Report Irregularity
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Report Tender Irregularity</DialogTitle>
+                    </DialogHeader>
+                    <form className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Your Name (Optional)</Label>
+                        <Input 
+                          id="name" 
+                          placeholder="Enter your name (optional)" 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contact">Contact Information (Optional)</Label>
+                        <Input 
+                          id="contact" 
+                          placeholder="Email or phone (optional)" 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="irregularity">Description of Irregularity</Label>
+                        <Textarea 
+                          id="irregularity" 
+                          placeholder="Describe the irregularity you've observed" 
+                          className="min-h-[100px]"
+                          required 
+                        />
+                      </div>
+                      <Button type="submit" variant="destructive" className="w-full">
+                        Submit Report
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
 
-The tender will be evaluated on the 80/20 Preference Points system as prescribed by the Preferential Procurement Regulations, 2022.
-
-No tender box will be emptied out after 12:00 on the closing date as above, hereafter all bids will be opened in public. Late tenders or tenders submitted by e-mail or fax will under no circumstances be accepted.
-
-The Municipality reserves the right to withdraw any invitation to tender and/or to re-advertise or to reject any tender or to accept a part of it. The Municipality does not bind itself to accept the lowest tender or award a contract to the bidder scoring the highest number of points.
-
-It is expected of all Bidders who are not yet registered on National Treasury's Central Supplier Database (CSD) to register without delay on the prescribed form. The Municipality reserves the right not to award tenders to Bidders who are not registered on the CSD.
-
-NB: The following supporting documents are to include in the tender submission:
-• Company Profile
-• Certified copies of ID's of all Directors
-• A copy of the company founding statement
-• A valid original SARS Tax Clearance Certificate
-• B-BBEE Certificate-original or Certified
-• Current Municipal account
-• Central Supplier Database Registration proof
-
-Bidder shall take note of the following Bid Documents
-• The Kai !Garib Municipality Supply Chain Policy will apply
-• The Municipality does not bind itself to accept the lowest bid or any other bid and reserves the right to accept the whole part of the bid`,
+            {/* Bidding Information */}
+            <div className="space-y-6">
+              <div className="bg-white shadow-md rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 text-[#4B0082]">Tender Overview</h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Status:</span>
+                    <span className={`
+                      px-3 py-1 rounded-full text-sm font-semibold
+                      ${tender.status === 'OPEN' ? 'bg-green-100 text-green-800' : 
+                        tender.status === 'CLOSED' ? 'bg-red-100 text-red-800' : 
+                        'bg-gray-100 text-gray-800'}
+                    `}>
+                      {tender.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Total Bids Received:</span>
+                    <span>{tender.bids.length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CitizenLayout>
+    )
+  } catch (error) {
+    notFound()
   }
-
-  return (
-    <CitizenLayout>
-      <header className="flex items-center justify-between border-b bg-white px-8 py-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Tenders</h1>
-          <p className="text-sm text-gray-600">View all available tender offers here</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="font-medium text-gray-900">Amoni Kevin</p>
-            <p className="text-sm text-gray-600">C.E.O, Eagles Limited Company</p>
-          </div>
-          <div className="relative h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-            <FileText className="h-6 w-6 text-gray-600" />
-          </div>
-        </div>
-      </header>
-      <main className="p-8">
-        <div className="space-y-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded bg-[#4B0082]">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-[#4B0082]">{tender.title}</h2>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                className="bg-[#4B0082] text-white hover:bg-[#3B0062]"
-                asChild
-              >
-                <Link href={`/citizen/report`}>Report Irregularity</Link>
-              </Button>
-              <Button variant="outline" size="icon">
-                <Bookmark className="h-4 w-4" />
-                <span className="sr-only">Bookmark tender</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-gray-50 p-4">
-            <dl className="grid gap-2 text-sm">
-              <div className="grid grid-cols-2 gap-1">
-                <dt className="font-medium text-gray-900">Issue Date:</dt>
-                <dd className="text-gray-700">{tender.issueDate}</dd>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <dt className="font-medium text-gray-900">Closing Date:</dt>
-                <dd className="text-gray-700">{tender.closingDate}</dd>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <dt className="font-medium text-gray-900">Tender Reference:</dt>
-                <dd className="text-gray-700">{tender.reference}</dd>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <dt className="font-medium text-gray-900">Location:</dt>
-                <dd className="text-gray-700">{tender.location}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="prose max-w-none">
-            <div className="whitespace-pre-wrap text-gray-700">{tender.description}</div>
-          </div>
-        </div>
-      </main>
-    </CitizenLayout>
-  )
 }

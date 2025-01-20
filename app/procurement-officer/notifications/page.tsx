@@ -7,14 +7,20 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
+type NotificationPreferences = {
+  inApp: boolean
+  email: boolean
+  sms: boolean
+}
+
 export default function NotificationPage() {
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
     inApp: true,
     email: true,
     sms: false,
   })
 
-  const handleToggle = (key: string) => {
+  const handleToggle = (key: keyof NotificationPreferences) => {
     setPreferences(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
@@ -76,4 +82,3 @@ export default function NotificationPage() {
     </DashboardLayout>
   )
 }
-

@@ -11,21 +11,31 @@ datasource db {
 }
 
 model User {
-  id             Int       @id @default(autoincrement())
-  name           String
-  email          String    @unique
-  password       String
-  role           Role      @default(VENDOR)
-  company        String?
-  phone          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  tenders        Tender[]
-  bids           Bid[]
-  documents      Document[]
-  notifications  Notification[]
-  feedbacks      Feedback[]
-  supportTickets SupportTicket[]
+  id                 Int       @id @default(autoincrement())
+  name              String
+  email             String    @unique
+  password          String
+  role              Role      @default(VENDOR)
+  company           String?
+  phone             String?
+  businessType      String?   // e.g., "Profit", "Non-Profit", "Academic"
+  registrationNumber String?
+  address           String?
+  city              String?
+  country           String?
+  postalCode        String?
+  website           String?
+  establishmentDate DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tenders           Tender[] @relation("TenderIssuer")
+  bids              Bid[]
+  documents         Document[]
+  notifications     Notification[]
+  feedbacks         Feedback[]
+  supportTickets    SupportTicket[]
+  reports           Report[]
+  procuredTenders   Tender[] @relation("TenderProcurementOfficer")
 }
 
 model Tender {
@@ -33,17 +43,25 @@ model Tender {
   title       String
   description String
   sector      String
+  category    String
   location    String
   budget      Float
-  issuer      User      @relation(fields: [issuerId], references: [id])
+  requirements String[]
+  closingDate DateTime
+  issuer      User      @relation("TenderIssuer", fields: [issuerId], references: [id])
   issuerId    Int
   status      TenderStatus @default(OPEN)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  closingDate DateTime
   bids        Bid[]
   documents   Document[]
   feedbacks   Feedback[]
+  reports     Report[]
+  procurementOfficerId Int?
+  procurementOfficer   User? @relation("TenderProcurementOfficer", fields: [procurementOfficerId], references: [id])
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  awardedBidId String?
 }
 
 model Bid {
@@ -53,11 +71,15 @@ model Bid {
   bidder           User      @relation(fields: [bidderId], references: [id])
   bidderId         Int
   amount           Float
+  completionTime   String?   // New field for estimated completion timeline
   technicalProposal String
+  vendorExperience String?   // New field for vendor's relevant experience
   status           BidStatus @default(PENDING)
   submissionDate   DateTime  @default(now())
   evaluationScore  Float?
   documents        Document[]
+  approvalDate     DateTime?
+  statusUpdatedAt  DateTime?
 }
 
 model Document {
@@ -66,6 +88,7 @@ model Document {
   fileSize  Int
   fileType  String
   url       String
+  s3Key     String?   // New field to store S3 object key
   uploadDate DateTime @default(now())
   tender    Tender?   @relation(fields: [tenderId], references: [id])
   tenderId  String?
@@ -107,8 +130,27 @@ model SupportTicket {
   updatedAt DateTime  @updatedAt
 }
 
+model Report {
+  id          String    @id @default(uuid())
+  tender      Tender    @relation(fields: [tenderId], references: [id])
+  tenderId    String
+  reporter    User      @relation(fields: [reporterId], references: [id])
+  reporterId  Int
+  type        ReportType
+  description String
+  status      ReportStatus @default(PENDING)
+  evidence    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  tenders   Tender[]
+}
+
 enum Role {
-  ADMIN
   PROCUREMENT
   VENDOR
   CITIZEN
@@ -142,3 +184,23 @@ enum TicketStatus {
   CLOSED
 }
 
+enum ReportType {
+  IRREGULARITY
+  FRAUD
+  CONFLICT_OF_INTEREST
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
+
+enum TenderCategory {
+  GOODS
+  SERVICES
+  WORKS
+  CONSULTING
+}

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import { Bid, BidStatus } from '@prisma/client'
 
 export async function submitBid(data: Omit<Bid, 'id' | 'submissionDate' | 'status' | 'evaluationScore'>) {

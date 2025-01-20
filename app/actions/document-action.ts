@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import { Document } from '@prisma/client'
 
 export async function uploadDocument(data: Omit<Document, 'id' | 'uploadDate'>) {

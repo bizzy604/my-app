@@ -1,80 +1,84 @@
+"use client"
+
+import React, { useState, useEffect, use } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { Building2, ThumbsUp, ThumbsDown, Clock, ArrowLeft, Download, Mail } from 'lucide-react'
 import { VendorLayout } from "@/components/vendor-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { getBidById } from "@/app/actions/tender-actions"
+import { useToast } from "@/hooks/use-toast"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
-// This would normally come from an API or database
-const getBidDetails = (id: string) => ({
-  id,
-  applicant: "Nelson Mandela University Business School",
-  proposedPrice: 16789123,
-  status: 'pending' as const,
-  submissionDate: "2024-01-08T14:30:00Z",
-  tender: {
-    title: "Provision of Short-Term Insurance Brokerage Services",
-    reference: "TOO2/2023",
-  },
-  documents: [
-    { name: "Technical Proposal", size: "2.4 MB", type: "PDF" },
-    { name: "Financial Proposal", size: "1.8 MB", type: "PDF" },
-    { name: "Company Registration", size: "500 KB", type: "PDF" },
-    { name: "Tax Clearance", size: "300 KB", type: "PDF" },
-  ],
-  technicalProposal: `Our technical approach focuses on implementing a comprehensive insurance brokerage service that leverages our extensive experience in the industry. Key highlights include:
+export default function TenderBidDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { data: session } = useSession()
+  const { toast } = useToast()
+  const { id } = React.use(params)
+  const [loading, setLoading] = useState(true)
+  const [bid, setBid] = useState<any>(null)
 
-1. Risk Assessment and Analysis
-- Detailed evaluation of current insurance portfolio
-- Identification of potential risks and coverage gaps
-- Custom risk management strategies
+  useEffect(() => {
+    const fetchBidDetails = async () => {
+      try {
+        setLoading(true)
+        const bidDetails = await getBidById(id)
+        setBid(bidDetails)
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch bid details",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
 
-2. Insurance Program Design
-- Tailored coverage solutions
-- Cost-effective premium structures
-- Innovative risk transfer mechanisms
+    fetchBidDetails()
+  }, [id, toast])
 
-3. Claims Management
-- 24/7 claims support
-- Streamlined claims processing
-- Regular claims analysis and reporting`,
-  experience: `- 15+ years in insurance brokerage
-- Managed portfolios for 50+ municipal clients
-- Successfully processed over 1000 claims
-- Certified team of insurance professionals
-- Strong relationships with major insurers`,
-  contactPerson: {
-    name: "Sarah Johnson",
-    position: "Senior Insurance Broker",
-    email: "sarah.johnson@nelsonmandela.ac.za",
-    phone: "+27 123 456 789"
-  }
-})
-
-export default function TenderBidDetailsPage({ params }: { params: { id: string } }) {
-  const bid = getBidDetails(params.id)
-
-  const getStatusIcon = (status: 'approved' | 'rejected' | 'pending') => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'approved':
+      case 'APPROVED':
         return <ThumbsUp className="h-5 w-5 text-green-500" />
-      case 'rejected':
+      case 'REJECTED':
         return <ThumbsDown className="h-5 w-5 text-red-500" />
-      case 'pending':
+      default:
         return <Clock className="h-5 w-5 text-yellow-500" />
     }
   }
 
-  const getStatusText = (status: 'approved' | 'rejected' | 'pending') => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case 'approved':
+      case 'APPROVED':
         return 'Approved'
-      case 'rejected':
+      case 'REJECTED':
         return 'Rejected'
-      case 'pending':
+      default:
         return 'Pending Review'
     }
+  }
+
+  if (loading) {
+    return (
+      <VendorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Loading bid details...</p>
+        </div>
+      </VendorLayout>
+    )
+  }
+
+  if (!bid) {
+    return (
+      <VendorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p>No bid details found</p>
+        </div>
+      </VendorLayout>
+    )
   }
 
   return (
@@ -93,8 +97,8 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="font-medium text-gray-900">John Mwangi</p>
-            <p className="text-sm text-gray-600">Procurement Officer, Ministry of Finance</p>
+            <p className="font-medium text-gray-900">{session?.user?.name}</p>
+            <p className="text-sm text-gray-600">Vendor</p>
           </div>
           <div className="relative h-12 w-12">
             <Image
@@ -120,7 +124,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Tender</h3>
                   <p className="mt-1 text-lg font-medium">{bid.tender.title}</p>
-                  <p className="text-sm text-gray-600">Reference: {bid.tender.reference}</p>
+                  <p className="text-sm text-gray-600">Reference: {bid.tender.id.slice(-6).toUpperCase()}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Applicant</h3>
@@ -129,7 +133,8 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                       <Building2 className="h-6 w-6 text-gray-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{bid.applicant}</p>
+                      <p className="font-medium">{bid.bidder.name}</p>
+                      <p className="text-sm text-gray-600">{bid.bidder.company}</p>
                     </div>
                   </div>
                 </div>
@@ -145,20 +150,13 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Proposed Price</h3>
                   <p className="mt-1 text-lg font-medium">
-                    Rs. {bid.proposedPrice.toLocaleString()}
+                    Rs. {formatCurrency(bid.amount)}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Submission Date</h3>
                   <p className="mt-1">
-                    {new Date(bid.submissionDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDate(bid.createdAt)}
                   </p>
                 </div>
               </div>
@@ -176,16 +174,6 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
           </CardContent>
         </Card>
 
-        {/* Experience */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Relevant Experience</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="whitespace-pre-wrap">{bid.experience}</div>
-          </CardContent>
-        </Card>
-
         {/* Documents */}
         <Card>
           <CardHeader>
@@ -193,75 +181,36 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
           </CardHeader>
           <CardContent>
             <div className="divide-y">
-              {bid.documents.map((doc, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-gray-100 p-2">
-                      <Download className="h-5 w-5 text-gray-600" />
+              {bid.documents && bid.documents.length > 0 ? (
+                bid.documents.map((doc: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Download className="h-5 w-5 text-gray-500" />
+                      <div>
+                        <p className="font-medium">{doc.fileName}</p>
+                        <p className="text-sm text-gray-500">
+                          {(doc.fileSize / 1024).toFixed(2)} KB, {doc.fileType}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{doc.name}</p>
-                      <p className="text-sm text-gray-500">{doc.size} • {doc.type}</p>
-                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => window.open(doc.url, '_blank')}
+                    >
+                      Download
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Download
-                  </Button>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No documents uploaded</p>
+              )}
             </div>
           </CardContent>
         </Card>
-
-        {/* Contact Person */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Person</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{bid.contactPerson.name}</p>
-                <p className="text-sm text-gray-600">{bid.contactPerson.position}</p>
-                <div className="mt-2 flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Mail className="h-4 w-4" />
-                    {bid.contactPerson.email}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {bid.contactPerson.phone}
-                  </div>
-                </div>
-              </div>
-              <Button>Contact</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Separator />
-
-        {/* Action Buttons */}
-        <div className="flex gap-4">
-          <Button 
-            className="bg-[#4B0082] hover:bg-[#3B0062]"
-            size="lg"
-            asChild
-          >
-            <Link href={`/vendor/tenders/${params.id}`}>
-            Check Bid Details
-            </Link>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="border-red-200 text-red-600 hover:bg-red-50"
-            size="lg"
-          >
-            Cancel Bid
-          </Button>
-        </div>
       </main>
     </VendorLayout>
   )

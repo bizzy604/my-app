@@ -1,140 +1,92 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import Image from "next/image"
-import { ArrowUpDown, MoreHorizontal, ThumbsUp, ThumbsDown, Clock, Building2 } from 'lucide-react'
+import Link from "next/link"
 import { VendorLayout } from "@/components/vendor-layout"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-interface Bid {
-  id: string
-  applicant: string
-  proposedPrice: number
-  status: 'approved' | 'rejected' | 'pending'
-  profileImage: string
-}
-
-const bids: Bid[] = [
-  {
-    id: '1',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'approved',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'rejected',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'pending',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '4',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'approved',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '5',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'pending',
-    profileImage: '/placeholder.svg'
-  },
-  {
-    id: '6',
-    applicant: 'Nelson Mandela University Business School',
-    proposedPrice: 16789123,
-    status: 'rejected',
-    profileImage: '/placeholder.svg'
-  },
-]
+import { Input } from "@/components/ui/input"
+import { getVendorTenders } from "@/app/actions/tender-actions"
+import { useToast } from "@/hooks/use-toast"
+import { TenderStatus } from '@prisma/client'
+import { Search } from 'lucide-react'
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 export default function TendersHistoryPage() {
-  const [selectedBids, setSelectedBids] = useState<Set<string>>(new Set())
-  const [selectAll, setSelectAll] = useState(false)
+  const { data: session } = useSession()
+  const { toast } = useToast()
+  const [tenders, setTenders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedBids(new Set())
-    } else {
-      setSelectedBids(new Set(bids.map(bid => bid.id)))
-    }
-    setSelectAll(!selectAll)
-  }
-
-  const handleSelectBid = (bidId: string) => {
-    const newSelected = new Set(selectedBids)
-    if (newSelected.has(bidId)) {
-      newSelected.delete(bidId)
-    } else {
-      newSelected.add(bidId)
-    }
-    setSelectedBids(newSelected)
-    setSelectAll(newSelected.size === bids.length)
-  }
-
-  const handleAcceptSelected = () => {
-    selectedBids.forEach(bidId => {
-      const bidIndex = bids.findIndex(bid => bid.id === bidId);
-      if (bidIndex !== -1) {
-        bids[bidIndex].status = 'approved';
+  useEffect(() => {
+    const fetchTenders = async () => {
+      if (!session?.user?.id) return
+      
+      try {
+        const data = await getVendorTenders(session.user.id)
+        setTenders(data)
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch tender history",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
       }
-    });
-    console.log('Accepting bids:', Array.from(selectedBids));
-    setSelectedBids(new Set());
-  }
-
-  const handleRejectSelected = () => {
-    selectedBids.forEach(bidId => {
-      const bidIndex = bids.findIndex(bid => bid.id === bidId);
-      if (bidIndex !== -1) {
-        bids[bidIndex].status = 'rejected';
-      }
-    });
-    console.log('Rejecting bids:', Array.from(selectedBids));
-    setSelectedBids(new Set());
-    setSelectAll(false);
-  }
-
-  const getStatusIcon = (status: Bid['status']) => {
-    switch (status) {
-      case 'approved':
-        return <ThumbsUp className="h-4 w-4 text-green-500" />
-      case 'rejected':
-        return <ThumbsDown className="h-4 w-4 text-red-500" />
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />
     }
+
+    fetchTenders()
+  }, [session?.user?.id, toast])
+
+  const filteredTenders = tenders.filter(tender => {
+    const searchLower = searchQuery.toLowerCase()
+    return (
+      tender.title.toLowerCase().includes(searchLower) ||
+      tender.description.toLowerCase().includes(searchLower) ||
+      tender.sector.toLowerCase().includes(searchLower) ||
+      tender.category.toLowerCase().includes(searchLower) ||
+      tender.location.toLowerCase().includes(searchLower)
+    )
+  })
+
+  const getBidStatus = (tender: any) => {
+    const bid = tender.bids[0]
+    if (!bid) return null
+    
+    return {
+      status: bid.status,
+      color: bid.status === 'APPROVED' 
+        ? 'bg-green-100 text-green-800'
+        : bid.status === 'REJECTED'
+        ? 'bg-red-100 text-red-800'
+        : 'bg-yellow-100 text-yellow-800'
+    }
+  }
+
+  if (loading) {
+    return (
+      <VendorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Loading tender history...</p>
+        </div>
+      </VendorLayout>
+    )
   }
 
   return (
     <VendorLayout>
       <header className="flex items-center justify-between border-b bg-white px-8 py-4">
         <div>
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Tenders</h1>
-          <p className="text-sm text-gray-600">View all tender offers made for tenders here</p>
+          <h1 className="text-2xl font-semibold text-[#4B0082]">Tender History</h1>
+          <p className="text-sm text-gray-600">View your tender application history</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="font-medium text-gray-900">Amoni Kevin</p>
-            <p className="text-sm text-gray-600">C.E.O, Eagles Limited Company</p>
+            <p className="font-medium text-gray-900">{session?.user?.name}</p>
+            <p className="text-sm text-gray-600">Vendor</p>
           </div>
           <div className="relative h-12 w-12">
             <Image
@@ -147,106 +99,99 @@ export default function TendersHistoryPage() {
           </div>
         </div>
       </header>
-      <main className="p-8">
-        <div className="space-y-4">
-          <div className="rounded-md border">
-            <div className="border-b bg-gray-50/50 px-4 py-3">
-              <h2 className="text-lg font-semibold text-[#4B0082]">
-                Provision of Short-Term Insurance Brokerage Services
-              </h2>
-            </div>
-            <div className="p-0">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-gray-50/50">
-                    <th className="px-4 py-3 text-left">
-                      <Checkbox
-                        checked={selectAll}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      Applicant
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      <div className="flex items-center gap-2">
-                        Proposed Price
-                        <ArrowUpDown className="h-4 w-4" />
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                      Flag
-                    </th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bids.map((bid) => (
-                    <tr 
-                      key={bid.id} 
-                      className="border-b cursor-pointer hover:bg-gray-50"
-                      onClick={() => window.location.href = `/vendor/tenders-history/${bid.id}`}
-                    >
-                      <td className="px-4 py-3">
-                        <Checkbox
-                          checked={selectedBids.has(bid.id)}
-                          onCheckedChange={() => handleSelectBid(bid.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-gray-600" />
-                          </div>
-                          <span className="text-sm">{bid.applicant}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">Rs. {bid.proposedPrice.toLocaleString()}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusIcon(bid.status)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View details</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Cancel bid
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleAcceptSelected}
-              disabled={selectedBids.size === 0}
-              className="bg-purple-100 text-[#4B0082] hover:bg-purple-200"
-            >
-              Check More Details
-            </Button>
-            <Button
-              onClick={handleRejectSelected}
-              disabled={selectedBids.size === 0}
-              variant="outline"
-              className="border-red-200 text-red-600 hover:bg-red-50"
-            >
-              Reject Selected
-            </Button>
+
+      <main className="p-8 space-y-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Input 
+              type="text" 
+              placeholder="Search tenders..." 
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
+
+        {filteredTenders.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No tenders found. Start applying for tenders to see your history!
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {filteredTenders.map((tender) => {
+              const bid = tender.bids[0]
+              const bidStatus = getBidStatus(tender)
+
+              return (
+                <div 
+                  key={tender.id} 
+                  className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-lg font-semibold text-[#4B0082]">
+                        {tender.title}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {tender.sector} • {tender.category}
+                      </p>
+                    </div>
+                    {bidStatus && (
+                      <span 
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${bidStatus.color}`}
+                      >
+                        {bidStatus.status}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Budget</p>
+                      <p className="font-medium">
+                        Rs. {formatCurrency(tender.budget)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Closing Date</p>
+                      <p className="font-medium">
+                        {formatDate(tender.closingDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Bid Amount</p>
+                      <p className="font-medium">
+                        {bid ? `Rs. ${formatCurrency(bid.amount)}` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-gray-600">
+                        Submitted on: {formatDate(bid?.createdAt || tender.createdAt)}
+                      </p>
+                    </div>
+                    
+                    {bid && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                      >
+                        <Link href={`/vendor/tenders-history/${bid.id}`}>
+                          View Bid Details
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </main>
     </VendorLayout>
   )

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
 import { signOut } from "next-auth/react"
+import { useToast } from "@/hooks/use-toast"
 
 interface NavItem {
   title: string
@@ -23,7 +24,7 @@ const navItems: NavItem[] = [
   { title: "Resource Center", href: "/procurement-officer/resource-center", icon: BookOpen },
   { title: "Notifications", href: "/procurement-officer/notifications", icon: Bell },
   { title: "Settings", href: "/procurement-officer/settings", icon: Settings },
-  { title: "Help", href: "/procurement-officer/help", icon: HelpCircle },
+  { title: "Help", href: "/procurement-officer/reports", icon: HelpCircle },
   { title: "Give Feedback", href: "/procurement-officer/feedback", icon: MessageSquare },
 ]
 
@@ -31,12 +32,22 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [showAlert, setShowAlert] = useState(false)
+  const { toast } = useToast()
 
-  const handleSignOut = () => {
-    // Implement actual sign out logic here
-    setShowAlert(true)
-    router.push('/login')
-    return'/login'
+  const handleSignOut = async () => {
+    try {
+      await signOut({ 
+        callbackUrl: '/login',  // Explicitly redirect to login page
+        redirect: true  // Enable automatic redirect
+      })
+    } catch (error) {
+      console.error('Sign out error:', error)
+      toast({
+        title: "Sign Out Failed",
+        description: "An error occurred while signing out. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
