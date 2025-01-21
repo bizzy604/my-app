@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 import { createTender } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
 
@@ -102,12 +108,23 @@ export default function CreateTenderPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="sector">Sector</Label>
-                    <Input
-                      id="sector"
-                      name="sector"
-                      placeholder="Enter sector"
-                      required
-                    />
+                    <Select name="sector" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sector" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CONSTRUCTION">Construction</SelectItem>
+                        <SelectItem value="MANUFACTURING">Manufacturing</SelectItem>
+                        <SelectItem value="SERVICES">Services</SelectItem>
+                        <SelectItem value="AGRICULTURE">Agriculture</SelectItem>
+                        <SelectItem value="TECHNOLOGY">Technology</SelectItem>
+                        <SelectItem value="HEALTHCARE">Healthcare</SelectItem>
+                        <SelectItem value="EDUCATION">Education</SelectItem>
+                        <SelectItem value="ENERGY">Energy</SelectItem>
+                        <SelectItem value="TRANSPORTATION">Transportation</SelectItem>
+                        <SelectItem value="FINANCE">Finance</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>

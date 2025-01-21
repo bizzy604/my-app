@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -193,12 +200,22 @@ export default function ProfilePage() {
 
                 <div>
                   <Label htmlFor="businessType">Business Type</Label>
-                  <Input
-                    id="businessType"
-                    value={formData.businessType}
-                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                  <Select 
+                    value={formData.businessType} 
+                    onValueChange={(value) => setFormData({ ...formData, businessType: value })}
                     disabled={!isEditing}
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Business Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROFIT">Profit</SelectItem>
+                      <SelectItem value="NON_PROFIT">Non-Profit</SelectItem>
+                      <SelectItem value="ACADEMIC_INSTITUTION">Academic Institution</SelectItem>
+                      <SelectItem value="GOVERNMENT_MULTI_AGENCY">Government or Multi Agency</SelectItem>
+                      <SelectItem value="OTHERS">Others</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>

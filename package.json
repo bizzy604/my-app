@@ -31,6 +31,7 @@
     "react-checkbox": "^0.1.0",
     "react-dom": "^18.2.0",
     "react-dropdown-menu": "^0.0.2",
+    "resend": "^4.1.1",
     "sharp": "^0.33.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",

@@ -4,12 +4,12 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache'
-import { Prisma, BidStatus, TenderStatus } from '@prisma/client'
+import { Prisma, BidStatus, TenderStatus, TenderSector } from '@prisma/client'
 import { uploadToS3 } from '@/lib/s3-upload'
 
 export async function getTenders(filters?: {
   status?: TenderStatus
-  sector?: string
+  sector?: TenderSector
   category?: string
 }) {
   try {
@@ -145,7 +145,7 @@ export async function getVendorTenders(vendorId: number | string) {
 export async function createTender(data: {
   title: string
   description: string
-  sector: string
+  sector: TenderSector
   location: string
   budget: number
   closingDate: string
@@ -261,7 +261,7 @@ export async function getTenderById(id: string) {
 export async function updateTender(id: string, data: {
   title?: string
   description?: string
-  sector?: string
+  sector?: TenderSector
   location?: string
   budget?: number
   closingDate?: string

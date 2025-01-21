@@ -16,9 +16,15 @@ model User {
   email             String    @unique
   password          String
   role              Role      @default(VENDOR)
+  emailVerified     Boolean   @default(false)
+  emailVerificationToken String? @unique
+  emailVerificationTokenExpiry DateTime?
+  passwordResetToken String?  @unique
+  passwordResetTokenExpiry DateTime?
+  
   company           String?
   phone             String?
-  businessType      String?   // e.g., "Profit", "Non-Profit", "Academic"
+  businessType      BusinessType?
   registrationNumber String?
   address           String?
   city              String?
@@ -42,7 +48,7 @@ model Tender {
   id          String    @id @default(uuid())
   title       String
   description String
-  sector      String
+  sector      TenderSector
   category    String
   location    String
   budget      Float
@@ -62,6 +68,8 @@ model Tender {
   departmentId Int?
   department   Department? @relation(fields: [departmentId], references: [id])
   awardedBidId String?
+  bidEvaluationLogs BidEvaluationLog[]
+  tenderAwardLogs   TenderAwardLog[]
 }
 
 model Bid {
@@ -77,7 +85,13 @@ model Bid {
   status           BidStatus @default(PENDING)
   submissionDate   DateTime  @default(now())
   evaluationScore  Float?
+  technicalScore   Float?    // New field for technical evaluation score
+  financialScore   Float?    // New field for financial evaluation score
+  experienceScore  Float?    // New field for vendor experience score
+  evaluationComments String? // New field for evaluation comments
   documents        Document[]
+  evaluationLogs   BidEvaluationLog[]
+  tenderAwardLogs  TenderAwardLog[]
   approvalDate     DateTime?
   statusUpdatedAt  DateTime?
 }
@@ -150,6 +164,31 @@ model Department {
   tenders   Tender[]
 }
 
+model BidEvaluationLog {
+  id               String    @id @default(uuid())
+  bid              Bid       @relation(fields: [bidId], references: [id])
+  bidId            String
+  tender           Tender    @relation(fields: [tenderId], references: [id])
+  tenderId         String
+  evaluatedBy      Int
+  technicalScore   Float
+  financialScore   Float
+  experienceScore  Float
+  totalScore       Float
+  comments         String?
+  createdAt        DateTime  @default(now())
+}
+
+model TenderAwardLog {
+  id               String    @id @default(uuid())
+  tender           Tender    @relation(fields: [tenderId], references: [id])
+  tenderId         String
+  bid              Bid       @relation(fields: [bidId], references: [id])
+  bidId            String
+  awardedBy        Int
+  createdAt        DateTime  @default(now())
+}
+
 enum Role {
   PROCUREMENT
   VENDOR
@@ -203,4 +242,25 @@ enum TenderCategory {
   SERVICES
   WORKS
   CONSULTING
+}
+
+enum TenderSector {
+  CONSTRUCTION
+  MANUFACTURING
+  SERVICES
+  AGRICULTURE
+  TECHNOLOGY
+  HEALTHCARE
+  EDUCATION
+  ENERGY
+  TRANSPORTATION
+  FINANCE
+}
+
+enum BusinessType {
+  PROFIT
+  NON_PROFIT
+  ACADEMIC_INSTITUTION
+  GOVERNMENT_MULTI_AGENCY
+  OTHERS
 }

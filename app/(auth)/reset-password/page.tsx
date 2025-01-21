@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { AuthLayout } from "@/components/auth-layout"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,16 +11,33 @@ export default function ResetPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
+
     try {
-      // Implement password reset logic here
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
-      setIsSubmitted(true)
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setIsSubmitted(true)
+      } else {
+        setError(result.error || 'Failed to send reset password email')
+      }
     } catch (error) {
       console.error(error)
+      setError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -41,6 +59,12 @@ export default function ResetPasswordPage() {
           )}
         </div>
 
+        {error && (
+          <div className="text-red-500 text-center mb-4">
+            {error}
+          </div>
+        )}
+
         {!isSubmitted ? (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -49,29 +73,34 @@ export default function ResetPasswordPage() {
               </Label>
               <Input
                 id="email"
-                placeholder="email@example.com"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="rounded-md border-gray-300"
+                placeholder="Enter your email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <Button 
-              className="w-full bg-[#4B0082] hover:bg-[#3B0062] text-white font-semibold py-2 px-4 rounded-md"
-              type="submit"
+              type="submit" 
               disabled={isLoading}
+              className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
             >
-              {isLoading ? "Sending..." : "Send Reset Instructions"}
+              {isLoading ? 'Sending...' : 'Reset Password'}
             </Button>
           </form>
         ) : (
-          <Button 
-            className="w-full bg-[#4B0082] hover:bg-[#3B0062] text-white font-semibold py-2 px-4 rounded-md"
-            onClick={() => window.location.href = '/login'}
-          >
-            Return to Login
-          </Button>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">
+              Check your email for instructions to reset your password.
+            </p>
+            <Button 
+              onClick={() => router.push('/login')}
+              className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700"
+            >
+              Back to Login
+            </Button>
+          </div>
         )}
       </div>
     </AuthLayout>

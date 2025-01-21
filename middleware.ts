@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
+import { UserRole } from "./lib/roles"
 
 export default withAuth(
   function middleware(req) {
@@ -7,21 +8,18 @@ export default withAuth(
     const path = req.nextUrl.pathname
 
     // Define role-specific paths
-    const vendorPaths = ['/vendor', '/vendor/tenders', '/vendor/awarded-tenders', '/vendor/report', '/vendor/statistics', '/vendor/help', '/vendor/settings', '/vendor/notifications', '/vendor/feedback']
-    const citizenPaths = ['/citizen', '/citizen/tenders', '/citizen/awarded-tenders', '/citizen/report', '/citizen/statistics', '/citizen/help', '/citizen/settings', '/citizen/notifications', '/citizen/feedback']
-    const procurementPaths = ['/procurement-officer', '/procurement-officer/tenders', '/procurement-officer/tenders-history', '/procurement-officer/help', '/procurement-officer/resource-center', '/procurement-officer/settings', '/procurement-officer/notifications', '/procurement-officer/feedback']
+    const rolePathMap = {
+      [UserRole.VENDOR]: ['/vendor', '/vendor/tenders', '/vendor/awarded-tenders', '/vendor/report', '/vendor/statistics', '/vendor/help', '/vendor/settings', '/vendor/notifications', '/vendor/feedback'],
+      [UserRole.CITIZEN]: ['/citizen', '/citizen/tenders', '/citizen/awarded-tenders', '/citizen/report', '/citizen/statistics', '/citizen/help', '/citizen/settings', '/citizen/notifications', '/citizen/feedback'],
+      [UserRole.PROCUREMENT]: ['/procurement-officer', '/procurement-officer/tenders', '/procurement-officer/tenders-history', '/procurement-officer/help', '/procurement-officer/resource-center', '/procurement-officer/settings', '/procurement-officer/notifications', '/procurement-officer/feedback']
+    }
 
     // Check if user is accessing paths they shouldn't
-    if (token?.role === "vendor" && !vendorPaths.some(p => path.startsWith(p))) {
-      return NextResponse.redirect(new URL("/vendor", req.url))
-    }
+    const userRole = token?.role as UserRole
+    const allowedPaths = rolePathMap[userRole] || []
 
-    if (token?.role === "citizen" && !citizenPaths.some(p => path.startsWith(p))) {
-      return NextResponse.redirect(new URL("/citizen", req.url))
-    }
-
-    if (token?.role === "procurement" && !procurementPaths.some(p => path.startsWith(p))) {
-      return NextResponse.redirect(new URL("/procurement-officer", req.url))
+    if (!allowedPaths.some(p => path.startsWith(p))) {
+      return NextResponse.redirect(new URL(`/${userRole.toLowerCase().replace('_', '-')}`, req.url))
     }
   },
   {
@@ -39,4 +37,3 @@ export const config = {
     '/citizen/:path*',
   ]
 }
-

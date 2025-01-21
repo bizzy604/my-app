@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('ADMIN', 'PROCUREMENT', 'VENDOR', 'CITIZEN');
+CREATE TYPE "Role" AS ENUM ('PROCUREMENT', 'VENDOR', 'CITIZEN');
 
 -- CreateEnum
 CREATE TYPE "TenderStatus" AS ENUM ('OPEN', 'CLOSED', 'AWARDED', 'CANCELLED');
@@ -22,6 +22,12 @@ CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'INVESTIGATING', 'RESOLVED', 'DIS
 -- CreateEnum
 CREATE TYPE "TenderCategory" AS ENUM ('GOODS', 'SERVICES', 'WORKS', 'CONSULTING');
 
+-- CreateEnum
+CREATE TYPE "TenderSector" AS ENUM ('CONSTRUCTION', 'MANUFACTURING', 'SERVICES', 'AGRICULTURE', 'TECHNOLOGY', 'HEALTHCARE', 'EDUCATION', 'ENERGY', 'TRANSPORTATION', 'FINANCE');
+
+-- CreateEnum
+CREATE TYPE "BusinessType" AS ENUM ('PROFIT', 'NON_PROFIT', 'ACADEMIC_INSTITUTION', 'GOVERNMENT_MULTI_AGENCY', 'OTHERS');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -29,16 +35,20 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'VENDOR',
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "emailVerificationToken" TEXT,
+    "emailVerificationTokenExpiry" TIMESTAMP(3),
+    "passwordResetToken" TEXT,
+    "passwordResetTokenExpiry" TIMESTAMP(3),
     "company" TEXT,
     "phone" TEXT,
-    "businessType" TEXT,
+    "businessType" "BusinessType",
     "registrationNumber" TEXT,
     "address" TEXT,
     "city" TEXT,
     "country" TEXT,
     "postalCode" TEXT,
     "website" TEXT,
-    "employeeCount" TEXT,
     "establishmentDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -51,16 +61,19 @@ CREATE TABLE "Tender" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "sector" TEXT NOT NULL,
+    "sector" "TenderSector" NOT NULL,
+    "category" TEXT NOT NULL,
     "location" TEXT NOT NULL,
     "budget" DOUBLE PRECISION NOT NULL,
+    "requirements" TEXT[],
+    "closingDate" TIMESTAMP(3) NOT NULL,
     "issuerId" INTEGER NOT NULL,
     "status" "TenderStatus" NOT NULL DEFAULT 'OPEN',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "closingDate" TIMESTAMP(3) NOT NULL,
-    "requirements" TEXT[],
-    "category" "TenderCategory" NOT NULL,
+    "procurementOfficerId" INTEGER,
+    "departmentId" INTEGER,
+    "awardedBidId" TEXT,
 
     CONSTRAINT "Tender_pkey" PRIMARY KEY ("id")
 );
@@ -71,10 +84,18 @@ CREATE TABLE "Bid" (
     "tenderId" TEXT NOT NULL,
     "bidderId" INTEGER NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
+    "completionTime" TEXT,
     "technicalProposal" TEXT NOT NULL,
+    "vendorExperience" TEXT,
     "status" "BidStatus" NOT NULL DEFAULT 'PENDING',
     "submissionDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "evaluationScore" DOUBLE PRECISION,
+    "technicalScore" DOUBLE PRECISION,
+    "financialScore" DOUBLE PRECISION,
+    "experienceScore" DOUBLE PRECISION,
+    "evaluationComments" TEXT,
+    "approvalDate" TIMESTAMP(3),
+    "statusUpdatedAt" TIMESTAMP(3),
 
     CONSTRAINT "Bid_pkey" PRIMARY KEY ("id")
 );
@@ -86,6 +107,7 @@ CREATE TABLE "Document" (
     "fileSize" INTEGER NOT NULL,
     "fileType" TEXT NOT NULL,
     "url" TEXT NOT NULL,
+    "s3Key" TEXT,
     "uploadDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "tenderId" TEXT,
     "bidId" TEXT,
@@ -146,11 +168,61 @@ CREATE TABLE "Report" (
     CONSTRAINT "Report_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Department" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "Department_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BidEvaluationLog" (
+    "id" TEXT NOT NULL,
+    "bidId" TEXT NOT NULL,
+    "tenderId" TEXT NOT NULL,
+    "evaluatedBy" INTEGER NOT NULL,
+    "technicalScore" DOUBLE PRECISION NOT NULL,
+    "financialScore" DOUBLE PRECISION NOT NULL,
+    "experienceScore" DOUBLE PRECISION NOT NULL,
+    "totalScore" DOUBLE PRECISION NOT NULL,
+    "comments" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "BidEvaluationLog_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TenderAwardLog" (
+    "id" TEXT NOT NULL,
+    "tenderId" TEXT NOT NULL,
+    "bidId" TEXT NOT NULL,
+    "awardedBy" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TenderAwardLog_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "User_emailVerificationToken_key" ON "User"("emailVerificationToken");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_passwordResetToken_key" ON "User"("passwordResetToken");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Department_name_key" ON "Department"("name");
+
 -- AddForeignKey
 ALTER TABLE "Tender" ADD CONSTRAINT "Tender_issuerId_fkey" FOREIGN KEY ("issuerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Tender" ADD CONSTRAINT "Tender_procurementOfficerId_fkey" FOREIGN KEY ("procurementOfficerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Tender" ADD CONSTRAINT "Tender_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Bid" ADD CONSTRAINT "Bid_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -184,3 +256,15 @@ ALTER TABLE "Report" ADD CONSTRAINT "Report_tenderId_fkey" FOREIGN KEY ("tenderI
 
 -- AddForeignKey
 ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BidEvaluationLog" ADD CONSTRAINT "BidEvaluationLog_bidId_fkey" FOREIGN KEY ("bidId") REFERENCES "Bid"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BidEvaluationLog" ADD CONSTRAINT "BidEvaluationLog_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TenderAwardLog" ADD CONSTRAINT "TenderAwardLog_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TenderAwardLog" ADD CONSTRAINT "TenderAwardLog_bidId_fkey" FOREIGN KEY ("bidId") REFERENCES "Bid"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

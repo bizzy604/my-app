@@ -1,39 +1,68 @@
-import { NextResponse } from 'next/server'
-import { CreateUser } from '@/app/actions/auth-actions'
+import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma' // Ensure correct import path
+import { prisma } from '@/lib/prisma'
+import { generateEmailVerificationToken, sendVerificationEmail } from '@/lib/email-utils'
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, role } = await request.json()
-    
-    console.log("Received registration data:", { name, email, role })
+    const body = await req.json()
+    const { name, email, password, role } = body
 
-    if (!name || !email || !password || !role) {
-      return NextResponse.json({ message: 'All fields are required.' }, { status: 400 })
-    }
-
-    // Normalize email to lowercase
-    const normalizedEmail = email.toLowerCase()
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim()
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+    const existingUser = await prisma.user.findUnique({ 
+      where: { email: normalizedEmail } 
+    })
+
     if (existingUser) {
-      return NextResponse.json({ message: 'User already exists.' }, { status: 400 })
+      return NextResponse.json({ 
+        message: 'User with this email already exists.' 
+      }, { status: 400 })
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
-    console.log("Hashed password:", hashedPassword)
 
-    // Create the user with hashed password and normalized email
-    const user = await CreateUser(name, normalizedEmail, hashedPassword, role)
+    // Create user with email unverified
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: normalizedEmail,
+        password: hashedPassword,
+        role,
+        emailVerified: false
+      }
+    })
 
-    console.log("User created:", user)
+    // Generate email verification token
+    const verificationToken = await generateEmailVerificationToken(normalizedEmail)
 
-    return NextResponse.json({ message: 'User created successfully.', user }, { status: 201 })
+    // Send verification email
+    await sendVerificationEmail(normalizedEmail, verificationToken)
+
+    // Return success with verification pending status
+    return NextResponse.json({ 
+      message: 'Registration successful. Please check your email to verify your account.',
+      verificationPending: true,
+      userId: user.id 
+    }, { status: 201 })
   } catch (error) {
-    console.error('Registration Error:', error)
-    return NextResponse.json({ message: 'Internal Server Error.' }, { status: 500 })
+    console.error('Registration error:', error)
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+    }
+
+    return NextResponse.json({ 
+      message: 'Registration failed. Please try again.',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

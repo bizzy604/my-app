@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withRoleAuthorization } from '@/lib/role-decorator'
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+async function getUserRole(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
   const email = searchParams.get('email')
 
   if (!email) {
@@ -25,3 +26,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export const GET = withRoleAuthorization(getUserRole)

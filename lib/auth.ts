@@ -24,6 +24,11 @@ export const authOptions = {
           return null
         }
 
+        // Check email verification
+        if (!user.emailVerified) {
+          throw new Error('Please verify your email before logging in')
+        }
+
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password as string,
           user.password
@@ -73,6 +78,15 @@ export const { signIn, signOut } = auth
 declare module "next-auth" {
   interface Session {
     user: {
+      city: string;
+      country: string;
+      postalCode: string;
+      businessType: string;
+      establishmentDate: string | number | Date;
+      address: string;
+      registrationNumber: string;
+      phone: string;
+      company: string;
       id: number
       email: string
       name?: string | null

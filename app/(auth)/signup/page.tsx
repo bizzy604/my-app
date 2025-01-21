@@ -1,142 +1,179 @@
-// filepath: /C:/Users/Admin/Desktop/my-app/app/(auth)/signup/page.tsx
-
 'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { AuthLayout } from "@/components/auth-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
+import { AuthLayout } from '@/components/auth-layout'
 
 export default function SignupPage() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'VENDOR' | 'PROCUREMENT' | 'CITIZEN'>('VENDOR')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  
   const router = useRouter()
+  const { toast } = useToast()
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setIsLoading(true)
-    setError("")
 
-    const formData = new FormData(event.currentTarget)
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const name = `${firstName} ${lastName}` // Combine first and last names
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const role = formData.get("role") as 'PROCUREMENT' | 'VENDOR' | 'CITIZEN'
+    // Basic validation
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Password Mismatch',
+        description: 'Passwords do not match',
+        variant: 'destructive'
+      })
+      setIsLoading(false)
+      return
+    }
 
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role
+        })
       })
 
-      if (response.ok) {
-        router.push('/login?registered=true')
-      } else {
-        const data = await response.json()
-        setError(data.message || "Registration failed")
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: 'Registration Failed',
+          description: result.message || 'An error occurred during registration',
+          variant: 'destructive'
+        })
+        return
       }
+
+      // Store email for verification pending page
+      localStorage.setItem('registeredEmail', email)
+
+      // Redirect to verification pending page
+      toast({
+        title: 'Registration Successful',
+        description: 'Please verify your email',
+        variant: 'default'
+      })
+      router.push('/verification-pending')
     } catch (error) {
-      console.error('Signup Error:', error)
-      setError("An error occurred during registration")
+      console.error('Registration error:', error)
+      toast({
+        title: 'Registration Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive'
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <AuthLayout isSignUp>
-      <div className="flex-w-1/3 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Create an Account</h1>
-          <p className="text-gray-500">Register to access the e-procurement system</p>
+    <AuthLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold text-[#4B0082]">Create Your Account</h1>
+            <p className="mt-2 text-gray-600">Join Innobid today</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="Your Full Name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Email Address"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                placeholder="Confirm Password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Account Type</Label>
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'VENDOR' | 'PROCUREMENT' | 'CITIZEN')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="VENDOR">Vendor</option>
+                <option value="PROCUREMENT">Procurement</option>
+                <option value="CITIZEN">Citizen</option>
+              </select>
+            </div>
+
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            >
+              {isLoading ? 'Registering...' : 'Create Account'}
+            </Button>
+
+            <p className="text-center text-sm text-gray-600">
+              Already have an account?{' '}
+              <Link href="/login" className="text-[#4B0082] hover:underline">
+                Login
+              </Link>
+            </p>
+          </form>
         </div>
-        
-        {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input 
-                id="firstName" 
-                name="firstName"
-                required 
-                className="rounded-md border-gray-300" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input 
-                id="lastName" 
-                name="lastName"
-                required 
-                className="rounded-md border-gray-300" 
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <Input 
-              id="email" 
-              name="email"
-              type="email" 
-              required 
-              className="rounded-md border-gray-300" 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input 
-              id="password" 
-              name="password"
-              type="password" 
-              required 
-              className="rounded-md border-gray-300" 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select name="role" required defaultValue="CITIZEN">
-              <SelectTrigger className="rounded-md border-gray-300">
-                <SelectValue placeholder="Select your role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CITIZEN">Citizen</SelectItem>
-                <SelectItem value="VENDOR">Vendor</SelectItem>
-                <SelectItem value="PROCUREMENT">Procurement Officer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            type="submit" 
-            className="w-full bg-[#4B0082] hover:bg-[#3B0062]"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
-
-          <p className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link href="/login" className="text-[#4B0082] hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </form>
       </div>
     </AuthLayout>
   )

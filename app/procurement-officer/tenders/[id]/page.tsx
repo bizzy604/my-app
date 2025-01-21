@@ -1,8 +1,8 @@
 'use client'
 
 import React, { Suspense } from 'react'
-import { useSession } from 'next-auth/react'
 import Link from "next/link"
+import { useSession } from 'next-auth/react'
 import { Bookmark, FileText, Building2, Download } from 'lucide-react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -114,33 +114,44 @@ function TenderDetailsContent({ id }: { id: string }) {
                 ) : (
                   <div className="space-y-4">
                     {tenderData.bids.map((bid) => (
-                      <div 
+                      <Link 
                         key={bid.id} 
-                        className="border rounded-lg p-4 flex justify-between items-center"
+                        href={`/procurement-officer/tenders/${id}/bids/${bid.id}`} 
+                        className="block"
                       >
-                        <div>
-                          <p className="font-semibold">{bid.bidder.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatCurrency(bid.amount)}
-                          </p>
+                        <div 
+                          className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <div>
+                            <p className="font-semibold">{bid.bidder.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {bid.bidder.company} | {formatCurrency(bid.amount)}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleBidAction(bid.id, BidStatus.ACCEPTED)
+                              }}
+                            >
+                              Accept
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleBidAction(bid.id, BidStatus.REJECTED)
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleBidAction(bid.id, BidStatus.ACCEPTED)}
-                          >
-                            Accept
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="destructive"
-                            onClick={() => handleBidAction(bid.id, BidStatus.REJECTED)}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
