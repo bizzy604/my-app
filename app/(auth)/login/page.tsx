@@ -16,21 +16,26 @@ import { prisma } from '@/lib/prisma'
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  interface CustomSession extends Session {
-    user: {
-      id: number;
-      email: string;
-      name?: string | null;
-      role: string;
-      company?: string;
-    };
-  }
   
-  const { data: session, status } = useSession() as { data: CustomSession | null; status: string }
+  const { data: session, status } = useSession() as { data: Session | null; status: string }
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const message = searchParams.get('message')
+
+    if (message === 'Password reset successfully') {
+      toast({
+        title: "Password Reset",
+        description: "Your password has been successfully reset. Please log in.",
+        variant: "success"
+      })
+
+      // Clear the message from URL to prevent repeated toasts
+      window.history.replaceState({}, document.title, "/login")
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

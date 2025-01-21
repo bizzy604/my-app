@@ -19,7 +19,11 @@ export default function SetNewPasswordPage() {
   useEffect(() => {
     const resetToken = searchParams.get('token')
     if (!resetToken) {
-      router.push('/reset-password')
+      setError('Invalid or missing reset token')
+      setTimeout(() => {
+        router.push('/login')
+      }, 3000)
+      return
     }
     setToken(resetToken)
   }, [searchParams, router])
@@ -29,7 +33,6 @@ export default function SetNewPasswordPage() {
     setIsLoading(true)
     setError(null)
 
-    // Basic password validation
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match')
       setIsLoading(false)
@@ -51,19 +54,18 @@ export default function SetNewPasswordPage() {
         body: JSON.stringify({ 
           token, 
           newPassword 
-        }),
+        })
       })
 
-      const result = await response.json()
+      const data = await response.json()
 
       if (response.ok) {
-        // Redirect to login with success message
-        router.push('/login?message=Password%20reset%20successfully')
+        setError(null)
+        router.push('/login?message=Password reset successfully')
       } else {
-        setError(result.error || 'Failed to reset password')
+        setError(data.error || 'Failed to reset password')
       }
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
       setError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
