@@ -3,6 +3,7 @@ import "./globals.css";
 import { Poppins } from "next/font/google";
 import { NextAuthProvider } from '@/components/next-auth-provider'
 import { Toaster } from "@/components/ui/toaster"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={poppins.variable}>
         <NextAuthProvider>
           {children}
+          <SpeedInsights />
         </NextAuthProvider>
         <Toaster />
       </body>
