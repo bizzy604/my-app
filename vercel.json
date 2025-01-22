@@ -5,11 +5,5 @@
   ],
   "routes": [
     { "src": "/(.*)", "dest": "/" }
-  ],
-  "env": {
-    "NEXT_PUBLIC_SITE_URL": "https://your-app-name.vercel.app"
-  },
-  "github": {
-    "silent": true
-  }
+  ]
 }
