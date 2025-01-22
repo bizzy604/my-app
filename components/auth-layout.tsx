@@ -1,7 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react'
-import InnobidLogo from "@/public/Innobid Logo.jpg"
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -14,9 +13,11 @@ export function AuthLayout({ children, isSignUp = false }: AuthLayoutProps) {
       <div className="flex-col justify-center items-center p-8">
         <Link href="/" className="w-50">
           <Image
-            src={InnobidLogo}
+            src="/Innobid Logo.jpg"
             alt="InnoBid Logo"
             priority
+            width={200}
+            height={200}
             className="max-w-50 h-50 justify-center items-center"
           />
         </Link>
@@ -43,4 +44,3 @@ export function AuthLayout({ children, isSignUp = false }: AuthLayoutProps) {
     </div>
   )
 }
-
