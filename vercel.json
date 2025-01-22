@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "next.config.js", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/" }
+  ],
+  "env": {
+    "NEXT_PUBLIC_SITE_URL": "https://your-app-name.vercel.app"
+  },
+  "github": {
+    "silent": true
+  }
+}
