@@ -6,8 +6,9 @@ import { AuthLayout } from "@/components/auth-layout"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Suspense } from 'react'
 
-export default function SetNewPasswordPage() {
+function SetNewPasswordContent() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -131,5 +132,13 @@ export default function SetNewPasswordPage() {
         </form>
       </div>
     </AuthLayout>
+  )
+}
+
+export default function SetNewPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SetNewPasswordContent />
+    </Suspense>
   )
 }

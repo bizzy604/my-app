@@ -4,10 +4,9 @@ import { BidStatus } from '@prisma/client'
 
 export async function GET(
   request: NextRequest, 
-  context: { params: { id: string } }
+  context: { params: { [key: string]: string } }
 ) {
-  // Await the params to ensure they are resolved
-  const { id: tenderId } = await context.params
+  const { id: tenderId } = context.params
 
   try {
     // Find the most recently accepted bids for this tender

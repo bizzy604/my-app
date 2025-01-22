@@ -17,7 +17,7 @@ export function AuthLayout({ children, isSignUp = false }: AuthLayoutProps) {
             src={InnobidLogo}
             alt="InnoBid Logo"
             priority
-            className="max-w-auto h-auto justify-center items-center"
+            className="max-w-50 h-50 justify-center items-center"
           />
         </Link>
         <div className="flex gap-6 mt-auto">

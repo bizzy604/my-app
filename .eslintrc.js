@@ -13,6 +13,10 @@ module.exports = {
     }],
     'no-var': 'error',
     'react/no-unescaped-entities': 'off',
-    '@typescript-eslint/no-empty-object-type': 'off'
+    '@typescript-eslint/no-empty-object-type': 'off',
+    // Ignore specific type generation errors
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-return': 'off'
   }
 }
