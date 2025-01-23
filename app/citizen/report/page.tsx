@@ -21,19 +21,45 @@ type TenderOption = {
 
 interface ReportFormData {
   tenderId: string
-  irregularityType: string
+  reportType: "IRREGULARITY" | "FRAUD" | "CONFLICT_OF_INTEREST" | "OTHER"
   description: string
   reporterName?: string
   contactInfo?: string
-  reportType: "IRREGULARITY" | "FRAUD" | "CONFLICT_OF_INTEREST" | "OTHER"
 }
 
-const IRREGULARITY_TYPES = [
-  'Bid Manipulation',
-  'Conflict of Interest',
-  'Unfair Evaluation',
-  'Corruption',
-  'Other Misconduct'
+const REPORT_TYPES = [
+  { 
+    value: "IRREGULARITY", 
+    label: "Irregularity", 
+    subtypes: [
+      'Bid Manipulation',
+      'Unfair Evaluation',
+      'Other Misconduct'
+    ]
+  },
+  { 
+    value: "FRAUD", 
+    label: "Fraud", 
+    subtypes: [
+      'Corruption',
+      'Financial Misrepresentation',
+      'False Documentation'
+    ]
+  },
+  { 
+    value: "CONFLICT_OF_INTEREST", 
+    label: "Conflict of Interest", 
+    subtypes: [
+      'Personal Relationship',
+      'Financial Interest',
+      'Undisclosed Connections'
+    ]
+  },
+  { 
+    value: "OTHER", 
+    label: "Other", 
+    subtypes: ['Other Unspecified Issue']
+  }
 ]
 
 export default function CitizenReportPage() {
@@ -44,12 +70,12 @@ export default function CitizenReportPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [formData, setFormData] = useState<ReportFormData>({
     tenderId: '',
-    irregularityType: '',
+    reportType: "IRREGULARITY",
     description: '',
     reporterName: '',
-    contactInfo: '',
-    reportType: "IRREGULARITY"
+    contactInfo: ''
   })
+  const [selectedSubtype, setSelectedSubtype] = useState('')
 
   // Fetch tenders when component mounts
   const loadTenders = async () => {
@@ -79,7 +105,7 @@ export default function CitizenReportPage() {
     setSuccess(null)
     
     // Validate form
-    if (!formData.tenderId || !formData.irregularityType || !formData.description) {
+    if (!formData.tenderId || !formData.reportType || !formData.description) {
       setError("Please fill in all required fields.")
       return
     }
@@ -88,7 +114,11 @@ export default function CitizenReportPage() {
       setIsLoading(true)
       
       // Submit the report using the server action
-      const result = await submitIrregularityReport(formData)
+      const result = await submitIrregularityReport({
+        ...formData,
+        reportSubtype: selectedSubtype,
+        evidence: '' // Optional: add file upload logic later
+      })
       
       if (result.success) {
         setSuccess(result.message)
@@ -96,12 +126,12 @@ export default function CitizenReportPage() {
         // Reset form after successful submission
         setFormData({
           tenderId: '',
-          irregularityType: '',
+          reportType: "IRREGULARITY",
           description: '',
           reporterName: '',
-          contactInfo: '',
-          reportType: "IRREGULARITY"
+          contactInfo: ''
         })
+        setSelectedSubtype('')
       } else {
         setError(result.message)
       }
@@ -169,52 +199,56 @@ export default function CitizenReportPage() {
             </div>
 
             <div>
-              <Label htmlFor="irregularityType">Type of Irregularity</Label>
-              <Select 
-                value={formData.irregularityType}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, irregularityType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Irregularity Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {IRREGULARITY_TYPES.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description of Irregularity</Label>
-              <Textarea 
-                id="description"
-                placeholder="Provide detailed information about the observed irregularity"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="min-h-[120px]"
-                required
-              />
-            </div>
-
-            <div>
               <Label htmlFor="reportType">Type of Report</Label>
               <Select 
                 value={formData.reportType}
-                onValueChange={(value: ReportFormData['reportType']) => setFormData((prev: ReportFormData) => ({ 
-                  ...prev, 
-                  reportType: value 
-                }))}
+                onValueChange={(value: ReportFormData['reportType']) => {
+                  setFormData(prev => ({ ...prev, reportType: value }))
+                  setSelectedSubtype('') // Reset subtype when main type changes
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Report Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {["IRREGULARITY", "FRAUD", "CONFLICT_OF_INTEREST", "OTHER"].map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  {REPORT_TYPES.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="reportSubtype">Specific Type of {REPORT_TYPES.find(r => r.value === formData.reportType)?.label}</Label>
+              <Select 
+                value={selectedSubtype}
+                onValueChange={(value) => setSelectedSubtype(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`Select ${formData.reportType} Subtype`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_TYPES.find(r => r.value === formData.reportType)?.subtypes.map(subtype => (
+                    <SelectItem key={subtype} value={subtype}>
+                      {subtype}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description of Report</Label>
+              <Textarea 
+                id="description"
+                placeholder="Provide detailed information about the observed issue"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="min-h-[120px]"
+                required
+              />
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -227,6 +261,7 @@ export default function CitizenReportPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, reporterName: e.target.value }))}
                 />
               </div>
+
               <div>
                 <Label htmlFor="contactInfo">Contact Information (Optional)</Label>
                 <Input 
@@ -240,10 +275,10 @@ export default function CitizenReportPage() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Submitting..." : "Submit Confidential Report"}
+              {isLoading ? 'Submitting...' : 'Submit Report'}
             </Button>
           </form>
         </div>

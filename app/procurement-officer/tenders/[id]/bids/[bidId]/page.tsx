@@ -36,7 +36,7 @@ function BidDetailsContent({ tenderId, bidId }: { tenderId: string, bidId: strin
 
   const handleBidAction = async (status: BidStatus) => {
     try {
-      const updatedBid = await updateBidStatus(bidId, status)
+      const updatedBid = await updateBidStatus(bidId, status, tenderId)
       
       if (status === BidStatus.ACCEPTED) {
         toast({

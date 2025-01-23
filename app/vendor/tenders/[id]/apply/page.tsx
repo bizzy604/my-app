@@ -37,7 +37,7 @@ function TenderApplicationContent({ id }: { id: string }) {
     amount: '',
     completionTime: '',
     technicalProposal: '',
-    experience: '',
+    vendorExperience: '',
     documents: [] as File[],
   })
 
@@ -87,12 +87,40 @@ function TenderApplicationContent({ id }: { id: string }) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
+    const MAX_FILES = 4
+    const MAX_FILE_SIZE_MB = 5
+
     if (files) {
+      const validFiles = Array.from(files).filter(file => {
+        // Check file size (5MB limit)
+        const fileSizeMB = file.size / (1024 * 1024)
+        if (fileSizeMB > MAX_FILE_SIZE_MB) {
+          toast({
+            title: "File Size Error",
+            description: `File ${file.name} exceeds the 5MB size limit`,
+            variant: "destructive",
+          })
+          return false
+        }
+        return true
+      })
+
+      // Limit to MAX_FILES
+      const limitedFiles = validFiles.slice(0, MAX_FILES)
+
+      if (limitedFiles.length < validFiles.length) {
+        toast({
+          title: "File Limit Exceeded",
+          description: `Only ${MAX_FILES} files can be uploaded`,
+          variant: "destructive",
+        })
+      }
+
       setApplicationData(prev => ({
         ...prev,
         documents: [
           ...(prev.documents || []), 
-          ...Array.from(files)
+          ...limitedFiles
         ]
       }))
     }
@@ -129,14 +157,49 @@ function TenderApplicationContent({ id }: { id: string }) {
 
     setSubmitting(true)
     try {
+      // Convert files to a serializable format with more robust conversion
+      const documentPromises = applicationData.documents.map(async (file) => {
+        try {
+          // Read file as array buffer
+          const arrayBuffer = await file.arrayBuffer()
+          
+          // Convert Uint8Array to number[]
+          const uint8Array = new Uint8Array(arrayBuffer)
+          const numberArray = Array.from(uint8Array)
+
+          // Convert to base64 for more reliable serialization
+          const base64String = btoa(
+            String.fromCharCode.apply(null, numberArray)
+          )
+
+          return {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            fileData: numberArray // Use number[] instead of base64
+          }
+        } catch (error) {
+          console.error('File conversion error:', error)
+          return null
+        }
+      })
+
+      const serializedDocuments = await Promise.all(documentPromises)
+        .then(docs => docs.filter(doc => doc !== null))
+
       const bidSubmission = {
-        tenderId: id,
+        tenderId: id, // Keep as string
         bidderId: safeUser.id,
         amount: parseFloat(applicationData.amount),
         completionTime: applicationData.completionTime,
         technicalProposal: applicationData.technicalProposal,
-        experience: applicationData.experience,
-        documents: applicationData.documents,
+        vendorExperience: applicationData.vendorExperience || '',
+        documents: serializedDocuments.map(doc => ({
+          fileName: doc.fileName,
+          fileType: doc.fileType,
+          fileSize: doc.fileSize,
+          fileData: doc.fileData
+        }))
       }
 
       await submitBid(bidSubmission)
@@ -256,12 +319,12 @@ function TenderApplicationContent({ id }: { id: string }) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="experience">Relevant Experience</Label>
+                    <Label htmlFor="vendorExperience">Relevant Experience</Label>
                     <Textarea
-                      id="experience"
-                      name="experience"
+                      id="vendorExperience"
+                      name="vendorExperience"
                       placeholder="Describe your relevant experience and past projects"
-                      value={applicationData.experience}
+                      value={applicationData.vendorExperience}
                       onChange={handleInputChange}
                       className="min-h-[150px]"
                     />
@@ -379,12 +442,10 @@ function TenderApplicationContent({ id }: { id: string }) {
   )
 }
 
-export default function TenderApplicationPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params)
-
+export default function TenderApplicationPage({ params }: { params: { id: string } }) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <TenderApplicationContent id={resolvedParams.id} />
+      <TenderApplicationContent id={params.id} />
     </Suspense>
   )
 }

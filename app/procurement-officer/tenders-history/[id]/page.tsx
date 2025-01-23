@@ -113,7 +113,7 @@ function TenderBidDetailsContent({ id }: { id: string }) {
     if (!bidData) return
 
     try {
-      await updateBidStatus(bidData.id, status)
+      await updateBidStatus(bidData.id, status, id)
       
       toast({
         title: "Success",

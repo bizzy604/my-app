@@ -1,8 +1,9 @@
 'use client'
 
-import React, { Suspense } from 'react'
+import React, { Suspense, useMemo } from 'react'
 import Link from "next/link"
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Bookmark, FileText, Building2, Download } from 'lucide-react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ import { BidStatus, TenderStatus } from '@prisma/client'
 
 function TenderDetailsContent({ id }: { id: string }) {
   const { data: session } = useSession()
+  const router = useRouter()
   const { 
     data: tenderData, 
     isLoading, 
@@ -35,7 +37,14 @@ function TenderDetailsContent({ id }: { id: string }) {
 
   const handleBidAction = async (bidId: string, status: BidStatus) => {
     try {
-      await updateBidStatus(bidId, status)
+      await updateBidStatus(bidId, status, id)
+      
+      // If bid is accepted, redirect to message page
+      if (status === BidStatus.ACCEPTED) {
+        router.push(`/procurement-officer/tenders/${id}/message?bidId=${bidId}`)
+        return
+      }
+      
       // Refresh bids
       const bidsData = await getTenderBids(id)
       

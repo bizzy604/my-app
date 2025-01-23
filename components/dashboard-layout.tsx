@@ -24,7 +24,7 @@ const navItems: NavItem[] = [
   { title: "Resource Center", href: "/procurement-officer/resource-center", icon: BookOpen },
   { title: "Notifications", href: "/procurement-officer/notifications", icon: Bell },
   { title: "Settings", href: "/procurement-officer/settings", icon: Settings },
-  { title: "Help", href: "/procurement-officer/reports", icon: HelpCircle },
+  { title: "Reports", href: "/procurement-officer/reports", icon: HelpCircle },
   { title: "Give Feedback", href: "/procurement-officer/feedback", icon: MessageSquare },
 ]
 

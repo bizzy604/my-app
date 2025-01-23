@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache'
 import type { Prisma } from '@prisma/client'
 import { ReportStatus, ReportType } from '@prisma/client'
 import { z } from "zod"
-import { auth } from "@/lib/auth"
+import { getServerSession } from "@/lib/auth"
+import { cookies } from 'next/headers'
 
 type CreateReportInput = {
   tenderId: string
@@ -25,12 +26,28 @@ type GetReportsFilters = {
 const ReportSchema = z.object({
   tenderId: z.string().min(1, "Tender ID is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  evidence: z.string().optional(),
-  reportType: z.nativeEnum(ReportType).default(ReportType.IRREGULARITY)
+  reportType: z.nativeEnum(ReportType).default(ReportType.IRREGULARITY),
+  reportSubtype: z.string().optional(),
+  reporterName: z.string().optional(),
+  contactInfo: z.string().optional(),
+  evidence: z.string().optional()
 })
 
 export async function getReports(filters?: GetReportsFilters) {
   try {
+    console.log('Attempting to fetch reports')
+    console.log('Cookies:', cookies().getAll())
+
+    // Authenticate the user
+    const session = await getServerSession()
+    
+    console.log('Session retrieved:', session)
+
+    if (!session) {
+      console.error('No active session found')
+      throw new Error("Unauthorized")
+    }
+
     const where: Prisma.ReportWhereInput = {}
 
     // Filter by status if provided
@@ -77,6 +94,19 @@ export async function getReports(filters?: GetReportsFilters) {
 
 export async function createReport(data: CreateReportInput) {
   try {
+    console.log('Attempting to create report')
+    console.log('Cookies:', cookies().getAll())
+
+    // Authenticate the user
+    const session = await getServerSession()
+    
+    console.log('Session retrieved:', session)
+
+    if (!session) {
+      console.error('No active session found')
+      throw new Error("Unauthorized")
+    }
+
     const report = await prisma.report.create({
       data: {
         tenderId: data.tenderId,
@@ -105,13 +135,26 @@ export async function createReport(data: CreateReportInput) {
     revalidatePath('/vendor/reports')
     return report
   } catch (error) {
-    console.error('Error creating report:', error)
+    console.error("Error creating report:", error)
     throw new Error('Failed to create report')
   }
 }
 
 export async function updateReportStatus(reportId: string, newStatus: ReportStatus) {
   try {
+    console.log('Attempting to update report status')
+    console.log('Cookies:', cookies().getAll())
+
+    // Authenticate the user
+    const session = await getServerSession()
+    
+    console.log('Session retrieved:', session)
+
+    if (!session) {
+      console.error('No active session found')
+      throw new Error("Unauthorized")
+    }
+
     // Validate the new status
     const validStatuses: ReportStatus[] = [
       ReportStatus.PENDING, 
@@ -140,58 +183,72 @@ export async function updateReportStatus(reportId: string, newStatus: ReportStat
 }
 
 export async function submitIrregularityReport(formData: z.infer<typeof ReportSchema>) {
-  // Get the current authenticated session
-  const session = await auth()
-  
-  if (!session || !session.user) {
-    throw new Error("You must be logged in to submit a report")
-  }
-
-  // Ensure the user is a valid reporter (e.g., citizen or vendor)
-  const allowedRoles = ['VENDOR', 'CITIZEN']
-  if (!allowedRoles.includes(session.user.role)) {
-    throw new Error("You are not authorized to submit a report")
-  }
-
   try {
+    console.log('Attempting to submit report')
+    console.log('Cookies:', cookies().getAll())
+
+    // Authenticate the user
+    const session = await getServerSession()
+    
+    console.log('Session retrieved:', session)
+
+    if (!session) {
+      console.error('No active session found')
+      return { 
+        success: false, 
+        message: "You must be logged in to submit a report" 
+      }
+    }
+
     // Validate the input
     const validatedData = ReportSchema.parse(formData)
 
-    // Create the report in the database
+    // Create the report
     const report = await prisma.report.create({
       data: {
         tenderId: validatedData.tenderId,
+        reporterId: session.user.id,
         type: validatedData.reportType,
-        description: validatedData.description,
-        evidence: validatedData.evidence,
+        description: `${validatedData.reportSubtype ? `[${validatedData.reportSubtype}] ` : ''}${validatedData.description}`,
         status: ReportStatus.PENDING,
-        reporterId: session.user.id, // Use the authenticated user's ID
-        createdAt: new Date()
-      }
+        evidence: validatedData.evidence
+      },
+      include: {
+        tender: {
+          select: {
+            title: true,
+          },
+        },
+        reporter: {
+          select: {
+            name: true,
+            company: true,
+          },
+        },
+      },
     })
 
-    // Optionally, you could add a notification mechanism here
-    // For example, sending an email to procurement officers
+    // Revalidate the path to reflect the latest changes
+    revalidatePath('/citizen/reports')
 
-    return {
-      success: true,
-      message: "Report submitted successfully",
-      reportId: report.id
+    return { 
+      success: true, 
+      message: "Report submitted successfully", 
+      reportId: report.id 
     }
   } catch (error) {
-    console.error("Error submitting irregularity report:", error)
-
+    console.error('Error submitting report:', error)
+    
     if (error instanceof z.ZodError) {
-      // Handle validation errors
-      return {
-        success: false,
-        message: error.errors[0].message
+      return { 
+        success: false, 
+        message: "Invalid report details. Please check your input." 
       }
     }
 
-    return {
-      success: false,
-      message: "Failed to submit report. Please try again."
+    return { 
+      success: false, 
+      message: "An unexpected error occurred while submitting the report" 
     }
   }
 }

@@ -268,3 +268,120 @@ export async function sendVerificationEmail(email: string, token: string) {
     return false;
   }
 }
+
+// TENDER AWARD NOTIFICATION TEMPLATE
+export async function sendTenderAwardEmail(email: string, tenderTitle: string, bidAmount: number) {
+  // Validate inputs
+  if (!email) {
+    console.error('sendTenderAwardEmail: No email provided')
+    return false
+  }
+
+  // Validate MailerSend API key
+  if (!process.env.MAILERSEND_API_KEY) {
+    console.error('MAILERSEND_API_KEY is not defined in environment variables')
+    return false
+  }
+
+  const sentFrom = new Sender(
+    "noreply@trial-k68zxl2kmeklj905.mlsender.net", 
+    "Innobid"
+  );
+
+  const recipients = [
+    new Recipient(email)
+  ];
+
+  const emailParams = new EmailParams()
+    .setFrom(sentFrom)
+    .setTo(recipients)
+    .setSubject(`Tender Award: ${tenderTitle}`)
+    .setHtml(`
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Tender Award Notification</h1>
+          
+          <p style="color: #333; line-height: 1.6;">Congratulations! </p>
+          
+          <p style="color: #333; line-height: 1.6;">
+            We are pleased to inform you that your bid for the tender <strong>"${tenderTitle}"</strong> 
+            has been successfully awarded. 
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="color: #333; margin: 10px 0;">
+              <strong>Tender Title:</strong> ${tenderTitle}<br>
+              <strong>Awarded Bid Amount:</strong> $${bidAmount.toFixed(2)}
+            </p>
+          </div>
+          
+          <p style="color: #333; line-height: 1.6;">
+            Our team will be in touch with further details about the next steps 
+            in the procurement process.
+          </p>
+          
+          <div style="border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; text-align: center;">
+            <p style="color: #999; font-size: 0.8em;">
+              ${new Date().getFullYear()} Innobid. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    `)
+    .setText(`Congratulations! Your bid for "${tenderTitle}" has been awarded. Bid Amount: $${bidAmount.toFixed(2)}`);
+
+  try {
+    console.log('Attempting to send email:', {
+      to: email,
+      subject: `Tender Award: ${tenderTitle}`,
+      apiKeyPresent: !!process.env.MAILERSEND_API_KEY
+    })
+
+    const response = await mailerSend.email.send(emailParams);
+    
+    // Extract message ID from headers
+    const messageId = response.headers['x-message-id']
+
+    console.log('Email Sent Successfully:', {
+      status: 'success',
+      messageId,
+      recipient: email,
+      tenderTitle,
+      bidAmount
+    })
+
+    logEmailEvent('sent', email, { 
+      type: 'tender_award', 
+      tenderTitle, 
+      bidAmount,
+      messageId,
+      responseDetails: JSON.stringify(response)
+    });
+    return true;
+  } catch (error) {
+    console.error('Email Sending Failed:', {
+      email,
+      tenderTitle,
+      bidAmount,
+      errorType: error instanceof Error ? error.name : 'Unknown Error',
+      errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+      errorStack: error instanceof Error ? error.stack : 'No stack trace'
+    })
+    
+    if (error instanceof Error) {
+      console.error('MailerSend Error Details:', {
+        errorName: error.name,
+        errorMessage: error.message,
+        errorStack: error.stack
+      })
+    }
+    
+    logEmailEvent('failed', email, { 
+      type: 'tender_award', 
+      tenderTitle,
+      bidAmount,
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return false;
+  }
+}

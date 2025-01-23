@@ -109,7 +109,7 @@ export default function AwardTenderPage({ params }: { params: { id: string } }) 
       })
 
       // Update bid status to ACCEPTED
-      await updateBidStatus(bid.id, BidStatus.ACCEPTED)
+      await updateBidStatus(bid.id, BidStatus.ACCEPTED, bid.tenderId)
 
       setIsSuccess(true)
     } catch (error: any) {

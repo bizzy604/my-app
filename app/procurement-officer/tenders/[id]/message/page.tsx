@@ -10,50 +10,59 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getBidById } from "@/app/actions/tender-actions"
 import { formatCurrency } from "@/lib/utils"
+import { useSearchParams } from 'next/navigation'
+import { sendAwardNotification } from "@/app/actions/tender-actions"
 
 export default function MessagePage({ params }: { params: { id: string } }) {
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [recipient, setRecipient] = useState('')
   const [message, setMessage] = useState('')
   const [bidWinnerDetails, setBidWinnerDetails] = useState<any>(null)
 
-  // Use React.use to resolve params
-  const resolvedParams = use(useMemo(() => Promise.resolve(params), [params]))
-
   useEffect(() => {
-    async function fetchWinningBid() {
+    async function fetchBidDetails() {
       try {
-        // Fetch the most recently accepted bid for this tender
-        const response = await fetch(`/api/tenders/${resolvedParams.id}/winning-bids`)
-        const winningBids = await response.json()
+        const bidId = searchParams.get('bidId')
         
-        if (winningBids.length > 0) {
-          const winningBid = winningBids[0]
-          const bidDetails = await getBidById(winningBid.id)
-          
+        if (!bidId) {
+          throw new Error('No bid ID provided')
+        }
+
+        // Fetch the specific bid details
+        const bidDetails = await getBidById(bidId)
+        
+        if (bidDetails) {
           setBidWinnerDetails(bidDetails)
-          setRecipient(winningBid.bidder.email)
-          setMessage(`Congratulations on winning the tender "${winningBid.tender.title}" with a bid of ${formatCurrency(winningBid.amount)}. We look forward to working with you.`)
+          setRecipient(bidDetails.bidder.email)
+          setMessage(`Congratulations on winning the tender "${bidDetails.tender.title}" with a bid of ${formatCurrency(bidDetails.amount)}. We look forward to working with you.`)
         }
       } catch (error) {
-        console.error('Error fetching winning bid:', error)
+        console.error('Error fetching bid details:', error)
       }
     }
 
-    fetchWinningBid()
-  }, [resolvedParams.id])
+    fetchBidDetails()
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      // Simulate sending email
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Use server action to send award notification
+      await sendAwardNotification({
+        bidId: bidWinnerDetails.id,
+        message,
+        recipientEmail: recipient,
+        recipientName: bidWinnerDetails.bidder.name
+      })
+      
       setIsSuccess(true)
     } catch (error) {
       console.error('Error sending message:', error)
+      // Add toast or error handling
     } finally {
       setIsSubmitting(false)
     }

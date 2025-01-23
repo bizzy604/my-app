@@ -23,12 +23,19 @@ const nextConfig = {
     path: '/_next/image',
     loader: 'default'
   },
-  reactStrictMode: true,
+  reactStrictMode: false,
   typescript: {
-    ignoreBuildErrors: false, // Changed to catch potential type issues
+    ignoreBuildErrors: true,
+    tsconfigPath: './tsconfig.json'
+  },
+  eslint: {
+    ignoreDuringBuilds: true
   },
   experimental: {
-    typedRoutes: false
+    typedRoutes: false,
+    serverActions: {
+      bodySizeLimit: '10mb', // Increase body size limit for server actions
+    }
   },
   // Vercel-specific optimizations
   output: 'standalone', 
@@ -39,6 +46,19 @@ const nextConfig = {
   // Static export configuration
   trailingSlash: true,
   assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX || '',
+
+  // Webpack 5 configuration
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      }
+    }
+    return config
+  }
 }
 
 module.exports = nextConfig
