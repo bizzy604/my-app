@@ -252,4 +252,4 @@ export default function ApplyTenderPage({ params }: { params: { id: string } }) 
       </div>
     </DashboardLayout>
   )
-}
+} 

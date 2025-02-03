@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Info } from 'lucide-react'
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { BidEvaluationForm } from "@/components/bid-evaluation-form"
 import { DocumentViewer } from "@/components/document-viewer"
 import { ComparativeAnalysis } from "@/components/comparative-analysis"
 import { BidStatus } from "@prisma/client"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface BidDetailsClientProps {
   params: { id: string, bidId: string }
@@ -28,7 +29,15 @@ interface BidDetailsClientProps {
     }
     bidderId: number
   }
-  evaluationScores: any
+  evaluationScores: {
+    technicalScore: number
+    financialScore: number
+    experienceScore: number
+    totalScore: number
+    comments?: string
+    stage: string
+    createdAt: Date
+  } | null
   documents: any[]
 }
 
@@ -50,6 +59,44 @@ export function BidDetailsClient({
 
   const handleAwardClick = () => {
     router.push(`/procurement-officer/tenders/${params.id}/bids/${params.bidId}/award`)
+  }
+
+  const getStatusBadgeVariant = (status: BidStatus): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case 'SHORTLISTED':
+        return 'default'
+      case 'FINAL_EVALUATION':
+        return 'secondary'
+      case 'TECHNICAL_EVALUATION':
+        return 'outline'
+      case 'UNDER_REVIEW':
+        return 'outline'
+      default:
+        return 'outline'
+    }
+  }
+
+  const renderEvaluationStatus = () => {
+    if (!evaluationScores) return null
+
+    return (
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertTitle>Evaluation Status</AlertTitle>
+        <AlertDescription>
+          <div className="mt-2 space-y-2">
+            <p>Technical Score: {evaluationScores.technicalScore}%</p>
+            <p>Financial Score: {evaluationScores.financialScore}%</p>
+            <p>Experience Score: {evaluationScores.experienceScore}%</p>
+            <p>Total Score: {evaluationScores.totalScore}%</p>
+            <p>Stage: {evaluationScores.stage}</p>
+            {evaluationScores.comments && (
+              <p>Comments: {evaluationScores.comments}</p>
+            )}
+          </div>
+        </AlertDescription>
+      </Alert>
+    )
   }
 
   return (
@@ -86,7 +133,7 @@ export function BidDetailsClient({
                   <CardTitle className="text-sm font-medium">Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Badge>{bid.status}</Badge>
+                  <Badge variant={getStatusBadgeVariant(bid.status)}>{bid.status}</Badge>
                 </CardContent>
               </Card>
 
@@ -131,50 +178,38 @@ export function BidDetailsClient({
           </TabsContent>
 
           <TabsContent value="evaluation">
+            {renderEvaluationStatus()}
+            
             <Card>
               <CardHeader>
                 <CardTitle>Bid Evaluation</CardTitle>
               </CardHeader>
               <CardContent>
-                <BidEvaluationForm 
-                  bid={{
-                    id: bid.id,
-                    tenderId: params.id,
-                    currentScores: evaluationScores ? {
-                      technicalScore: evaluationScores.technicalScore,
-                      financialScore: evaluationScores.financialScore,
-                      experienceScore: evaluationScores.experienceScore,
-                      comments: evaluationScores.comments
-                    } : null
-                  }}
-                  onComplete={handleEvaluationComplete}
-                />
+                {!evaluationScores ? (
+                  <BidEvaluationForm 
+                    bid={{
+                      id: bid.id,
+                      tenderId: params.id,
+                      currentScores: null
+                    }}
+                    onComplete={handleEvaluationComplete}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      This bid has already been evaluated. Current status: <Badge variant={getStatusBadgeVariant(bid.status)}>{bid.status}</Badge>
+                    </p>
+                    {bid.status === 'SHORTLISTED' && (
+                      <div>
+                        <Button onClick={handleAwardClick} className="mt-4">
+                          Proceed to Award
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {bid.status === 'SHORTLISTED' && (
-              <div className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Award Tender</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 mb-4">
-                      This bid has been shortlisted with the following scores:
-                      <br />
-                      Technical: {evaluationScores?.technicalScore}%
-                      <br />
-                      Financial: {evaluationScores?.financialScore}%
-                      <br />
-                      Experience: {evaluationScores?.experienceScore}%
-                    </p>
-                    <Button onClick={handleAwardClick}>
-                      Proceed to Award
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="documents">

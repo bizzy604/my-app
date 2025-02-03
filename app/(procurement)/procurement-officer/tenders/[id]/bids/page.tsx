@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getTenderBids } from "@/app/actions/tender-actions"
@@ -12,26 +12,32 @@ import { BidStatus } from '@prisma/client'
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
-export default function TenderBidsPage({ params }: { params: { id: string } }) {
+interface BidsPageProps {
+  params: { id: string }
+}
+
+export default function TenderBidsPage({ params }: BidsPageProps) {
   const router = useRouter()
   const { data: bids, isLoading, error } = useHydrationSafeClient(() => getTenderBids(params.id))
 
   const getBidStatusBadge = (status: BidStatus) => {
     switch (status) {
-      case 'TECHNICAL_EVALUATION':
-        return <Badge variant="info">Technical Evaluation</Badge>
-      case 'SHORTLISTED':
-        return <Badge variant="success">Shortlisted</Badge>
-      case 'COMPARATIVE_ANALYSIS':
+      case BidStatus.SHORTLISTED:
+        return <Badge variant="default">Shortlisted</Badge>
+      case BidStatus.FINAL_EVALUATION:
+        return <Badge variant="secondary">Final Evaluation</Badge>
+      case BidStatus.TECHNICAL_EVALUATION:
+        return <Badge variant="outline">Technical Evaluation</Badge>
+      case BidStatus.UNDER_REVIEW:
+        return <Badge variant="outline">Under Review</Badge>
+      case BidStatus.COMPARATIVE_ANALYSIS:
         return <Badge variant="warning">Under Comparison</Badge>
-      case 'FINAL_EVALUATION':
-        return <Badge variant="primary">Final Evaluation</Badge>
-      case 'ACCEPTED':
+      case BidStatus.ACCEPTED:
         return <Badge variant="success">Accepted</Badge>
-      case 'REJECTED':
+      case BidStatus.REJECTED:
         return <Badge variant="destructive">Rejected</Badge>
       default:
-        return <Badge>Under Review</Badge>
+        return <Badge variant="outline">Under Review</Badge>
     }
   }
 

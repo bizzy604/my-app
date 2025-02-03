@@ -7,6 +7,8 @@ import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 import { Tender } from '@prisma/client'
 import { formatCurrency } from "@/lib/utils"
 import { uploadToS3 } from '@/lib/s3-upload'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 type BidSubmissionData = {
   tenderId: string;
@@ -239,59 +241,35 @@ export async function createTender(data: CreateTenderData) {
   }
 }
 
-export async function getTenderById(tenderId: string) {
+export async function getTenderById(id: string) {
   try {
     const tender = await prisma.tender.findUnique({
-      where: {
-        id: tenderId
-      },
+      where: { id },
       include: {
+        department: true,
+        procurementOfficer: {
+          select: {
+            name: true,
+            email: true
+          }
+        },
         documents: true,
         bids: {
           include: {
             bidder: {
               select: {
-                id: true,
                 name: true,
-                company: true,
-                email: true
-              }
-            },
-            documents: true,
-            evaluationLogs: {
-              include: {
-                evaluator: {
-                  select: {
-                    name: true
-                  }
-                },
-                bid: true,
-                tender: true
+                company: true
               }
             }
-          }
-        },
-        department: true,
-        issuer: {
-          select: {
-            name: true,
-            company: true
           }
         }
       }
     })
-
-    if (!tender) {
-      throw new Error('Tender not found')
-    }
-
     return tender
   } catch (error) {
-    console.error('Error fetching tender:', {
-      tenderId,
-      error
-    })
-    throw new Error('Failed to fetch tender details. Please try again later.')
+    console.error('Error fetching tender:', error)
+    throw new Error('Failed to fetch tender')
   }
 }
 
@@ -782,7 +760,7 @@ export async function awardTender(
     // Update bid status to AWARDED
     await prisma.bid.update({
       where: { id: bidId },
-      data: { status: BidStatus.AWARDED }
+      data: { status: BidStatus.ACCEPTED  }
     })
 
     // Update tender status to AWARDED
@@ -902,7 +880,7 @@ export async function getTenderHistory(tenderId?: string) {
         include: {
           bids: {
             where: {
-              status: BidStatus.AWARDED
+              status: BidStatus.ACCEPTED
             },
             include: {
               bidder: {
@@ -1167,99 +1145,156 @@ export async function sendAwardNotification({
   }
 }
 
-export async function awardTenderAndNotify(
-  tenderId: string,
-  bidId: string,
-  notificationMessage: string,
-  userId: string
-) {
+export async function awardTenderAndNotify(tenderId: string, bidId: string, userId: string) {
   try {
-    const bid = await prisma.bid.findUnique({
-      where: { id: bidId },
-      include: {
-        tender: true,
-        bidder: true
-      }
-    })
+    // Since userId is passed, let's use it directly but validate it
+    const awardedById = Number(userId)
+    
+    if (isNaN(awardedById) || awardedById <= 0) {
+      throw new Error('Invalid user ID provided')
+    }
 
-    if (!bid) throw new Error('Bid not found')
-
-    // Start a transaction to ensure all updates are atomic
-    await prisma.$transaction(async (tx) => {
-      // Update bid status
-      await tx.bid.update({
+    const result = await prisma.$transaction(async (prisma) => {
+      // Get bid details first
+      const bid = await prisma.bid.findUnique({
         where: { id: bidId },
-        data: { status: BidStatus.SHORTLISTED }
+        include: {
+          tender: true,
+          bidder: true
+        }
       })
+
+      if (!bid) {
+        throw new Error('Bid not found')
+      }
 
       // Update tender status
-      await tx.tender.update({
+      const updatedTender = await prisma.tender.update({
         where: { id: tenderId },
-        data: { 
+        data: {
           status: TenderStatus.AWARDED,
           awardedBidId: bidId,
-          updatedAt: new Date(),
-          awardedById: parseInt(userId)
+          updatedAt: new Date()
         }
       })
 
-      // Create notification for the winning bidder
-      await tx.notification.create({
+      // Create award log
+      const awardLog = await prisma.tenderAwardLog.create({
         data: {
-          type: NotificationType.TENDER_AWARD,
-          message: notificationMessage,
-          userId: bid.bidderId,
-          relatedId: tenderId
+          tenderId,
+          bidId,
+          awardedBy: awardedById,
+          createdAt: new Date()
         }
       })
 
-      // Create notifications for other bidders
-      const otherBids = await tx.bid.findMany({
+      // Update winning bid status
+      await prisma.bid.update({
+        where: { id: bidId },
+        data: { status: BidStatus.ACCEPTED }
+      })
+
+      // Update other bids as rejected
+      await prisma.bid.updateMany({
         where: {
           tenderId,
           id: { not: bidId }
         },
-        include: { bidder: true }
+        data: { status: BidStatus.REJECTED }
       })
 
-      for (const otherBid of otherBids) {
-        await tx.notification.create({
-          data: {
-            type: NotificationType.BID_STATUS_UPDATE,
-            message: `The tender "${bid.tender.title}" has been awarded to another bidder.`,
-            userId: otherBid.bidderId,
-            relatedId: tenderId
-          }
-        })
+      // Create notifications
+      await prisma.notification.create({
+        data: {
+          type: NotificationType.TENDER_AWARD,
+          message: `Congratulations! Your bid for tender "${bid.tender.title}" has been accepted.`,
+          userId: bid.bidderId,
+          tenderId: tenderId,
+          bidId: bidId
+        }
+      })
 
-        // Update other bids status
-        await tx.bid.update({
-          where: { id: otherBid.id },
-          data: { status: BidStatus.REJECTED }
-        })
-      }
-    })
-
-    // Send email notifications
-    await sendTenderAwardEmail({
-      to: bid.bidder.email,
-      subject: 'Tender Award Notification',
-      data: {
-        recipientName: bid.bidder.name,
-        tenderTitle: bid.tender.title,
-        message: notificationMessage,
-        bidAmount: bid.amount.toString(),
-        companyName: bid.bidder.company || '',
-        tenderReference: bid.tender.id
-      }
+      // Send email notification
+      await sendTenderAwardEmail({
+        to: bid.bidder.email,
+        subject: `Tender Award Notification - ${bid.tender.title}`,
+        data: {
+          recipientName: bid.bidder.name,
+          tenderTitle: bid.tender.title,
+          bidAmount: formatCurrency(bid.amount),
+          companyName: bid.bidder.company || '',
+          tenderReference: bid.tender.id
+        }
+      })
     })
 
     revalidatePath(`/procurement-officer/tenders/${tenderId}`)
     revalidatePath('/procurement-officer/tenders')
-
+    
     return { success: true }
   } catch (error) {
     console.error('Error in award process:', error)
     throw new Error('Failed to complete the award process')
+  }
+}
+
+export async function getShortlistedBids(tenderId: string) {
+  try {
+    const shortlistedBids = await prisma.bid.findMany({
+      where: {
+        tenderId,
+        status: BidStatus.SHORTLISTED
+      },
+      include: {
+        bidder: {
+          select: {
+            name: true,
+            company: true,
+            email: true
+          }
+        },
+        evaluationLogs: {
+          select: {
+            stage: true,
+            technicalScore: true,
+            financialScore: true,
+            experienceScore: true,
+            totalScore: true,
+            comments: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 1
+        }
+      },
+      orderBy: {
+        // Order by latest evaluation
+        evaluationLogs: {
+          _count: 'desc'
+        }
+      }
+    })
+
+    // Transform the data to match the expected format
+    return shortlistedBids.map(bid => ({
+      id: bid.id,
+      amount: bid.amount,
+      status: bid.status,
+      score: bid.evaluationLogs[0]?.totalScore || 0,
+      bidder: {
+        name: bid.bidder.name,
+        company: bid.bidder.company
+      },
+      evaluationStages: [{
+        stage: bid.evaluationLogs[0]?.stage || '',
+        score: bid.evaluationLogs[0]?.totalScore || 0,
+        comments: bid.evaluationLogs[0]?.comments || ''
+      }]
+    }))
+
+  } catch (error) {
+    console.error('Error fetching shortlisted bids:', error)
+    throw new Error('Failed to fetch shortlisted bids')
   }
 }

@@ -288,7 +288,7 @@ export async function sendSupportNotificationEmail({
 }: EmailNotification) {
   try {
     await resend.emails.send({
-      from: 'Innobid Support <support@innobid.com>',
+      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
       to: [to],
       subject: subject,
       html: `
@@ -339,7 +339,7 @@ export async function sendTenderAwardEmail({
     `
 
     const response = await resend.emails.send({
-      from: 'Innobid Notifications <notifications@innobid.com>',
+      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
       to: [to],
       subject: subject,
       html: `
@@ -389,7 +389,7 @@ export async function sendBidStatusEmail(
     const template = emailTemplates[status](data)
     
     const response = await resend.emails.send({
-      from: 'Innobid Notifications <notifications@innobid.com>',
+      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
       to: [to],
       subject: template.subject,
       html: template.html,

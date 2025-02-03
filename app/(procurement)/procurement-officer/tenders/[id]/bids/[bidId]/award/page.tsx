@@ -21,7 +21,7 @@ export default function AwardBidPage({ params }: { params: { id: string, bidId: 
     getBidById(params.bidId)
   )
 
-  const handleAward = async (notificationMessage: string) => {
+  const handleAward = async () => {
     if (!session?.user?.id) {
       toast({
         title: "Error",
@@ -35,8 +35,7 @@ export default function AwardBidPage({ params }: { params: { id: string, bidId: 
       await awardTenderAndNotify(
         params.id,
         params.bidId,
-        notificationMessage,
-        session.user.id
+        session.user.id.toString()
       )
 
       toast({

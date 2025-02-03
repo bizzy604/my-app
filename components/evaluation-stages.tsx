@@ -14,7 +14,7 @@ import { CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { useSession } from "next-auth/react"
-import { BidWithDetails } from '@/types/bid'
+import { formatDate } from "@/lib/utils"
 
 interface EvaluationStage {
   id: string
@@ -28,29 +28,128 @@ interface EvaluationStage {
     weight: number
     score?: number
   }>
+  comments?: string | null
 }
 
-export function EvaluationStages({ bid, onEvaluationComplete }: { 
-  bid: BidWithDetails
-  onEvaluationComplete: () => void 
-}) {
+interface EvaluationStagesProps {
+  bid: {
+    id: string
+    tenderId: string
+    currentScores: {
+      technicalScore: number
+      financialScore: number
+      experienceScore: number
+      comments?: string
+    } | null
+  }
+  onEvaluationComplete: () => void
+}
+
+export function EvaluationStages({ bid, onEvaluationComplete }: EvaluationStagesProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const { data: session } = useSession()
-  const router = useRouter()
-  const [currentStage, setCurrentStage] = useState<string>(bid.evaluationStage || 'INITIAL')
-  const [scores, setScores] = useState<Record<string, number>>({})
-  const [comments, setComments] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Helper function to determine stage status without depending on stages array
-  function determineStageStatus(stageId: string): 'pending' | 'current' | 'completed' {
-    const allStages = ['INITIAL', 'TECHNICAL', 'FINANCIAL', 'FINAL']
-    const stageIndex = allStages.indexOf(stageId)
-    const currentIndex = allStages.indexOf(currentStage)
-    
-    if (stageIndex < currentIndex) return 'completed'
-    if (stageIndex === currentIndex) return 'current'
-    return 'pending'
+  const getStageVariant = (status: 'pending' | 'current' | 'completed') => {
+    switch (status) {
+      case 'completed':
+        return "default"
+      case 'current':
+        return "secondary"
+      default:
+        return "outline"
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const formData = new FormData(e.currentTarget)
+      const scores = {
+        technicalScore: Number(formData.get('technicalScore')),
+        financialScore: Number(formData.get('financialScore')),
+        experienceScore: Number(formData.get('experienceScore')),
+        comments: formData.get('comments')?.toString()
+      }
+
+      await evaluateBid({
+        bidId: bid.id,
+        tenderId: bid.tenderId,
+        ...scores
+      })
+
+      toast({
+        title: "Evaluation submitted",
+        description: "The bid has been evaluated successfully."
+      })
+
+      onEvaluationComplete()
+    } catch (error) {
+      console.error('Error submitting evaluation:', error)
+      toast({
+        title: "Error",
+        description: "Failed to submit evaluation. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (!session?.user) {
+    return null
+  }
+
+  if (bid.currentScores) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Evaluation Scores</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Technical Score</Label>
+              <div className="mt-1">
+                <Progress value={bid.currentScores.technicalScore} />
+                <span className="text-sm text-muted-foreground">
+                  {bid.currentScores.technicalScore}%
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label>Financial Score</Label>
+              <div className="mt-1">
+                <Progress value={bid.currentScores.financialScore} />
+                <span className="text-sm text-muted-foreground">
+                  {bid.currentScores.financialScore}%
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label>Experience Score</Label>
+              <div className="mt-1">
+                <Progress value={bid.currentScores.experienceScore} />
+                <span className="text-sm text-muted-foreground">
+                  {bid.currentScores.experienceScore}%
+                </span>
+              </div>
+            </div>
+            {bid.currentScores.comments && (
+              <div>
+                <Label>Comments</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {bid.currentScores.comments}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   const stages: EvaluationStage[] = [
@@ -58,7 +157,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
       id: 'INITIAL',
       name: 'Initial Review',
       description: 'Review submitted documents and basic eligibility',
-      status: determineStageStatus('INITIAL'),
+      status: 'pending',
       maxScore: 100,
       criteria: [
         { name: 'Document Completeness', weight: 50 },
@@ -69,7 +168,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
       id: 'TECHNICAL',
       name: 'Technical Evaluation',
       description: 'Evaluate technical capabilities and proposal',
-      status: determineStageStatus('TECHNICAL'),
+      status: 'pending',
       maxScore: 100,
       criteria: [
         { name: 'Technical Capability', weight: 40 },
@@ -81,7 +180,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
       id: 'FINANCIAL',
       name: 'Financial Evaluation',
       description: 'Evaluate financial proposal and bid amount',
-      status: determineStageStatus('FINANCIAL'),
+      status: 'pending',
       maxScore: 100,
       criteria: [
         { name: 'Price Competitiveness', weight: 50 },
@@ -92,7 +191,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
       id: 'FINAL',
       name: 'Final Evaluation',
       description: 'Overall evaluation and recommendation',
-      status: determineStageStatus('FINAL'),
+      status: 'pending',
       maxScore: 100,
       criteria: [
         { name: 'Technical Score', weight: 70 },
@@ -101,19 +200,18 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
     }
   ]
 
-  function getNextStatus(currentStageId: string): BidStatus {
-    switch (currentStageId) {
-      case 'INITIAL':
-        return BidStatus.TECHNICAL_EVALUATION
-      case 'TECHNICAL':
-        return BidStatus.SHORTLISTED
-      case 'FINANCIAL':
-        return BidStatus.COMPARATIVE_ANALYSIS
-      case 'FINAL':
-        return BidStatus.FINAL_EVALUATION
-      default:
-        return BidStatus.UNDER_REVIEW
-    }
+  const [currentStage, setCurrentStage] = useState<string>('INITIAL')
+  const [scores, setScores] = useState<Record<string, number>>({})
+  const [comments, setComments] = useState('')
+
+  const determineStageStatus = (stageId: string): 'pending' | 'current' | 'completed' => {
+    const allStages = ['INITIAL', 'TECHNICAL', 'FINANCIAL', 'FINAL']
+    const stageIndex = allStages.indexOf(stageId)
+    const currentIndex = allStages.indexOf(currentStage)
+    
+    if (stageIndex < currentIndex) return 'completed'
+    if (stageIndex === currentIndex) return 'current'
+    return 'pending'
   }
 
   const handleEvaluate = async (stageId: string) => {
@@ -146,7 +244,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
         stage: stageId,
         score: averageScore,
         comments,
-        status: getNextStatus(stageId),
+        status: 'UNDER_REVIEW',
         evaluatedBy: parseInt(session.user.id)
       })
       
@@ -189,7 +287,7 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
                 {stage.name}
               </CardTitle>
               {stage.status === 'completed' && (
-                <Badge variant="success">
+                <Badge variant={getStageVariant(stage.status)}>
                   Score: {stage.score || 0}/{stage.maxScore}
                 </Badge>
               )}
@@ -249,4 +347,4 @@ export function EvaluationStages({ bid, onEvaluationComplete }: {
       ))}
     </div>
   )
-} 
+}

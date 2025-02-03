@@ -1,14 +1,41 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
 import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { useState } from "react"
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+
+const formSchema = z.object({
+  technicalScore: z.coerce
+    .number()
+    .min(0, "Score must be at least 0")
+    .max(100, "Score cannot exceed 100"),
+  financialScore: z.coerce
+    .number()
+    .min(0, "Score must be at least 0")
+    .max(100, "Score cannot exceed 100"),
+  experienceScore: z.coerce
+    .number()
+    .min(0, "Score must be at least 0")
+    .max(100, "Score cannot exceed 100"),
+  comments: z.string().optional(),
+})
 
 interface BidEvaluationFormProps {
   bid: {
@@ -30,19 +57,21 @@ export function BidEvaluationForm({ bid, onComplete }: BidEvaluationFormProps) {
   const { data: session } = useSession()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [scores, setScores] = useState({
-    technical: bid.currentScores?.technicalScore?.toString() || '',
-    financial: bid.currentScores?.financialScore?.toString() || '',
-    experience: bid.currentScores?.experienceScore?.toString() || ''
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      technicalScore: bid.currentScores?.technicalScore || 0,
+      financialScore: bid.currentScores?.financialScore || 0,
+      experienceScore: bid.currentScores?.experienceScore || 0,
+      comments: bid.currentScores?.comments || "",
+    },
   })
-  const [comments, setComments] = useState(bid.currentScores?.comments || '')
 
   // Check if current user has already evaluated
-  const hasEvaluated = bid.currentScores?.evaluatorId === session?.user?.id
+  const hasEvaluated = bid.currentScores?.evaluator === session?.user?.id
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!session?.user?.id) {
       toast({
         title: "Error",
@@ -61,26 +90,8 @@ export function BidEvaluationForm({ bid, onComplete }: BidEvaluationFormProps) {
       return
     }
 
-    // Validate scores
-    const technicalScore = parseInt(scores.technical)
-    const financialScore = parseInt(scores.financial)
-    const experienceScore = parseInt(scores.experience)
-
-    if (
-      isNaN(technicalScore) || technicalScore < 0 || technicalScore > 100 ||
-      isNaN(financialScore) || financialScore < 0 || financialScore > 100 ||
-      isNaN(experienceScore) || experienceScore < 0 || experienceScore > 100
-    ) {
-      toast({
-        title: "Error",
-        description: "All scores must be numbers between 0 and 100",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setIsSubmitting(true)
     try {
+      setIsSubmitting(true)
       const response = await fetch('/api/bids/evaluate', {
         method: 'POST',
         headers: {
@@ -89,21 +100,35 @@ export function BidEvaluationForm({ bid, onComplete }: BidEvaluationFormProps) {
         body: JSON.stringify({
           bidId: bid.id,
           tenderId: bid.tenderId,
-          technicalScore,
-          financialScore,
-          experienceScore,
-          comments: comments.trim()
+          ...values
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to submit evaluation')
+        throw new Error(data.error || 'Failed to evaluate bid')
+      }
+
+      const totalScore = (
+        (values.technicalScore * 0.4) +
+        (values.financialScore * 0.4) +
+        (values.experienceScore * 0.2)
+      )
+
+      let toastMessage = `Bid evaluated successfully. Total Score: ${totalScore.toFixed(2)}%`
+      
+      if (totalScore >= 80) {
+        toastMessage += '. Bid has moved to final evaluation.'
+      } else if (totalScore >= 70) {
+        toastMessage += '. Bid has been shortlisted.'
+      } else if (totalScore >= 60) {
+        toastMessage += '. Bid is in technical evaluation.'
       }
 
       toast({
-        title: "Success",
-        description: "Bid evaluation has been submitted successfully"
+        title: "Evaluation Complete",
+        description: toastMessage,
       })
 
       // Refresh the page data
@@ -114,8 +139,8 @@ export function BidEvaluationForm({ bid, onComplete }: BidEvaluationFormProps) {
       console.error('Evaluation error:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit evaluation",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to evaluate bid",
+        variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
@@ -139,61 +164,82 @@ export function BidEvaluationForm({ bid, onComplete }: BidEvaluationFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="technical">Technical Score (0-100)</Label>
-          <Input
-            id="technical"
-            type="number"
-            min="0"
-            max="100"
-            value={scores.technical}
-            onChange={(e) => setScores(prev => ({ ...prev, technical: e.target.value }))}
-            required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="technicalScore"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Technical Score</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormDescription>
+                  Score out of 100 (40% weight)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div>
-          <Label htmlFor="financial">Financial Score (0-100)</Label>
-          <Input
-            id="financial"
-            type="number"
-            min="0"
-            max="100"
-            value={scores.financial}
-            onChange={(e) => setScores(prev => ({ ...prev, financial: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="experience">Experience Score (0-100)</Label>
-          <Input
-            id="experience"
-            type="number"
-            min="0"
-            max="100"
-            value={scores.experience}
-            onChange={(e) => setScores(prev => ({ ...prev, experience: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="comments">Evaluation Comments</Label>
-          <Textarea
-            id="comments"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            placeholder="Enter your evaluation comments here..."
-            required
-          />
-        </div>
-      </div>
 
-      <div className="flex justify-end">
+          <FormField
+            control={form.control}
+            name="financialScore"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Financial Score</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormDescription>
+                  Score out of 100 (40% weight)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="experienceScore"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience Score</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormDescription>
+                  Score out of 100 (20% weight)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="comments"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Comments</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Add any comments about the evaluation..." 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit Evaluation'}
+          {isSubmitting ? "Evaluating..." : "Submit Evaluation"}
         </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   )
 }

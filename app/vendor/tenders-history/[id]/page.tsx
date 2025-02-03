@@ -21,7 +21,7 @@ interface BidDetail {
   submissionDate: Date
   completionTime: string
   technicalProposal: string
-  vendorExperience: string
+  vendorExperience?: string | null
   tender: {
     id: string
     title: string
@@ -42,6 +42,18 @@ interface BidDetail {
     fileSize: number
     url: string
     uploadDate: Date
+  }>
+  evaluationLogs?: Array<{
+    stage: string
+    totalScore: number
+    comments: string | null
+    evaluator: {
+      name: string
+    }
+    createdAt: Date
+    technicalScore: number
+    financialScore: number
+    experienceScore: number
   }>
 }
 
