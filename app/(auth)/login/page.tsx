@@ -104,13 +104,15 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <div className="w-full max-w-md mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
+      <div className="w-full space-y-6">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#4B0082]">Welcome to Innobid</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-[#4B0082]">
+            Welcome to Innobid
+          </h1>
         </div>
         
         {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-md text-center">
+          <div className="bg-red-50 text-red-500 p-2 md:p-3 rounded-md text-center text-sm md:text-base">
             {error}
           </div>
         )}
@@ -125,7 +127,7 @@ export default function LoginPage() {
               autoComplete="email"
               required
               placeholder="john.doe@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
@@ -134,7 +136,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Link 
                 href="/reset-password" 
-                className="text-sm font-semibold text-[#4B0082] hover:underline"
+                className="text-xs md:text-sm font-semibold text-[#4B0082] hover:underline"
               >
                 Forgot password?
               </Link>
@@ -146,19 +148,19 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               placeholder="At least 8 characters"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 text-sm md:text-base"
           >
             {isLoading ? 'Logging in...' : 'Log in'}
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-xs md:text-sm text-gray-600">
             Don't have an account?{' '}
             <Link 
               href="/signup" 

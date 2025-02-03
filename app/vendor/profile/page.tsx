@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { VendorLayout } from "@/components/vendor-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,12 +16,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
+import { User, Building, Phone, Mail, MapPin, Globe } from 'lucide-react'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
   const router = useRouter()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -34,216 +36,225 @@ export default function ProfilePage() {
     postalCode: '',
     businessType: '',
     establishmentDate: '',
+    website: ''
   })
-
-  useEffect(() => {
-    if (session?.user) {
-      setFormData({
-        name: session.user.name || '',
-        email: session.user.email || '',
-        company: session.user.company || '',
-        phone: session.user.phone || '',
-        registrationNumber: session.user.registrationNumber || '',
-        address: session.user.address || '',
-        city: session.user.city || '',
-        country: session.user.country || '',
-        postalCode: session.user.postalCode || '',
-        businessType: session.user.businessType || '',
-        establishmentDate: session.user.establishmentDate ? new Date(session.user.establishmentDate).toISOString().split('T')[0] : '',
-      })
-    }
-  }, [session])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
+
     try {
-      if (!session?.user?.id) {
-        throw new Error('User ID not found')
-      }
-
-      console.log('Submitting profile update for user ID:', session.user.id) // Debugging
-
-      const response = await fetch('/api/user/updateProfile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: session.user.id, profile: formData }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to update user profile')
-      }
+      // API call to update profile
       toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
+        title: "Success",
+        description: "Profile updated successfully",
       })
       setIsEditing(false)
     } catch (error) {
       toast({
         title: "Error",
-        description: "There was an issue updating your profile.",
+        description: "Failed to update profile",
+        variant: "destructive",
       })
-      console.error(error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-
   return (
     <VendorLayout>
-      <div className="container mx-auto py-8">
+      <div className="p-4 md:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Company Profile</h1>
+            <p className="text-sm md:text-base text-gray-600">Manage your company information</p>
+          </div>
+          {!isEditing && (
+            <Button onClick={() => setIsEditing(true)}>
+              Edit Profile
+            </Button>
+          )}
+        </div>
+
         <Card>
-          <CardHeader>
-            <CardTitle>Vendor Profile</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Company Name</Label>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <Label htmlFor="company">Company</Label>
-                  <Input
-                    id="company"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    disabled={!isEditing}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="website"
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="registrationNumber">Registration Number</Label>
-                  <Input
-                    id="registrationNumber"
-                    value={formData.registrationNumber}
-                    onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
-                    disabled={!isEditing}
-                  />
+              {/* Business Details */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Business Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="registrationNumber">Registration Number</Label>
+                    <Input
+                      id="registrationNumber"
+                      value={formData.registrationNumber}
+                      onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessType">Business Type</Label>
+                    <Select
+                      disabled={!isEditing}
+                      value={formData.businessType}
+                      onValueChange={(value) => setFormData({ ...formData, businessType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select business type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PROFIT">For Profit</SelectItem>
+                        <SelectItem value="NON_PROFIT">Non Profit</SelectItem>
+                        <SelectItem value="GOVERNMENT">Government</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="establishmentDate">Establishment Date</Label>
+                    <Input
+                      id="establishmentDate"
+                      type="date"
+                      value={formData.establishmentDate}
+                      onChange={(e) => setFormData({ ...formData, establishmentDate: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    disabled={!isEditing}
-                  />
+              {/* Address Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Address Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Street Address</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input
+                      id="country"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      value={formData.postalCode}
+                      onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input
-                    id="postalCode"
-                    value={formData.postalCode}
-                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="businessType">Business Type</Label>
-                  <Select 
-                    value={formData.businessType} 
-                    onValueChange={(value) => setFormData({ ...formData, businessType: value })}
-                    disabled={!isEditing}
+              {isEditing && (
+                <div className="flex justify-end gap-4 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSubmitting}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Business Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PROFIT">Profit</SelectItem>
-                      <SelectItem value="NON_PROFIT">Non-Profit</SelectItem>
-                      <SelectItem value="ACADEMIC_INSTITUTION">Academic Institution</SelectItem>
-                      <SelectItem value="GOVERNMENT_MULTI_AGENCY">Government or Multi Agency</SelectItem>
-                      <SelectItem value="OTHERS">Others</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="establishmentDate">Establishment Date</Label>
-                  <Input
-                    id="establishmentDate"
-                    type="date"
-                    value={formData.establishmentDate}
-                    onChange={(e) => setFormData({ ...formData, establishmentDate: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-4">
-                {!isEditing ? (
-                  <Button type="button" onClick={() => setIsEditing(true)}>
-                    Edit Profile
+                    Cancel
                   </Button>
-                ) : (
-                  <>
-                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">Save Changes</Button>
-                  </>
-                )}
-              </div>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

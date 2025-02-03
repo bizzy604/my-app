@@ -16,32 +16,42 @@ export default function VerificationPendingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-8 md:py-12">
+      <div className="w-full max-w-md space-y-8 bg-white p-6 md:p-8 rounded-lg shadow-md text-center">
         <div>
-          <h1 className="text-3xl font-bold text-[#4B0082] mb-4">Verify Your Email</h1>
+          <h1 className="text-xl md:text-3xl font-bold text-[#4B0082] mb-4">
+            Verify Your Email
+          </h1>
           
           <div className="mb-6">
-            <p className="text-gray-600 mb-2">
+            <p className="text-sm md:text-base text-gray-600 mb-2">
               We've sent a verification link to:
             </p>
-            <p className="font-semibold text-[#4B0082]">{email}</p>
+            <p className="font-semibold text-[#4B0082] text-sm md:text-base">
+              {email}
+            </p>
           </div>
 
           <div className="space-y-4">
-            <p className="text-gray-700">
+            <p className="text-sm md:text-base text-gray-700">
               Please check your email inbox (and spam folder) and click on the verification link to activate your account.
             </p>
 
             <div className="flex flex-col space-y-3">
               <Link href="/resend-verification" passHref>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm md:text-base py-2"
+                >
                   Resend Verification Email
                 </Button>
               </Link>
 
               <Link href="/login" passHref>
-                <Button variant="secondary" className="w-full">
+                <Button 
+                  variant="secondary" 
+                  className="w-full text-sm md:text-base py-2"
+                >
                   Back to Login
                 </Button>
               </Link>

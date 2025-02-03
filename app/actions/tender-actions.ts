@@ -2,13 +2,15 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { Prisma, BidStatus, TenderStatus, TenderSector, NotificationType } from '@prisma/client'
-import { uploadDocument } from '@/lib/document-upload'
-import { sendTenderAwardEmail } from '@/lib/email-utils'
+import { Prisma, BidStatus, TenderStatus, TenderSector, TenderCategory, NotificationType } from '@prisma/client'
+import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
+import { Tender } from '@prisma/client'
+import { formatCurrency } from "@/lib/utils"
+import { uploadToS3 } from '@/lib/s3-upload'
 
 type BidSubmissionData = {
   tenderId: string;
-  bidderId: number;
+  bidderId: string | number;
   amount: number;
   completionTime: string;
   technicalProposal: string;
@@ -21,10 +23,58 @@ type BidSubmissionData = {
   }[];
 }
 
+export interface Bid {
+  id: string
+  amount: number
+  status: BidStatus
+  submittedAt: string
+  completionTime: string
+  technicalProposal: string
+  vendor: {
+    id: string
+    name: string
+    company: string
+  }
+  documents: {
+    id: string
+    name: string
+    url: string
+  }[]
+}
+
+interface CreateTenderData {
+  title: string
+  description: string
+  sector: TenderSector
+  location: string
+  budget: number
+  closingDate: string
+  category: TenderCategory
+  requirements: string[]
+  issuerId: number
+  status: string
+}
+
+interface EvaluationData {
+  bidId: string
+  stage: string
+  score: number
+  comments?: string
+  evaluatedBy: number
+  technicalScore?: number
+  financialScore?: number
+  experienceScore?: number
+  documentReviews?: Array<{
+    documentId: string
+    comments: string
+    status: 'ACCEPTED' | 'REJECTED' | 'NEEDS_CLARIFICATION'
+  }>
+}
+
 export async function getTenders(filters?: {
   status?: TenderStatus
   sector?: TenderSector
-  category?: string
+  category?: TenderCategory
 }) {
   try {
     const where: Prisma.TenderWhereInput = {}
@@ -156,352 +206,211 @@ export async function getVendorTenders(vendorId: number | string) {
   }
 }
 
-export async function createTender(data: {
-  title: string
-  description: string
-  sector: TenderSector
-  location: string
-  budget: number
-  closingDate: string
-  requirements: string[]
-  category: string
-  issuerId: number
-  documents?: {
-    fileName: string
-    fileSize: number
-    fileType: string
-    url: string
-  }[]
-}) {
-  // console.log('Creating tender with data:', data)
+export async function createTender(data: CreateTenderData) {
   try {
+    const closingDate = new Date(data.closingDate).toISOString()
+    const { issuerId, ...tenderData } = data
+
     const tender = await prisma.tender.create({
       data: {
-        title: data.title,
-        description: data.description,
-        sector: data.sector,
-        location: data.location,
-        budget: data.budget,
-        closingDate: new Date(data.closingDate),
-        requirements: data.requirements,
-        category: data.category,
-        issuerId: data.issuerId,
+        ...tenderData,
+        sector: tenderData.sector,
+        closingDate,
         status: TenderStatus.OPEN,
-        documents: data.documents ? {
-          create: data.documents.map(doc => ({
-            fileName: doc.fileName,
-            fileSize: doc.fileSize,
-            fileType: doc.fileType,
-            url: doc.url,
-            user: {
-              connect: { id: data.issuerId, email: '' }
-            }
-          }))
-        } : undefined,
-      },
-      include: {
         issuer: {
-          select: {
-            name: true,
-            company: true,
-          },
+          connect: {
+            id: issuerId
+          }
         },
-        documents: true,
-      },
+        title: tenderData.title,
+        description: tenderData.description,
+        location: tenderData.location,
+        budget: tenderData.budget,
+        category: tenderData.category,
+        requirements: tenderData.requirements
+      }
     })
-    console.log('Created tender:', tender)
+
     revalidatePath('/procurement-officer/tenders')
-    revalidatePath('/procurement-officer/tenders-history')
-    revalidatePath('/vendor/tenders')
     return tender
   } catch (error) {
-    console.error('Failed to create tender:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    console.error('Tender data:', data)
-    throw new Error(error instanceof Error ? error.message : 'Failed to create tender. Please check your input and try again.')
+    console.error('Error creating tender:', error)
+    throw new Error('Failed to create tender')
   }
 }
 
-export async function getTenderById(id: string) {
+export async function getTenderById(tenderId: string) {
   try {
-    // console.log('Fetching tender details for ID:', id)
-
     const tender = await prisma.tender.findUnique({
-      where: { id },
+      where: {
+        id: tenderId
+      },
       include: {
-        issuer: {
-          select: {
-            name: true,
-            company: true,
-          },
-        },
+        documents: true,
         bids: {
           include: {
             bidder: {
               select: {
+                id: true,
                 name: true,
                 company: true,
-                id: true, // Include bidder ID for more detailed logging
+                email: true
+              }
+            },
+            documents: true,
+            evaluationLogs: {
+              include: {
+                evaluator: {
+                  select: {
+                    name: true
+                  }
+                },
+                bid: true,
+                tender: true
               }
             }
           }
         },
-        documents: true,
-      },
-    })
-    
-    if (!tender) {
-      console.error(`Tender not found with ID: ${id}`)
-      throw new Error('Tender not found')
-    }
-
-    // Log detailed tender information for debugging
-    // console.log('Fetched Tender Details:', {
-    //   id: tender.id,
-    //   title: tender.title,
-    //   status: tender.status,
-    //   closingDate: tender.closingDate,
-    //   bidsCount: tender.bids.length,
-    //   bidderIds: tender.bids.map(bid => bid.bidder.id)
-    // })
-    
-    return tender
-  } catch (error) {
-    console.error('Failed to fetch tender:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    console.error('Tender ID:', id)
-    throw new Error('Failed to fetch tender details')
-  }
-}
-
-export async function updateTender(id: string, data: {
-  title?: string
-  description?: string
-  sector?: TenderSector
-  location?: string
-  budget?: number
-  closingDate?: string
-  requirements?: string[]
-  category?: string
-  status?: string
-  documents?: {
-    fileName: string
-    fileSize: number
-    fileType: string
-    url: string
-  }[]
-}) {
-  try {
-    const tender = await prisma.tender.update({
-      where: { id },
-      data: {
-        ...(data.title && { title: data.title }),
-        ...(data.description && { description: data.description }),
-        ...(data.sector && { sector: data.sector }),
-        ...(data.location && { location: data.location }),
-        ...(data.budget && { budget: data.budget }),
-        ...(data.closingDate && { closingDate: new Date(data.closingDate) }),
-        ...(data.requirements && { requirements: data.requirements }),
-        ...(data.status && { status: data.status as TenderStatus }),
-        ...(data.documents && {
-          documents: {
-            deleteMany: {},
-            create: data.documents.map(doc => ({
-              fileName: doc.fileName,
-              fileSize: doc.fileSize,
-              fileType: doc.fileType,
-              url: doc.url,
-              user: {
-                connect: { id: Number(id), email: '' }
-              }
-            }))
-          },
-        }),
-      },
-      include: {
+        department: true,
         issuer: {
           select: {
             name: true,
-            company: true,
-          },
-        },
-        documents: true,
-      },
+            company: true
+          }
+        }
+      }
     })
-    if (data.status === 'CANCELLED') {
-      const bids = await prisma.bid.findMany({
-        where: { tenderId: id }
-      })
 
-      // Update all bids to rejected status
-      await prisma.bid.updateMany({
-        where: { tenderId: id },
-        data: { status: BidStatus.REJECTED }
-      })
+    if (!tender) {
+      throw new Error('Tender not found')
     }
-    revalidatePath('/procurement-officer/tenders')
-    revalidatePath('/procurement-officer/tenders-history')
-    revalidatePath('/vendor/tenders')
+
     return tender
   } catch (error) {
-    console.error('Failed to update tender:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    console.error('Tender ID:', id)
-    console.error('Tender data:', data)
+    console.error('Error fetching tender:', {
+      tenderId,
+      error
+    })
+    throw new Error('Failed to fetch tender details. Please try again later.')
+  }
+}
+
+export async function updateTender(id: string, data: Partial<Tender>) {
+  try {
+    // Convert closingDate string to ISO format if it exists
+    const closingDate = data.closingDate ? new Date(data.closingDate).toISOString() : undefined
+
+    const tender = await prisma.tender.update({
+      where: { id },
+      data: {
+        ...data,
+        closingDate, // Use the converted date
+        sector: data.sector,
+      }
+    })
+
+    revalidatePath('/procurement-officer/tenders')
+    return tender
+  } catch (error) {
+    console.error('Error updating tender:', error)
     throw new Error('Failed to update tender')
   }
 }
 
-export async function updateTenderClosingDate(id: string, newClosingDate?: Date) {
-  try {
-    // If no date provided, set to 30 days from now
-    const closingDate = newClosingDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-
-    console.log('Updating tender closing date:', {
-      tenderId: id,
-      newClosingDate: closingDate.toISOString()
+export async function deleteTender(id: string) {
+    await prisma.tender.delete({
+    where: { id }
     })
+    revalidatePath('/procurement-officer/tenders')
+}
 
-    const updatedTender = await prisma.tender.update({
-      where: { id },
-      data: { 
-        closingDate: closingDate 
+export async function submitBid(data: BidSubmissionData) {
+  try {
+    // Check if vendor has already submitted a bid for this tender
+    const existingBid = await prisma.bid.findFirst({
+      where: {
+        tenderId: data.tenderId,
+        bidderId: typeof data.bidderId === 'string' ? parseInt(data.bidderId) : data.bidderId,
       }
     })
 
-    console.log('Tender closing date updated successfully:', {
-      id: updatedTender.id,
-      newClosingDate: updatedTender.closingDate.toISOString()
-    })
-
-    return updatedTender
-  } catch (error) {
-    console.error('Failed to update tender closing date:', error)
-    throw new Error(`Failed to update tender closing date: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-export async function deleteTender(id: string) {
-  try {
-    await prisma.tender.delete({
-      where: { id },
-    })
-    revalidatePath('/procurement-officer/tenders')
-    revalidatePath('/procurement-officer/tenders-history')
-    revalidatePath('/vendor/tenders')
-  } catch (error) {
-    console.error('Failed to delete tender:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    console.error('Tender ID:', id)
-    throw new Error('Failed to delete tender')
-  }
-}
-
-export async function submitBid(bidData: BidSubmissionData) {
-  try {
-    // Validate input
-    if (!bidData.tenderId || !bidData.bidderId) {
-      throw new Error('Tender ID and Bidder ID are required')
+    if (existingBid) {
+      throw new Error('You have already submitted a bid for this tender')
     }
 
-    // Verify tender exists
-    const tender = await prisma.tender.findUnique({
-      where: { id: bidData.tenderId },
-      select: { id: true }
-    })
+    // Convert bidderId to number if it's a string
+    const bidderId = typeof data.bidderId === 'string' ? parseInt(data.bidderId, 10) : data.bidderId;
 
-    if (!tender) {
-      throw new Error(`Tender not found with ID: ${bidData.tenderId}`)
-    }
-
-    // Upload documents to S3 if any
-    const documentUrls = bidData.documents ? await Promise.all(
-      bidData.documents.map(async (doc) => {
-        // Decode base64 file data
-        let fileBuffer: Uint8Array
-        if (typeof doc.fileData === 'string') {
-          // Decode base64 string
-          const binaryString = atob(doc.fileData)
-          fileBuffer = new Uint8Array(binaryString.length)
-          for (let i = 0; i < binaryString.length; i++) {
-            fileBuffer[i] = binaryString.charCodeAt(i)
-          }
-        } else if (Array.isArray(doc.fileData)) {
-          // Convert number array to Uint8Array
-          fileBuffer = new Uint8Array(doc.fileData)
-        } else {
-          console.error('Unsupported file data format:', typeof doc.fileData)
-          return null
-        }
-        
-        // Create a File object
-        const file = new File([fileBuffer], doc.fileName, {
-          type: doc.fileType,
-          lastModified: Date.now()
-        })
-
-        // Upload document
-        return uploadDocument(file, {
-          userId: bidData.bidderId,
-          tenderId: bidData.tenderId
-        })
-      })
-    ).then(results => results.filter(result => result !== null)) : []
-
-    // Create bid
+    // Create the bid first
     const bid = await prisma.bid.create({
       data: {
-        tenderId: bidData.tenderId,
-        bidderId: bidData.bidderId,
-        amount: bidData.amount,
-        completionTime: bidData.completionTime,
-        technicalProposal: bidData.technicalProposal,
-        vendorExperience: bidData.vendorExperience || '',
-        status: "PENDING",
-        documents: {
-          create: documentUrls.map(doc => ({
-            fileName: doc.fileName,
-            fileType: doc.fileType,
-            fileSize: doc.fileSize,
-            url: doc.url,
-            userId: bidData.bidderId
-          }))
-        }
+        tenderId: data.tenderId,
+        bidderId: bidderId,
+        amount: data.amount,
+        completionTime: data.completionTime,
+        technicalProposal: data.technicalProposal,
+        vendorExperience: data.vendorExperience,
+        status: BidStatus.PENDING,
       },
-      include: {
-        bidder: {
-          select: {
-            name: true,
-            email: true,
-            company: true
-          }
-        },
-        tender: {
-          select: {
-            title: true,
-            issuer: {
-              select: {
-                name: true,
-                email: true
-              }
-            }
-          }
-        }
-      }
     })
 
-    // Revalidate paths
-    revalidatePath('/vendor/tenders')
-    revalidatePath('/vendor/tenders-history')
-    revalidatePath(`/vendor/tenders/${bidData.tenderId}`)
-    revalidatePath('/procurement-officer/tenders')
+    // Handle document uploads if any
+    if (data.documents && data.documents.length > 0) {
+      try {
+        // Upload documents to S3 first
+        const uploadPromises = data.documents.map(async (doc) => {
+          const blob = new Blob(
+            [Buffer.from(doc.fileData as string, 'base64')], 
+            { type: doc.fileType }
+          )
+          const file = new File([blob], doc.fileName, { type: doc.fileType })
 
-    // console.log('Bid submitted successfully:', bid)
+          return uploadToS3(file, {
+            userId: bidderId,
+            bidId: bid.id,
+            tenderId: data.tenderId
+          })
+        })
 
+        const uploadedDocs = await Promise.all(uploadPromises)
+
+        // Then create document records in database
+        await prisma.$transaction(
+          uploadedDocs.map((uploadedDoc, index) => 
+            prisma.document.create({
+      data: {
+                fileName: data.documents![index].fileName,
+                fileSize: data.documents![index].fileSize,
+                fileType: data.documents![index].fileType,
+                url: uploadedDoc.url,
+                s3Key: uploadedDoc.key,
+                bidId: bid.id,
+                userId: bidderId,
+              },
+            })
+          )
+        )
+      } catch (uploadError) {
+        console.error('Document upload error:', uploadError)
+        throw new Error(`Document upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`)
+      }
+    }
+
+    // Create notification
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.TENDER_STATUS_UPDATE,
+        message: `New bid submitted for tender ${data.tenderId}`,
+        userId: bidderId,
+      },
+    })
+
+    revalidatePath(`/vendor/tenders/${data.tenderId}`)
     return bid
+
   } catch (error) {
     console.error('Error submitting bid:', error)
-    throw new Error(
-      error instanceof Error 
-        ? error.message 
-        : 'An unexpected error occurred while submitting the bid'
-    )
+    throw error
   }
 }
 
@@ -544,13 +453,22 @@ export async function updateBid(data: {
           lastModified: Date.now()
         })
 
-        // Upload document
-        return uploadDocument(file, {
+        // Upload document using uploadToS3
+        const uploadedDoc = await uploadToS3(file, {
           userId: existingBid.bidderId,
+          bidId: existingBid.id,
           tenderId: existingBid.tenderId
         })
+
+        return {
+          fileName: doc.fileName,
+          fileSize: doc.fileSize,
+          fileType: doc.fileType,
+          url: uploadedDoc.url,
+          s3Key: uploadedDoc.key
+        }
       })
-    ).then(results => results.filter(result => result !== null)) : []
+    ) : []
 
     // Update the bid
     const bid = await prisma.bid.update({
@@ -565,6 +483,7 @@ export async function updateBid(data: {
             fileSize: doc.fileSize,
             fileType: doc.fileType,
             url: doc.url,
+            s3Key: doc.s3Key,
             userId: existingBid.bidderId
           }))
         } : undefined,
@@ -610,204 +529,82 @@ export async function cancelBid(bidId: string) {
   }
 }
 
-export async function checkVendorBidStatus(tenderId: string, vendorId: string | number) {
+export async function checkVendorBidStatus(tenderId: string, vendorId: number): Promise<boolean> {
   try {
-    // Ensure vendorId is a number
-    const parsedVendorId = typeof vendorId === 'string' 
-      ? parseInt(vendorId, 10) 
-      : vendorId
-
-    console.log('Checking bid status:', { 
-      tenderId, 
-      vendorId: parsedVendorId 
-    })
-
-    const bid = await prisma.bid.findFirst({
+    const existingBid = await prisma.bid.findFirst({
       where: {
         tenderId: tenderId,
-        bidderId: parsedVendorId
-      },
-      select: {
-        id: true,
-        status: true,
-        amount: true,
-        submissionDate: true,
-        documents: true,
-        technicalProposal: true,
-        evaluationScore: true
+        bidderId: vendorId
       }
     })
-
-    console.log('Bid found:', bid ? 'Yes' : 'No')
-
-    return bid ? {
-      status: bid.status,
-      amount: bid.amount,
-      submissionDate: bid.submissionDate,
-      documents: bid.documents,
-      technicalProposal: bid.technicalProposal,
-      evaluationScore: bid.evaluationScore,
-      bidId: bid.id
-    } : null
-  } catch (error) {
-    console.error('Failed to check vendor bid status:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    console.error('Tender ID:', tenderId)
-    console.error('Vendor ID:', vendorId)
     
-    // If it's a Prisma error, log additional details
-    if (error instanceof Error) {
-      console.error('Error name:', error.name)
-      console.error('Error message:', error.message)
-      console.error('Error stack:', error.stack)
-     }
-
-    throw new Error(`Failed to check vendor bid status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    return !!existingBid // Returns true if a bid exists, false otherwise
+  } catch (error) {
+    console.error('Error checking bid status:', error)
+    throw new Error('Failed to check bid status')
   }
 }
 
 export async function getTenderBids(tenderId: string) {
   try {
-    console.log('Fetching bids for tender:', tenderId)
-
-    // Validate input
-    if (!tenderId) {
-      console.error('getTenderBids called with undefined or null tender ID')
-      return []
-    }
-
-    // First, verify the tender exists
-    const tender = await prisma.tender.findUnique({
-      where: { id: tenderId },
-      select: { id: true }
-    })
-
-    if (!tender) {
-      console.error(`Tender not found with ID: ${tenderId}`)
-      return []
-    }
-
-    // Fetch bids for the tender, sorted by submission date (most recent first)
     const bids = await prisma.bid.findMany({
-      where: { 
-        tenderId: tenderId,
-        // Optionally filter for specific statuses if needed
-        // status: { in: [BidStatus.PENDING, BidStatus.SUBMITTED] }
-      },
-      orderBy: { 
-        submissionDate: 'desc' 
-      },
+      where: { tenderId },
       include: {
         bidder: {
           select: {
             id: true,
             name: true,
-            email: true,
-            company: true
+            company: true,
+            email: true
+          }
+        },
+        documents: true,
+        evaluationLogs: {
+          include: {
+            evaluator: {
+              select: {
+                name: true
+              }
+            },
+            bid: true,
+            tender: true
           }
         }
+      },
+      orderBy: {
+        submissionDate: 'desc'
       }
     })
-
-    console.log(`Found ${bids.length} bids for tender ${tenderId}`)
 
     return bids
   } catch (error) {
-    console.error('Error in getTenderBids:', error)
-    
-    // Log detailed error information
-    if (error instanceof Error) {
-      console.error('Error name:', error.name)
-      console.error('Error message:', error.message)
-      console.error('Error stack:', error.stack)
-    }
-
-    // Always return an empty array to prevent breaking the application
-    return []
+    console.error('Error fetching bids:', error)
+    return []  // Return empty array instead of throwing
   }
 }
 
-export async function updateBidStatus(
-  bidId: string, 
-  status: BidStatus, 
-  tenderOrBidId: string
-) {
+export async function updateBidStatus(bidId: string, status: BidStatus): Promise<void> {
   try {
-    // First, find the bid with full details
-    const currentBid = await prisma.bid.findUnique({
-      where: { id: bidId },
-      include: {
-        bidder: true,  // Include bidder details
-        tender: true   // Include tender details
-      }
-    })
-
-    if (!currentBid) {
-      throw new Error(`Bid with ID ${bidId} not found`)
-    }
-
-    // Update the bid status
-    const updatedBid = await prisma.bid.update({
-      where: { id: bidId },
-      data: { 
-        status: status,
-        statusUpdatedAt: new Date()
+    await prisma.bid.update({
+      where: {
+        id: bidId
       },
-      include: {
-        bidder: true,
-        tender: true
+      data: {
+        status
       }
     })
-
-    // If the bid is being awarded, update the tender
-    if (status === BidStatus.EVALUATED) {
-      await prisma.tender.update({
-        where: { id: currentBid.tenderId },
-        data: {
-          status: TenderStatus.CLOSED,
-          awardedBidId: bidId
-        }
-      })
-      
-      // Send award notification email
-      try {
-        const emailSent = await sendTenderAwardEmail(
-          currentBid.bidder.email, 
-          currentBid.tender.title, 
-          currentBid.amount
-        )
-        
-        if (!emailSent) {
-          console.error('Failed to send award notification email', {
-            email: currentBid.bidder.email,
-            tenderTitle: currentBid.tender.title,
-            bidAmount: currentBid.amount
-          })
-        }
-      } catch (emailError) {
-        console.error('Error sending award notification email:', emailError)
-      }
-    }
-
-    return updatedBid
+    
+    revalidatePath('/procurement-officer/tenders')
   } catch (error) {
-    console.error('Failed to update bid status:', error)
-    throw new Error(`Failed to update bid status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Error updating bid status:', error)
+    throw new Error('Failed to update bid status')
   }
 }
 
-export async function getBidById(bidOrTenderId: string | undefined) {
+export async function getBidById(bidId: string) {
   try {
-    // Validate input
-    if (!bidOrTenderId) {
-      console.error('getBidById called with undefined or null ID')
-      throw new Error('Invalid bid or tender ID provided')
-    }
-
-    // console.log('Fetching bid details for ID:', bidOrTenderId)
-
-    // First, try to find the bid directly by ID
-    let bid = await prisma.bid.findUnique({
-      where: { id: bidOrTenderId },
+    const bid = await prisma.bid.findUnique({
+      where: { id: bidId },
       include: {
         tender: true,
         bidder: {
@@ -816,53 +613,497 @@ export async function getBidById(bidOrTenderId: string | undefined) {
             name: true,
             email: true,
             company: true,
+            phone: true,
+            address: true,
+            businessType: true,
+            registrationNumber: true,
+            establishmentDate: true,
           }
         },
-        documents: true
+        documents: {
+          select: {
+            id: true,
+            fileName: true,
+            fileType: true,
+            fileSize: true,
+            url: true,
+            uploadDate: true,
+          }
+        },
+        evaluationLogs: {
+          include: {
+            evaluator: {
+              select: {
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
       }
     })
 
-    // If no bid found, try to find a bid by tender ID
     if (!bid) {
-      const bids = await prisma.bid.findMany({
-        where: { tenderId: bidOrTenderId },
-        include: {
-          tender: true,
-          bidder: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              company: true,
-            }
-          },
-          documents: true
-        },
-        orderBy: {
-          submissionDate: 'desc'
-        },
-        take: 1  // Take the most recent bid
-      })
-
-      bid = bids[0]
+      throw new Error('Bid not found')
     }
 
-    // console.log('Bid details fetched:', bid ? 'Found' : 'Not Found')
+    const evaluationLogs = await prisma.bidEvaluationLog.findMany({
+      where: { bidId },
+      include: {
+        evaluator: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
 
-    if (!bid) {
-      console.error(`No bid found with ID or Tender ID: ${bidOrTenderId}`)
-      throw new Error(`No bid found with ID or Tender ID: ${bidOrTenderId}`)
+    return {
+      ...bid,
+      evaluationLogs: evaluationLogs.map((log) => ({
+        stage: log.stage || 'PENDING',
+        totalScore: log.totalScore,
+        comments: log.comments,
+        evaluator: log.evaluator,
+        createdAt: log.createdAt,
+        technicalScore: log.technicalScore,
+        financialScore: log.financialScore,
+        experienceScore: log.experienceScore
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching bid:', error)
+    throw new Error('Failed to fetch bid')
+  }
+}
+
+export async function evaluateBid(
+  bidId: string,
+  data: {
+    stage: string
+    score: number
+    comments?: string
+    status: BidStatus
+    evaluatedBy: number
+  }
+) {
+  try {
+    // First, check if the bid exists
+    const existingBid = await prisma.bid.findUnique({
+      where: { id: bidId }
+    })
+
+    if (!existingBid) {
+      throw new Error('Bid not found')
+    }
+
+    // Create the evaluation stage first
+    const evaluationStage = await prisma.evaluationStage.create({
+      data: {
+        bid: { 
+          connect: { id: bidId } 
+        },
+        stage: data.stage,
+        score: data.score,
+        status: data.status,
+        comments: data.comments,
+        evaluator: {  // Only use the evaluator relation
+          connect: { id: data.evaluatedBy }
+        }
+      }
+    })
+
+    // Then update the bid status
+    const bid = await prisma.bid.update({
+      where: { id: bidId },
+      data: {
+        status: data.status
+      },
+      include: {
+        tender: true,
+        bidder: true,
+        evaluationStages: {
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 1
+        }
+      }
+    })
+
+    // If bid is shortlisted, send notification
+    if (data.status === BidStatus.SHORTLISTED) {
+      await sendBidStatusEmail({
+        to: bid.bidder.email,
+        subject: `Bid Shortlisted - ${bid.tender.title}`,
+        data: {
+          recipientName: bid.bidder.name,
+          tenderTitle: bid.tender.title,
+          status: 'shortlisted'
+        }
+      })
     }
 
     return bid
   } catch (error) {
-    console.error('Failed to fetch bid details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
-    
-    // If it's a Prisma error, log additional details
+    console.error('Error evaluating bid:', error)
     if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    throw error
+  }
+}
+
+export async function awardTender(
+  tenderId: string,
+  bidId: string, 
+  userId: number
+) {
+  try {
+    // Get bid and tender details
+    const bid = await prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        tender: true,
+        bidder: true,
+      }
+    })
+
+    if (!bid || !bid.bidder || !bid.tender) {
+      throw new Error('Bid or related data not found')
     }
 
-    throw new Error(`Failed to fetch bid details: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    // Update bid status to AWARDED
+    await prisma.bid.update({
+      where: { id: bidId },
+      data: { status: BidStatus.AWARDED }
+    })
+
+    // Update tender status to AWARDED
+    await prisma.tender.update({
+      where: { id: tenderId },
+      data: { status: TenderStatus.AWARDED }
+    })
+
+    // Send email notification
+    await sendTenderAwardEmail({
+      to: bid.bidder.email,
+      subject: 'Tender Award Notification',
+      data: { 
+        recipientName: bid.bidder.name,
+        tenderTitle: bid.tender.title,
+        message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
+        bidAmount: formatCurrency(bid.amount),
+        companyName: bid.bidder.company || 'N/A',
+        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+      }
+    })
+
+    // Create notification
+    await prisma.notification.create({
+        data: {
+        type: NotificationType.TENDER_STATUS_UPDATE,
+        message: `Your bid for tender ${bid.tender.title} has been accepted`,
+        userId: bid.bidderId,
+      }
+    })
+
+    revalidatePath('/procurement-officer/tenders')
+    revalidatePath(`/procurement-officer/tenders/${tenderId}`)
+    return { success: true }
+
+  } catch (error) {
+    console.error('Error awarding tender:', error)
+    throw new Error('Failed to award tender')
+  }
+}
+
+export async function getTenderReports(timeRange: string) {
+  try {
+    const startDate = new Date()
+    switch (timeRange) {
+      case 'week':
+        startDate.setDate(startDate.getDate() - 7)
+        break
+      case 'month':
+        startDate.setMonth(startDate.getMonth() - 1)
+        break
+      case 'quarter':
+        startDate.setMonth(startDate.getMonth() - 3)
+        break
+      case 'year':
+        startDate.setFullYear(startDate.getFullYear() - 1)
+        break
+      default:
+        startDate.setMonth(startDate.getMonth() - 1) // default to last month
+    }
+
+    const tenders = await prisma.tender.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+        },
+      },
+      include: {
+        bids: true,
+      },
+    })
+
+    return tenders.map(tender => ({
+      id: tender.id,
+      title: tender.title,
+      status: tender.status,
+      budget: tender.budget,
+      bidsCount: tender.bids.length,
+      closingDate: tender.closingDate.toISOString(),
+    }))
+  } catch (error) {
+    console.error('Error fetching tender reports:', error)
+    throw new Error('Failed to fetch tender reports')
+  }
+}
+
+export async function getTenderHistory(tenderId?: string) {
+  try {
+    if (tenderId) {
+      const tenderExists = await prisma.tender.findUnique({
+        where: { id: tenderId },
+        select: { id: true }
+      })
+
+      if (!tenderExists) {
+        throw new Error('Tender not found')
+      }
+
+      const history = await prisma.tenderHistory.findMany({
+        where: { tenderId },
+        include: {
+          changedByUser: {
+            select: {
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          changeDate: 'desc'
+        }
+      })
+
+      return history
+    } else {
+      const tenders = await prisma.tender.findMany({
+        include: {
+          bids: {
+            where: {
+              status: BidStatus.AWARDED
+            },
+            include: {
+              bidder: {
+                select: {
+                  name: true,
+                  company: true
+                }
+              }
+            }
+          },
+          history: {
+            include: {
+              changedByUser: {
+                select: {
+                  name: true
+                }
+              }
+            },
+            orderBy: {
+              changeDate: 'desc'
+            },
+            take: 1
+          }
+        }
+      })
+
+      return tenders
+    }
+  } catch (error) {
+    console.error('Error fetching tender history:', error)
+    throw new Error('Failed to fetch tender history')
+  }
+}
+
+export async function createTenderHistoryEntry({
+  tenderId,
+  status,
+  changedBy,
+  comments,
+  previousValues,
+  newValues
+}: {
+  tenderId: string
+  status: TenderStatus
+  changedBy: number
+  comments?: string
+  previousValues?: any
+  newValues?: any
+}) {
+  try {
+    const historyEntry = await prisma.tenderHistory.create({
+      data: {
+        tenderId,
+        status,
+        changedBy,
+        comments,
+        previousValues,
+        newValues
+      }
+    })
+    return historyEntry
+  } catch (error) {
+    console.error('Error creating tender history entry:', error)
+    throw new Error('Failed to create tender history entry')
+  }
+}
+
+export async function getBidsForTender(tenderId: string): Promise<Bid[]> {
+  try {
+      const bids = await prisma.bid.findMany({
+      where: {
+        tenderId
+      },
+        include: {
+          bidder: {
+            select: {
+              id: true,
+              name: true,
+            company: true
+          }
+        },
+        documents: {
+          select: {
+            id: true,
+            fileName: true,
+            url: true
+          }
+        }
+      }
+    })
+
+    return bids.map(bid => ({
+      id: bid.id,
+      amount: bid.amount,
+      status: bid.status,
+      submittedAt: bid.submissionDate.toISOString(),
+      completionTime: bid.completionTime || '',
+      technicalProposal: bid.technicalProposal,
+      vendor: {
+        id: bid.bidder.id.toString(),
+        name: bid.bidder.name,
+        company: bid.bidder.company || 'No Company',
+      },
+      documents: bid.documents.map(doc => ({
+        id: doc.id,
+        name: doc.fileName,
+        url: doc.url,
+      }))
+    }))
+  } catch (error) {
+    console.error('Error fetching bids:', error)
+    throw new Error('Failed to fetch bids')
+  }
+}
+
+export async function updateTenderStatus(
+  tenderId: string, 
+  newStatus: TenderStatus, 
+  userId: number,
+  comments?: string
+) {
+  try {
+    // Get current tender state
+    const currentTender = await prisma.tender.findUnique({
+      where: { id: tenderId }
+    })
+
+    if (!currentTender) {
+      throw new Error('Tender not found')
+    }
+
+    // Update tender status
+    const updatedTender = await prisma.tender.update({
+      where: { id: tenderId },
+      data: { status: newStatus }
+    })
+
+    // Create history entry
+    await createTenderHistoryEntry({
+      tenderId,
+      status: newStatus,
+      changedBy: userId,
+      comments,
+      previousValues: { status: currentTender.status },
+      newValues: { status: newStatus }
+    })
+
+    revalidatePath(`/procurement-officer/tenders-history/${tenderId}`)
+    return updatedTender
+  } catch (error) {
+    console.error('Error updating tender status:', error)
+    throw new Error('Failed to update tender status')
+  }
+}
+
+export async function getBidHistory(userId: number) {
+  try {
+    const bids = await prisma.bid.findMany({
+      where: {
+        bidderId: userId
+      },
+      include: {
+        tender: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            closingDate: true,
+            budget: true,
+            status: true
+          }
+        },
+        documents: {
+          select: {
+            id: true,
+            fileName: true,
+            fileType: true,
+            fileSize: true,
+            url: true,
+            uploadDate: true
+          }
+        }
+      },
+      orderBy: {
+        submissionDate: 'desc'
+      }
+    })
+
+    return bids.map(bid => ({
+      id: bid.id,
+      amount: bid.amount,
+      status: bid.status,
+      submittedAt: bid.submissionDate,
+      completionTime: bid.completionTime,
+      technicalProposal: bid.technicalProposal,
+      tender: bid.tender,
+      documents: bid.documents
+    }))
+  } catch (error) {
+    console.error('Error fetching bid history:', error)
+    throw new Error('Failed to fetch bid history')
   }
 }
 
@@ -870,15 +1111,14 @@ export async function sendAwardNotification({
   bidId, 
   message, 
   recipientEmail, 
-  recipientName
+  recipientName,
 }: {
-  bidId: string, 
-  message: string, 
-  recipientEmail: string, 
+  bidId: string
+  message: string
+  recipientEmail: string
   recipientName: string
 }) {
   try {
-    // Find the bid with associated tender details
     const bid = await prisma.bid.findUnique({
       where: { id: bidId },
       include: { 
@@ -891,51 +1131,135 @@ export async function sendAwardNotification({
       throw new Error('Bid not found')
     }
 
-    // Create a notification record
-    const notification = await prisma.notification.create({
+    // Create notification in database
+    await prisma.notification.create({
       data: {
+        type: NotificationType.TENDER_STATUS_UPDATE,
+        message: `Congratulations! Your bid for tender ${bid.tender.title} has been accepted.`,
         userId: bid.bidderId,
-        message: message,
-        type: NotificationType.TENDER_AWARD
       }
     })
 
-    // Send award notification email
-    try {
-      const emailSent = await sendTenderAwardEmail(
-        recipientEmail, 
-        bid.tender.title, 
-        bid.amount
-      )
-      
-      if (!emailSent) {
-        console.error('Failed to send award notification email', {
-          email: recipientEmail,
+    // Send email notification
+    await sendTenderAwardEmail({
+      to: recipientEmail,
+      subject: `Tender Award Notification - ${bid.tender.title}`,
+      data: {
+        recipientName,
           tenderTitle: bid.tender.title,
-          bidAmount: bid.amount
+        message,
+        bidAmount: formatCurrency(bid.amount),
+        companyName: bid.bidder.company || '',
+        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+      }
+    })
+
+    revalidatePath(`/procurement-officer/tenders/${bid.tenderId}`)
+    revalidatePath(`/procurement-officer/tenders-history`)
+    
+    return {
+      success: true,
+      message: 'Award notification sent successfully'
+    }
+  } catch (error) {
+    console.error('Error sending award notification:', error)
+    throw new Error('Failed to send award notification')
+  }
+}
+
+export async function awardTenderAndNotify(
+  tenderId: string,
+  bidId: string,
+  notificationMessage: string,
+  userId: string
+) {
+  try {
+    const bid = await prisma.bid.findUnique({
+      where: { id: bidId },
+      include: {
+        tender: true,
+        bidder: true
+      }
+    })
+
+    if (!bid) throw new Error('Bid not found')
+
+    // Start a transaction to ensure all updates are atomic
+    await prisma.$transaction(async (tx) => {
+      // Update bid status
+      await tx.bid.update({
+        where: { id: bidId },
+        data: { status: BidStatus.SHORTLISTED }
+      })
+
+      // Update tender status
+      await tx.tender.update({
+        where: { id: tenderId },
+        data: { 
+          status: TenderStatus.AWARDED,
+          awardedBidId: bidId,
+          updatedAt: new Date(),
+          awardedById: parseInt(userId)
+        }
+      })
+
+      // Create notification for the winning bidder
+      await tx.notification.create({
+        data: {
+          type: NotificationType.TENDER_AWARD,
+          message: notificationMessage,
+          userId: bid.bidderId,
+          relatedId: tenderId
+        }
+      })
+
+      // Create notifications for other bidders
+      const otherBids = await tx.bid.findMany({
+        where: {
+          tenderId,
+          id: { not: bidId }
+        },
+        include: { bidder: true }
+      })
+
+      for (const otherBid of otherBids) {
+        await tx.notification.create({
+          data: {
+            type: NotificationType.BID_STATUS_UPDATE,
+            message: `The tender "${bid.tender.title}" has been awarded to another bidder.`,
+            userId: otherBid.bidderId,
+            relatedId: tenderId
+          }
+        })
+
+        // Update other bids status
+        await tx.bid.update({
+          where: { id: otherBid.id },
+          data: { status: BidStatus.REJECTED }
         })
       }
-    } catch (emailError) {
-      console.error('Error sending award notification email:', emailError)
-    }
+    })
 
-    return notification
+    // Send email notifications
+    await sendTenderAwardEmail({
+      to: bid.bidder.email,
+      subject: 'Tender Award Notification',
+      data: {
+        recipientName: bid.bidder.name,
+        tenderTitle: bid.tender.title,
+        message: notificationMessage,
+        bidAmount: bid.amount.toString(),
+        companyName: bid.bidder.company || '',
+        tenderReference: bid.tender.id
+      }
+    })
+
+    revalidatePath(`/procurement-officer/tenders/${tenderId}`)
+    revalidatePath('/procurement-officer/tenders')
+
+    return { success: true }
   } catch (error) {
-    console.error('Failed to send award notification:', error)
-    
-    // More detailed error logging
-    if (error instanceof Error) {
-      console.error('Error name:', error.name)
-      console.error('Error message:', error.message)
-      console.error('Error stack:', error.stack)
-    }
-    
-    // If it's a Prisma error, log additional details
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('Prisma Error Code:', error.code)
-      console.error('Prisma Error Meta:', error.meta)
-    }
-    
-    throw new Error(`Failed to send award notification: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Error in award process:', error)
+    throw new Error('Failed to complete the award process')
   }
 }

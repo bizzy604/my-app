@@ -1,76 +1,71 @@
 'use client'
 
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import Image from "next/image"
-import Link from "next/link"
+import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { VendorLayout } from "@/components/vendor-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { getVendorTenders } from "@/app/actions/tender-actions"
-import { useToast } from "@/hooks/use-toast"
-import { TenderStatus } from '@prisma/client'
-import { Search } from 'lucide-react'
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Clock, CheckCircle, XCircle } from 'lucide-react'
+import { getBidHistory } from "@/app/actions/tender-actions"
+import { formatDate, formatCurrency } from "@/lib/utils"
+
+interface BidHistory {
+  id: string
+  amount: number
+  status: string
+  submittedAt: Date
+  completionTime: string
+  tender: {
+    title: string
+    description: string
+    status: string
+  }
+  documents: Array<{
+    id: string
+    fileName: string
+    url: string
+  }>
+}
 
 export default function TendersHistoryPage() {
   const { data: session } = useSession()
-  const { toast } = useToast()
-  const [tenders, setTenders] = useState<any[]>([])
+  const [bids, setBids] = useState<BidHistory[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    const fetchTenders = async () => {
-      if (!session?.user?.id) return
-      
-      try {
-        const data = await getVendorTenders(session.user.id)
-        setTenders(data)
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch tender history",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
+    const fetchBids = async () => {
+      if (session?.user?.id) {
+        try {
+          const history = await getBidHistory(parseInt(session.user.id))
+          setBids(history)
+        } catch (error) {
+          console.error('Error fetching bid history:', error)
+        } finally {
+          setLoading(false)
+        }
       }
     }
 
-    fetchTenders()
-  }, [session?.user?.id, toast])
+    fetchBids()
+  }, [session])
 
-  const filteredTenders = tenders.filter(tender => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      tender.title.toLowerCase().includes(searchLower) ||
-      tender.description.toLowerCase().includes(searchLower) ||
-      tender.sector.toLowerCase().includes(searchLower) ||
-      tender.category.toLowerCase().includes(searchLower) ||
-      tender.location.toLowerCase().includes(searchLower)
-    )
-  })
-
-  const getBidStatus = (tender: any) => {
-    const bid = tender.bids[0]
-    if (!bid) return null
-    
-    return {
-      status: bid.status,
-      color: bid.status === 'APPROVED' 
-        ? 'bg-green-100 text-green-800'
-        : bid.status === 'REJECTED'
-        ? 'bg-red-100 text-red-800'
-        : 'bg-yellow-100 text-yellow-800'
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACCEPTED':
+        return <Badge className="bg-green-500"><CheckCircle className="w-4 h-4 mr-1" /> Accepted</Badge>
+      case 'REJECTED':
+        return <Badge className="bg-red-500"><XCircle className="w-4 h-4 mr-1" /> Rejected</Badge>
+      default:
+        return <Badge className="bg-yellow-500"><Clock className="w-4 h-4 mr-1" /> Pending</Badge>
     }
   }
 
   if (loading) {
     return (
       <VendorLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <p>Loading tender history...</p>
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4B0082]"></div>
         </div>
       </VendorLayout>
     )
@@ -78,121 +73,56 @@ export default function TendersHistoryPage() {
 
   return (
     <VendorLayout>
-      <header className="flex items-center justify-between border-b bg-white px-8 py-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Tender History</h1>
-          <p className="text-sm text-gray-600">View your tender application history</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="font-medium text-gray-900">{session?.user?.name}</p>
-            <p className="text-sm text-gray-600">Vendor</p>
-          </div>
-          <div className="relative h-12 w-12">
-            <Image
-              src="/placeholder.svg"
-              alt="Profile picture"
-              fill
-              className="rounded-full object-cover"
-            />
-            <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white bg-green-400" />
-          </div>
-        </div>
-      </header>
-
-      <main className="p-8 space-y-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <Input 
-              type="text" 
-              placeholder="Search tenders..." 
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {filteredTenders.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No tenders found. Start applying for tenders to see your history!
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {filteredTenders.map((tender) => {
-              const bid = tender.bids[0]
-              const bidStatus = getBidStatus(tender)
-
-              return (
-                <div 
-                  key={tender.id} 
-                  className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Tender Applications History</h1>
+        <div className="grid gap-6">
+          {bids.map((bid) => (
+            <Link key={bid.id} href={`/vendor/tenders-history/${bid.id}`}>
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <span className="text-lg font-semibold">{bid.tender.title}</span>
+                    {getStatusBadge(bid.status)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold text-[#4B0082]">
-                        {tender.title}
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {tender.sector} • {tender.category}
-                      </p>
-                    </div>
-                    {bidStatus && (
-                      <span 
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${bidStatus.color}`}
-                      >
-                        {bidStatus.status}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 grid md:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Budget</p>
-                      <p className="font-medium">
-                        Rs. {formatCurrency(tender.budget)}
-                      </p>
+                      <p className="text-sm text-gray-500">Bid Amount</p>
+                      <p className="font-medium">{formatCurrency(bid.amount)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Closing Date</p>
-                      <p className="font-medium">
-                        {formatDate(tender.closingDate)}
-                      </p>
+                      <p className="text-sm text-gray-500">Submission Date</p>
+                      <p className="font-medium">{formatDate(bid.submittedAt)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Bid Amount</p>
-                      <p className="font-medium">
-                        {bid ? `Rs. ${formatCurrency(bid.amount)}` : 'N/A'}
-                      </p>
+                      <p className="text-sm text-gray-500">Documents</p>
+                      <p className="font-medium">{bid.documents.length} files</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Completion Time</p>
+                      <p className="font-medium">{bid.completionTime}</p>
                     </div>
                   </div>
-
-                  <div className="mt-6 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-gray-600">
-                        Submitted on: {formatDate(bid?.createdAt || tender.createdAt)}
-                      </p>
-                    </div>
-                    
-                    {bid && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        asChild
-                      >
-                        <Link href={`/vendor/tenders-history/${bid.id}`}>
-                          View Bid Details
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </main>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+          {bids.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center text-gray-500">
+                <p className="text-lg font-medium">No bid history found</p>
+                <p className="mt-2">You haven't submitted any bids yet.</p>
+                <Link href="/vendor/tenders">
+                  <button className="mt-4 px-4 py-2 bg-[#4B0082] text-white rounded-md hover:bg-[#3B0062]">
+                    Browse Tenders
+                  </button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </VendorLayout>
   )
 }

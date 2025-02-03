@@ -48,20 +48,20 @@ function VerifyEmailContent() {
   }, [searchParams, router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 md:py-12">
+      <div className="w-full max-w-md space-y-8 bg-white p-6 md:p-8 rounded-lg shadow-md">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-[#4B0082]">
+          <h2 className="text-center text-xl md:text-3xl font-extrabold text-[#4B0082]">
             Email Verification
           </h2>
-          <p className="mt-2 text-center text-gray-600">
+          <p className="mt-2 text-center text-sm md:text-base text-gray-600">
             Verifying your email address for Innobid
           </p>
         </div>
         
         {status === 'loading' && (
           <div className="text-center">
-            <p className="text-blue-600">Verifying your email...</p>
+            <p className="text-blue-600 text-sm md:text-base">Verifying your email...</p>
             <div className="mt-4 flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
             </div>
@@ -71,33 +71,39 @@ function VerifyEmailContent() {
         {status === 'success' && (
           <div className="text-center">
             <div className="text-green-600 mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 md:h-16 md:w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-green-600 text-xl">Email Verified Successfully!</p>
-            <p className="mt-2 text-gray-600">You will be redirected to login shortly.</p>
+            <p className="text-green-600 text-lg md:text-xl">Email Verified Successfully!</p>
+            <p className="mt-2 text-sm md:text-base text-gray-600">You will be redirected to login shortly.</p>
           </div>
         )}
 
         {status === 'error' && (
           <div className="text-center">
             <div className="text-red-600 mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 md:h-16 md:w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-red-600 text-xl">Verification Failed</p>
-            <p className="mt-2 text-gray-600">{errorMessage}</p>
+            <p className="text-red-600 text-lg md:text-xl">Verification Failed</p>
+            <p className="mt-2 text-sm md:text-base text-gray-600">{errorMessage}</p>
             
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 space-y-3">
               <Link href="/resend-verification" passHref>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm md:text-base py-2"
+                >
                   Resend Verification Email
                 </Button>
               </Link>
               <Link href="/login" passHref>
-                <Button variant="secondary" className="w-full">
+                <Button 
+                  variant="secondary" 
+                  className="w-full text-sm md:text-base py-2"
+                >
                   Back to Login
                 </Button>
               </Link>
@@ -111,7 +117,11 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">Loading...</div>
+      </div>
+    }>
       <VerifyEmailContent />
     </Suspense>
   )
