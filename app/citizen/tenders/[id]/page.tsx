@@ -1,156 +1,244 @@
-import { getTenderById } from "@/app/actions/tender-actions"
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CitizenLayout } from "@/components/citizen-layout"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   FileText, 
   MapPin, 
   Calendar, 
   Building2, 
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Users,
+  FileCheck,
+  ArrowLeft
 } from 'lucide-react'
-import Link from "next/link"
-import { notFound } from 'next/navigation'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import { getTenderById } from "@/app/actions/tender-actions"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
-export default async function TenderDetailsPage({ params }: { params: { id: string } }) {
-  try {
-    const tender = await getTenderById(params.id)
+export default function TenderDetailsPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const [tender, setTender] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    const fetchTender = async () => {
+      try {
+        const data = await getTenderById(params.id)
+        setTender(data)
+      } catch (error) {
+        console.error('Error fetching tender:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTender()
+  }, [params.id])
+
+  if (loading) {
     return (
       <CitizenLayout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Main Tender Details */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="bg-white shadow-md rounded-lg p-6">
-                <div className="flex items-start justify-between">
-                  <h1 className="text-2xl font-bold text-[#4B0082] flex items-center gap-3">
-                    <FileText className="h-6 w-6" />
-                    {tender.title}
-                  </h1>
-                  <span className="text-sm text-gray-500 font-medium">
-                    Ref: {tender.id.slice(-6).toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="mt-4 space-y-3 text-gray-700">
-                  <p className="text-sm">{tender.description}</p>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-gray-600" />
-                      <span>
-                        <span className="font-medium">Issuer:</span> {tender.issuer.name} 
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-gray-600" />
-                      <span>
-                        <span className="font-medium">Location:</span> {tender.location}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-gray-600" />
-                      <span>
-                        <span className="font-medium">Closing Date:</span> {new Date(tender.closingDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5 text-gray-600" />
-                      <span>
-                        <span className="font-medium">Budget:</span> Rs. {tender.budget?.toLocaleString() || 'Not specified'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Public Accountability Section */}
-              <div className="bg-white shadow-md rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4 text-[#4B0082] flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                  Report Irregularities
-                </h2>
-                <p className="text-sm text-gray-600 mb-4">
-                  If you notice any suspicious activities or potential misconduct related to this tender, 
-                  please report it confidentially. Your input helps maintain transparency and integrity 
-                  in the procurement process.
-                </p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" className="w-full">
-                      <AlertTriangle className="mr-2 h-4 w-4" /> Report Irregularity
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Report Tender Irregularity</DialogTitle>
-                    </DialogHeader>
-                    <form className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Your Name (Optional)</Label>
-                        <Input 
-                          id="name" 
-                          placeholder="Enter your name (optional)" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="contact">Contact Information (Optional)</Label>
-                        <Input 
-                          id="contact" 
-                          placeholder="Email or phone (optional)" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="irregularity">Description of Irregularity</Label>
-                        <Textarea 
-                          id="irregularity" 
-                          placeholder="Describe the irregularity you've observed" 
-                          className="min-h-[100px]"
-                          required 
-                        />
-                      </div>
-                      <Button type="submit" variant="destructive" className="w-full">
-                        Submit Report
-                      </Button>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-
-            {/* Bidding Information */}
-            <div className="space-y-6">
-              <div className="bg-white shadow-md rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4 text-[#4B0082]">Tender Overview</h2>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Status:</span>
-                    <span className={`
-                      px-3 py-1 rounded-full text-sm font-semibold
-                      ${tender.status === 'OPEN' ? 'bg-green-100 text-green-800' : 
-                        tender.status === 'CLOSED' ? 'bg-red-100 text-red-800' : 
-                        'bg-gray-100 text-gray-800'}
-                    `}>
-                      {tender.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Total Bids Received:</span>
-                    <span>{tender.bids.length}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center justify-center min-h-screen">
+          <LoadingSpinner className="h-8 w-8" />
         </div>
       </CitizenLayout>
     )
-  } catch (error) {
-    notFound()
   }
+
+  if (!tender) {
+    return (
+      <CitizenLayout>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <h2 className="text-xl font-bold text-red-500">Tender Not Found</h2>
+          <Button onClick={() => router.back()} className="mt-4">
+            Go Back
+          </Button>
+        </div>
+      </CitizenLayout>
+    )
+  }
+
+  return (
+    <CitizenLayout>
+      <div className="container mx-auto p-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          className="mb-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Main Content */}
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-2xl font-bold text-[#4B0082]">
+                      {tender.title}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500">
+                      Reference: {tender.id.slice(-6).toUpperCase()}
+                    </p>
+                  </div>
+                  <Badge variant={tender.status === 'OPEN' ? 'success' : 'secondary'}>
+                    {tender.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="details">
+                  <TabsList>
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="details" className="space-y-4">
+                    <div className="prose max-w-none">
+                      <h3 className="text-lg font-semibold">Description</h3>
+                      <p className="text-gray-600">{tender.description}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium">Department</p>
+                          <p className="text-sm text-gray-600">{tender.department?.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium">Location</p>
+                          <p className="text-sm text-gray-600">{tender.location}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium">Budget</p>
+                          <p className="text-sm text-gray-600">
+                            {formatCurrency(tender.budget)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium">Duration</p>
+                          <p className="text-sm text-gray-600">{tender.duration}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="requirements">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Technical Requirements</h3>
+                      <ul className="list-disc list-inside space-y-2 text-gray-600">
+                        {tender.requirements?.map((req: string, index: number) => (
+                          <li key={index}>{req}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="documents">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Supporting Documents</h3>
+                      {tender.documents?.length > 0 ? (
+                        <div className="space-y-2">
+                          {tender.documents.map((doc: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm text-gray-600">{doc.title}</span>
+                              </div>
+                              <Button variant="ghost" size="sm">
+                                View
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No documents available</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Key Dates</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Published</span>
+                  <span className="text-sm font-medium">
+                    {formatDate(tender.createdAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Closing Date</span>
+                  <span className="text-sm font-medium">
+                    {formatDate(tender.closingDate)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Bid Statistics</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Bids</span>
+                  <span className="text-sm font-medium">{tender.bids?.length || 0}</span>
+                </div>
+                {tender.status === 'AWARDED' && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Awarded Amount</span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(tender.awardedBid?.amount)}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Button 
+              variant="destructive" 
+              className="w-full"
+              onClick={() => router.push(`/citizen/report?tenderId=${tender.id}`)}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Report Irregularity
+            </Button>
+          </div>
+        </div>
+      </div>
+    </CitizenLayout>
+  )
 }

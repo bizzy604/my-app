@@ -48,11 +48,11 @@ export function DocumentManager({ tenderId, userId }: { tenderId: string, userId
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="document-upload" className="block text-sm font-medium text-gray-700">
+      <div className="w-full">
+        <Label htmlFor="document-upload" className="block text-sm font-medium text-gray-700 mb-2">
           Upload Document
         </Label>
-        <div className="mt-1 flex items-center">
+        <div className="flex flex-col sm:flex-row items-center gap-2">
           <Input
             id="document-upload"
             type="file"
@@ -62,46 +62,55 @@ export function DocumentManager({ tenderId, userId }: { tenderId: string, userId
           />
           <Label
             htmlFor="document-upload"
-            className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#4B0082] shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="w-full sm:w-auto cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#4B0082] shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 flex items-center justify-center"
           >
-            <Upload className="h-5 w-5 inline-block mr-2" />
+            <Upload className="h-4 w-4 inline-block mr-2" />
             {isUploading ? 'Uploading...' : 'Choose file'}
           </Label>
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>File Name</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>Upload Date</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {documents.map((doc) => (
-            <TableRow key={doc.id}>
-              <TableCell className="font-medium">
-                <FileText className="h-4 w-4 inline-block mr-2" />
-                {doc.fileName}
-              </TableCell>
-              <TableCell>{(doc.fileSize / 1024).toFixed(2)} KB</TableCell>
-              <TableCell>{new Date(doc.uploadDate).toLocaleDateString()}</TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(doc.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Delete</span>
-                </Button>
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="whitespace-nowrap">File Name</TableHead>
+              <TableHead className="hidden sm:table-cell">Size</TableHead>
+              <TableHead className="hidden sm:table-cell">Upload Date</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {documents.map((doc) => (
+              <TableRow key={doc.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{doc.fileName}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  {(doc.fileSize / 1024).toFixed(2)} KB
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  {new Date(doc.uploadDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(doc.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

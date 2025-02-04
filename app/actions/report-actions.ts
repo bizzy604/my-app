@@ -252,3 +252,32 @@ export async function submitIrregularityReport(formData: z.infer<typeof ReportSc
     }
   }
 }
+
+export async function getAllReports() {
+  try {
+    const reports = await prisma.report.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      },
+      include: {
+        tender: {
+          select: {
+            title: true
+          }
+        },
+        reporter: {
+          select: {
+            name: true,
+            company: true
+          }
+        }
+      }
+    })
+
+    return reports
+
+  } catch (error) {
+    console.error('Error fetching reports:', error)
+    throw new Error('Failed to fetch reports')
+  }
+}

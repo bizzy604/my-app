@@ -1,47 +1,91 @@
-import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface AlertProps {
-  message: string
-  isVisible: boolean
-  onClose: () => void
-}
+const alertVariants = cva(
+  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  {
+    variants: {
+      variant: {
+        default: "bg-background text-foreground",
+        destructive:
+          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
 
-export function Alert({ message, isVisible, onClose }: AlertProps) {
-  const [isClosing, setIsClosing] = useState(false)
+const Alert = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & 
+  VariantProps<typeof alertVariants> & 
+  { onClose?: () => void }
+>(({ className, variant, children, onClose, ...props }, ref) => {
+  const [isClosing, setIsClosing] = React.useState(false)
 
-  useEffect(() => {
-    if (isVisible) {
+  React.useEffect(() => {
+    if (onClose) {
       const timer = setTimeout(() => {
         setIsClosing(true)
         setTimeout(onClose, 300) // Match this with the transition duration
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [isVisible, onClose])
-
-  if (!isVisible) return null
+  }, [onClose])
 
   return (
     <div
-      className={cn(
-        "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 flex items-center p-4 mb-4 text-white bg-green-500 rounded-lg",
-        isClosing ? "animate-fade-out" : "animate-fade-in"
-      )}
+      ref={ref}
       role="alert"
+      className={cn(
+        alertVariants({ variant }),
+        isClosing ? "animate-fade-out" : "animate-fade-in",
+        className
+      )}
+      {...props}
     >
-      <span className="sr-only">Info</span>
-      <div className="ml-3 text-sm font-medium">{message}</div>
-      <button
-        type="button"
-        className="ml-auto -mx-1.5 -my-1.5 bg-green-600 text-white rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-700 inline-flex h-8 w-8 items-center justify-center"
-        aria-label="Close"
-        onClick={() => setIsClosing(true)}
-      >
-        <span className="sr-only">Close</span>
-        <X className="w-5 h-5" />
-      </button>
+      {children}
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+      )}
     </div>
   )
-}
+})
+Alert.displayName = "Alert"
+
+const AlertTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h5
+    ref={ref}
+    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+    {...props}
+  />
+))
+AlertTitle.displayName = "AlertTitle"
+
+const AlertDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm [&_p]:leading-relaxed", className)}
+    {...props}
+  />
+))
+AlertDescription.displayName = "AlertDescription"
+
+export { Alert, AlertTitle, AlertDescription }

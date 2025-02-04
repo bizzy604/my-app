@@ -1,85 +1,84 @@
-import NextAuth from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { prisma } from "@/lib/prisma"
+import NextAuth from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { compare } from "bcryptjs"
+import { Role } from "@prisma/client"
 
 const handler = NextAuth({
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "email@example.com" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Please enter an email and password')
+        }
+
         try {
-          if (!credentials?.email || !credentials?.password) {
-            console.log("Missing credentials")
-            throw new Error("Email and password are required")
-          }
-
-          // Normalize email to lowercase
-          const normalizedEmail = credentials.email.toLowerCase()
-          console.log("Attempting to authorize user with email:", normalizedEmail)
-
-          // Fetch user from the database
           const user = await prisma.user.findUnique({
-            where: { email: normalizedEmail },
+            where: {
+              email: credentials.email
+            },
+            select: {
+              id: true,
+              email: true,
+              password: true,
+              role: true,
+              name: true
+            }
           })
 
-          console.log("Found user:", user)
-
           if (!user) {
-            console.log("User not found")
-            throw new Error("User not found")
+            throw new Error('No user found with this email')
           }
 
-          // Compare the hashed password
-          const isValid = await bcrypt.compare(credentials.password, user.password)
-          console.log("Password valid:", isValid)
+          const isPasswordValid = await compare(credentials.password, user.password)
 
-          if (!isValid) {
-            console.log("Invalid password")
-            throw new Error("Invalid password")
+          if (!isPasswordValid) {
+            throw new Error('Invalid password')
           }
 
-          // Return user object without password
           return {
-            id: user.id.toString(),
-            name: user.name,
+            id: user.id,
             email: user.email,
-            role: user.role,
+            name: user.name,
+            role: user.role
           }
         } catch (error) {
-          console.error("Auth error:", error)
-          throw error
+          console.error('Auth error:', error)
+          throw new Error('Authentication error')
         }
-      },
-    }),
+      }
+    })
   ],
-  session: {
-    strategy: 'jwt',
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.email = user.email
         token.role = user.role
       }
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.email = token.email
-        session.user.role = token.role
+      if (session.user) {
+        session.user.id = token.id?.toString() ?? ''
+        session.user.role = token.role as Role
       }
       return session
-    },
+    }
   },
+  session: {
+    strategy: "jwt"
+  },
+  pages: {
+    signIn: '/login',
+    error: '/login'
+  },
+  debug: process.env.NODE_ENV === 'development',
 })
 
 export { handler as GET, handler as POST }

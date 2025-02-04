@@ -17,10 +17,6 @@ export default withAuth(
     // Check if user is accessing paths they shouldn't
     const userRole = token?.role as UserRole
     const allowedPaths = rolePathMap[userRole] || []
-
-    if (!allowedPaths.some(p => path.startsWith(p))) {
-      return NextResponse.redirect(new URL(`/${userRole.toLowerCase().replace('_', '-')}`, req.url))
-    }
   },
   {
     callbacks: {
