@@ -1,46 +1,55 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from "next/link"
-import { useRouter } from 'next/navigation'
 import { CitizenLayout } from "@/components/citizen-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Award, AlertTriangle, BarChart } from 'lucide-react'
-import { getTenders } from "@/app/actions/tender-actions"
-import { getReports } from "@/app/actions/report-actions"
+import { useCitizenData } from "@/hooks/use-citizen-data"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import Link from "next/link"
+import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { getRecentActivities } from "@/app/actions/activity-actions"
+import { formatDistanceToNow } from 'date-fns'
 
 export default function CitizenDashboardPage() {
-  const [dashboardData, setDashboardData] = useState({
-    activeTenders: 0,
-    recentlyAwarded: 0,
-    reportedIrregularities: 0,
-  })
   const router = useRouter()
+  const { stats, isLoading: statsLoading } = useCitizenData()
+  
+  // Fetch recent activities
+  const { 
+    data: activities, 
+    isLoading: activitiesLoading 
+  } = useQuery({
+    queryKey: ['recent-activities'],
+    queryFn: () => getRecentActivities(5)
+  })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch active tenders
-        const activeTenders = await getTenders({ status: 'OPEN' })
-        
-        // Fetch awarded tenders
-        const awardedTenders = await getTenders({ status: 'AWARDED' })
-        
-        // Fetch reports
-        const reports = await getReports()
-        
-        setDashboardData({
-          activeTenders: activeTenders.length,
-          recentlyAwarded: awardedTenders.length,
-          reportedIrregularities: reports.length,
-        })
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-      }
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'NEW_TENDER':
+        return <FileText className="h-5 w-5 text-[#4B0082]" />
+      case 'AWARDED':
+        return <Award className="h-5 w-5 text-[#4B0082]" />
+      case 'REPORT':
+        return <AlertTriangle className="h-5 w-5 text-[#4B0082]" />
+      default:
+        return null
     }
-    fetchData()
-  }, [])
+  }
+
+  const getActivityText = (activity: any) => {
+    switch (activity.type) {
+      case 'NEW_TENDER':
+        return `New tender posted: "${activity.title}" by ${activity.department}`
+      case 'AWARDED':
+        return `Tender awarded: "${activity.title}" to ${activity.winner}`
+      case 'REPORT':
+        return `Irregularity reported for tender: "${activity.tenderTitle}"`
+      default:
+        return ''
+    }
+  }
 
   return (
     <CitizenLayout>
@@ -57,9 +66,19 @@ export default function CitizenDashboardPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.activeTenders}</div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? (
+                  <LoadingSpinner className="h-4 w-4" />
+                ) : (
+                  stats?.activeTenders || 0
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">Open for bidding</p>
-              <Button asChild className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]">
+              <Button 
+                asChild 
+                className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]"
+                disabled={statsLoading}
+              >
                 <Link href="/citizen/tenders">View Tenders</Link>
               </Button>
             </CardContent>
@@ -71,7 +90,7 @@ export default function CitizenDashboardPage() {
               <Award className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.recentlyAwarded}</div>
+              <div className="text-2xl font-bold">{stats?.recentlyAwarded}</div>
               <p className="text-xs text-muted-foreground">In the last 30 days</p>
               <Button asChild className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]">
                 <Link href="/citizen/awarded-tenders">View Awarded</Link>
@@ -85,7 +104,7 @@ export default function CitizenDashboardPage() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.reportedIrregularities}</div>
+              <div className="text-2xl font-bold">{stats?.reportedIrregularities}</div>
               <p className="text-xs text-muted-foreground">Submitted reports</p>
               <Button asChild className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]">
                 <Link href="/citizen/report">Report Irregularity</Link>
@@ -115,29 +134,34 @@ export default function CitizenDashboardPage() {
           <h2 className="mb-4 text-xl font-semibold text-[#4B0082]">Recent Activity</h2>
           <Card>
             <CardContent className="p-0">
-              <ul className="divide-y divide-gray-200">
-                <li className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center">
-                    <FileText className="mr-3 h-5 w-5 text-[#4B0082]" />
-                    <span>New tender posted: "Supply of Medical Equipment"</span>
-                  </div>
-                  <span className="text-sm text-gray-500">2 hours ago</span>
-                </li>
-                <li className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center">
-                    <Award className="mr-3 h-5 w-5 text-[#4B0082]" />
-                    <span>Tender awarded: "City Park Renovation Project"</span>
-                  </div>
-                  <span className="text-sm text-gray-500">1 day ago</span>
-                </li>
-                <li className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center">
-                    <AlertTriangle className="mr-3 h-5 w-5 text-[#4B0082]" />
-                    <span>Irregularity reported: "Suspicious bid pattern"</span>
-                  </div>
-                  <span className="text-sm text-gray-500">3 days ago</span>
-                </li>
-              </ul>
+              {activitiesLoading ? (
+                <div className="flex justify-center p-6">
+                  <LoadingSpinner className="h-6 w-6" />
+                </div>
+              ) : activities && activities.length > 0 ? (
+                <ul className="divide-y divide-gray-200">
+                  {activities.map((activity, index) => (
+                    <li 
+                      key={index} 
+                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                      onClick={() => router.push(`/citizen/tenders/${activity.tenderId}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="flex items-center">
+                        {getActivityIcon(activity.type)}
+                        <span className="ml-3">{getActivityText(activity)}</span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  No recent activity
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

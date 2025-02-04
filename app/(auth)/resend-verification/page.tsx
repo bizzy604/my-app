@@ -94,11 +94,15 @@ export default function ResendVerificationPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 md:py-12">
+      <div className="w-full max-w-md space-y-8">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Resend Verification Email</h1>
-          <p className="text-gray-600">Enter your email to receive a new verification link</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-[#4B0082]">
+            Resend Verification Email
+          </h1>
+          <p className="text-sm md:text-base text-gray-600">
+            Enter your email to receive a new verification link
+          </p>
         </div>
 
         <form onSubmit={handleResendVerification} className="space-y-4">
@@ -111,19 +115,19 @@ export default function ResendVerificationPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="Email Address"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 text-sm md:text-base"
           >
             {isLoading ? 'Sending...' : 'Resend Verification Email'}
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-xs md:text-sm text-gray-600">
             Remember to check your spam folder if you don't see the email.{' '}
             <Link href="/login" className="text-[#4B0082] hover:underline">
               Back to Login

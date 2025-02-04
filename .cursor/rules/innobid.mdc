@@ -1,0 +1,13 @@
+---
+description: Rules that helps in managing this project
+globs: 
+---
+
+# Your rule content
+
+- Kindly do not change any code in the codebase first without understanding the context, but i want you go through the existing codebase and try to understand it first before making any changes.
+
+- Also as you write your codes, make sure that they are documented, scalable and follows industry best standards, such as putting the common codes in one place and separating the frontend from the backend.
+
+- Follow the existing custom styling and colors.
+- Remove the redudant codes and unused, to keep our codes clean and easily maintanable.

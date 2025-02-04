@@ -6,10 +6,12 @@ import Image from "next/image"
 import { VendorLayout } from "@/components/vendor-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { getTenders } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
 import { TenderStatus } from '@prisma/client'
-import { Search } from 'lucide-react'
+import { Search, Filter, MapPin, Calendar, DollarSign } from 'lucide-react'
 import { formatCurrency, formatDate } from "@/lib/utils"
 import Link from "next/link"
 
@@ -19,11 +21,11 @@ export default function TendersPage() {
   const [tenders, setTenders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
     const fetchTenders = async () => {
       try {
-        // Only fetch OPEN tenders for vendors
         const data = await getTenders({ status: TenderStatus.OPEN })
         setTenders(data)
       } catch (error: any) {
@@ -36,141 +38,129 @@ export default function TendersPage() {
         setLoading(false)
       }
     }
+
     fetchTenders()
   }, [toast])
 
-  const filteredTenders = tenders.filter(tender => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      tender.title.toLowerCase().includes(searchLower) ||
-      tender.description.toLowerCase().includes(searchLower) ||
-      tender.sector.toLowerCase().includes(searchLower) ||
-      tender.category.toLowerCase().includes(searchLower) ||
-      tender.location.toLowerCase().includes(searchLower)
-    )
-  })
-
-  if (loading) {
-    return (
-      <VendorLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <p>Loading tenders...</p>
-        </div>
-      </VendorLayout>
-    )
-  }
+  const filteredTenders = tenders.filter(tender => 
+    tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tender.description.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <VendorLayout>
-      <header className="flex items-center justify-between border-b bg-white px-8 py-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Available Tenders</h1>
-          <p className="text-sm text-gray-600">Browse and bid on available tenders</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="font-medium text-gray-900">{session?.user?.name}</p>
-            <p className="text-sm text-gray-600">Vendor</p>
+      <div className="p-4 md:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Available Tenders</h1>
+            <p className="text-sm md:text-base text-gray-600">Browse and bid on open tender opportunities</p>
           </div>
-          <div className="relative h-12 w-12">
-            <Image
-              src="/placeholder.svg"
-              alt="Profile picture"
-              fill
-              className="rounded-full object-cover"
-            />
-            <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white bg-green-400" />
-          </div>
-        </div>
-      </header>
 
-      <main className="p-8">
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <Input
-              className="pl-10"
-              placeholder="Search tenders by title, description, sector, or location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search tenders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full sm:w-[300px]"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              className="md:hidden"
+              onClick={() => setFilterOpen(!filterOpen)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
           </div>
         </div>
 
-        {filteredTenders.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              {searchQuery ? "No tenders found matching your search" : "No tenders available at the moment"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTenders.map((tender) => (
-              <div
-                key={tender.id}
-                className="rounded-lg border bg-white shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-[#4B0082] mb-2">
-                    {tender.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {tender.description}
-                  </p>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div>
-                      <dt className="text-gray-500">Category</dt>
-                      <dd className="font-medium">{tender.category}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Location</dt>
-                      <dd className="font-medium">{tender.location}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Budget</dt>
-                      <dd className="font-medium">
-                        {formatCurrency(tender.budget)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500">Sector</dt>
-                      <dd className="font-medium">{tender.sector}</dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="text-gray-500">Closing Date</dt>
-                      <dd className="font-medium">
-                        {formatDate(tender.closingDate)}
-                      </dd>
-                    </div>
-                    {tender.requirements && tender.requirements.length > 0 && (
-                      <div className="col-span-2">
-                        <dt className="text-gray-500 mb-1">Requirements</dt>
-                        <dd className="space-y-1">
-                          {tender.requirements.map((req: string, index: number) => (
-                            <p key={index} className="text-sm text-gray-600">
-                              • {req}
-                            </p>
-                          ))}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                  <div className="mt-4">
-                    <Button
-                      className="w-full"
-                      asChild
-                    >
-                      <Link href={`/vendor/tenders/${tender.id}`}>
-                        View Details & Submit Bid
-                      </Link>
-                    </Button>
+        {/* Tenders Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {loading ? (
+            // Loading skeletons
+            Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-full" />
+                    <div className="h-4 bg-gray-200 rounded w-5/6" />
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : filteredTenders.length > 0 ? (
+            filteredTenders.map((tender) => (
+              <Card key={tender.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg text-[#4B0082] mb-2">
+                        {tender.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {tender.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <MapPin className="h-4 w-4" />
+                        <span>{tender.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        <span>Closes: {formatDate(tender.closingDate)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <DollarSign className="h-4 w-4" />
+                        <span>Budget: {formatCurrency(tender.budget)}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <Button className="w-full" asChild>
+                        <Link href={`/vendor/tenders/${tender.id}`}>
+                          View Details
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No tenders found
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Filter Panel */}
+        {filterOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 md:hidden">
+            <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Filters</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setFilterOpen(false)}
+                >
+                  Close
+                </Button>
               </div>
-            ))}
+              {/* Add filter options here */}
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </VendorLayout>
   )
 }

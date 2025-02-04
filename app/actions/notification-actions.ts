@@ -3,51 +3,80 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache'
 
-export async function createNotification(data: {
-  userId: number
+export type NotificationType = 'TENDER' | 'BID' | 'SUPPORT_TICKET' | 'SYSTEM'
+
+interface NotificationData {
+  type: NotificationType
   message: string
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
-}) {
+  userId: number
+}
+
+export async function createNotification(data: NotificationData) {
   try {
     const notification = await prisma.notification.create({
-      data,
+      data: {
+        type: data.type,
+        message: data.message,
+        userId: data.userId,
+      }
     })
-    revalidatePath('/notifications')
+    revalidatePath('/procurement-officer/notifications')
     return notification
   } catch (error) {
-    console.error('Failed to create notification:', error)
+    console.error('Error creating notification:', error)
     throw new Error('Failed to create notification')
   }
 }
 
-export async function getNotifications(userId: number) {
+export async function getNotifications(userId?: string) {
   try {
+    const parsedUserId = userId ? parseInt(userId, 10) : undefined
+
     const notifications = await prisma.notification.findMany({
-      where: {
-        userId,
-      },
+      where: parsedUserId ? {
+        userId: parsedUserId
+      } : undefined,
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     })
-    return notifications
+
+    return notifications.map(notification => ({
+      ...notification,
+      createdAt: notification.createdAt.toISOString(),
+    }))
   } catch (error) {
-    console.error('Failed to fetch notifications:', error)
-    throw new Error('Failed to fetch notifications')
+    console.error('Error fetching notifications:', error)
+    return []
   }
 }
 
-export async function markNotificationAsRead(id: string) {
+export async function markAsRead(id: string) {
   try {
-    const notification = await prisma.notification.update({
+    await prisma.notification.update({
       where: { id },
-      data: { isRead: true },
+      data: { isRead: true }
     })
-    revalidatePath('/notifications')
-    return notification
+
+    revalidatePath('/procurement-officer/notifications')
+    return { success: true }
   } catch (error) {
-    console.error('Failed to mark notification as read:', error)
+    console.error('Error marking notification as read:', error)
     throw new Error('Failed to mark notification as read')
+  }
+}
+
+export async function deleteNotification(id: string) {
+  try {
+    await prisma.notification.delete({
+      where: { id }
+    })
+
+    revalidatePath('/procurement-officer/notifications')
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting notification:', error)
+    throw new Error('Failed to delete notification')
   }
 }
 

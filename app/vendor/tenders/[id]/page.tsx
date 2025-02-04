@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Bookmark, FileText, Upload } from 'lucide-react'
@@ -11,12 +11,17 @@ import {
   getTenderById, 
   checkVendorBidStatus 
 } from "@/app/actions/tender-actions"
-import { formatDate } from "@/lib/utils"
+import { formatDate, formatCurrency } from "@/lib/utils"
 import { 
   useHydrationSafeClient, 
   HydrationSafeLoader, 
   safeSessionData 
 } from "@/components/hydration-safe-client-component"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { MapPin, Calendar, DollarSign, ArrowLeft } from 'lucide-react'
 
 type TenderDataWithBidStatus = Awaited<ReturnType<typeof getTenderById>> & { 
   hasBid: boolean;
@@ -27,46 +32,66 @@ function TenderDetailsContent({ id }: { id: string }) {
   const router = useRouter()
   const { data: session } = useSession()
   const { toast } = useToast()
+  const [tender, setTender] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const { 
-    data: tenderData, 
-    isLoading, 
-    isClient 
-  } = useHydrationSafeClient<TenderDataWithBidStatus | null>(
-    async () => {
+  useEffect(() => {
+    const fetchTender = async () => {
       try {
-        const tenderData = await getTenderById(id)
-
-        // Use checkVendorBidStatus to determine if user has a bid
-        const bidStatus = session?.user?.id 
-          ? await checkVendorBidStatus(id, session.user.id) 
-          : null
-
-        return {
-          ...tenderData,
-          hasBid: !!bidStatus, // Convert to boolean
-          bidStatus // Include full bid status for additional information
-        }
-      } catch (error) {
-        console.error('Error loading tender:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load tender details",
-          variant: "destructive",
-        })
-        return null
+        const data = await getTenderById(id)
+        setTender(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load tender details')
+      } finally {
+        setIsLoading(false)
       }
-    },
-    [id, session?.user?.id]
-  )
+    }
+
+    fetchTender()
+  }, [id])
+
+  if (isLoading) {
+    return (
+      <VendorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <LoadingSpinner className="h-8 w-8" />
+        </div>
+      </VendorLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <VendorLayout>
+        <div className="flex flex-col items-center justify-center min-h-screen p-4">
+          <h2 className="text-xl font-bold text-red-500 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
+      </VendorLayout>
+    )
+  }
+
+  if (!tender) {
+    return (
+      <VendorLayout>
+        <div className="flex flex-col items-center justify-center min-h-screen p-4">
+          <h2 className="text-xl font-bold mb-2">Tender Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested tender could not be found.</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
+      </VendorLayout>
+    )
+  }
 
   const safeUser = safeSessionData(session)
 
   const handleApplyForTender = () => {
-    if (!tenderData) return
+    if (!tender) return
 
     // Validate tender status and closing date
-    if (tenderData.status !== 'OPEN') {
+    if (tender.status !== 'OPEN') {
       toast({
         title: "Tender Closed",
         description: "This tender is no longer accepting applications",
@@ -75,7 +100,7 @@ function TenderDetailsContent({ id }: { id: string }) {
       return
     }
 
-    if (new Date(tenderData.closingDate) < new Date()) {
+    if (new Date(tender.closingDate) < new Date()) {
       toast({
         title: "Tender Expired",
         description: "The application period for this tender has closed",
@@ -89,155 +114,75 @@ function TenderDetailsContent({ id }: { id: string }) {
   }
 
   return (
-    <HydrationSafeLoader 
-      isLoading={isLoading} 
-      isClient={isClient}
-      fallback={
-        <VendorLayout>
-          <div className="flex items-center justify-center min-h-screen">
-            <p>Loading tender details...</p>
+    <VendorLayout>
+      <div className="p-4 md:p-8 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="hidden md:flex"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">{tender.title}</h1>
+            <p className="text-sm md:text-base text-gray-600">Tender Details</p>
           </div>
-        </VendorLayout>
-      }
-    >
-      {tenderData && (
-        <VendorLayout>
-          <header className="flex items-center justify-between border-b bg-white px-8 py-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-[#4B0082]">Tender Details</h1>
-              <p className="text-sm text-gray-600">Review tender information and apply</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-medium text-gray-900">{safeUser.name}</p>
-                <p className="text-sm text-gray-600">{safeUser.company}</p>
-              </div>
-              <div className="relative h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-gray-600" />
-              </div>
-            </div>
-          </header>
+        </div>
 
-          <main className="p-8">
+        <Card>
+          <CardContent className="p-6">
             <div className="space-y-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded bg-[#4B0082]">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-[#4B0082]">{tenderData.title}</h2>
-                    <p className="text-sm text-gray-600">Posted by {tenderData.issuer.company}</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span>{tender.location}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    // Detailed condition checks
-                    const isOpen = tenderData.status === 'OPEN'
-                    const isNotClosed = new Date(tenderData.closingDate) > new Date()
-                    const hasNoBid = !tenderData.hasBid
-
-                    console.log('Visibility Conditions:', {
-                      isOpen,
-                      isNotClosed,
-                      hasNoBid
-                    })
-
-                    // Detailed logging of why button might not show
-                    if (!isOpen) {
-                      console.warn('Button not shown: Tender is not OPEN')
-                    }
-                    if (!isNotClosed) {
-                      console.warn('Button not shown: Tender is closed')
-                    }
-                    if (!hasNoBid) {
-                      console.warn('Button not shown: Bid already exists')
-                    }
-
-                    // Render button only if all conditions are met
-                    return (isOpen && isNotClosed && hasNoBid) ? (
-                    <Button 
-                      className="bg-[#4B0082] text-white hover:bg-[#3B0062]"
-                      onClick={handleApplyForTender}
-                    >
-                      Apply for Tender
-                    </Button>
-                  ) : null
-                  })()}
-                  {tenderData.hasBid && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => router.push('/vendor/tenders-history')}
-                    >
-                      View Your Application
-                    </Button>
-                  )}
-                  <Button variant="outline" size="icon">
-                    <Bookmark className="h-4 w-4" />
-                    <span className="sr-only">Bookmark tender</span>
-                  </Button>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Calendar className="h-4 w-4" />
+                  <span>Closes: {formatDate(tender.closingDate)}</span>
                 </div>
-              </div>
-
-              <div className="rounded-lg bg-gray-50 p-4">
-                <dl className="grid gap-2 text-sm">
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Issue Date:</dt>
-                    <dd className="text-gray-700">{formatDate(tenderData.createdAt)}</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Closing Date:</dt>
-                    <dd className="text-gray-700">{formatDate(tenderData.closingDate)}</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Status:</dt>
-                    <dd className="text-gray-700">{tenderData.status}</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Location:</dt>
-                    <dd className="text-gray-700">{tenderData.location}</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Budget:</dt>
-                    <dd className="text-gray-700">${tenderData.budget.toLocaleString()}</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <dt className="font-medium text-gray-900">Category:</dt>
-                    <dd className="text-gray-700">{tenderData.category}</dd>
-                  </div>
-                </dl>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Budget: {formatCurrency(tender.budget)}</span>
+                </div>
               </div>
 
               <div className="prose max-w-none">
-                <h3 className="text-lg font-semibold text-gray-900">Description</h3>
-                <div className="whitespace-pre-wrap text-gray-700">{tenderData.description}</div>
+                <h3 className="text-lg font-semibold mb-2">Description</h3>
+                <p className="text-gray-600">{tender.description}</p>
               </div>
 
-              {tenderData.requirements?.length > 0 && (
-                <div className="prose max-w-none">
-                  <h3 className="text-lg font-semibold text-gray-900">Requirements</h3>
-                  <ul className="list-disc pl-5">
-                    {tenderData.requirements.map((req: string, index: number) => (
-                      <li key={index} className="text-gray-700">{req}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Requirements</h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  {tender.requirements.map((req: string, index: number) => (
+                    <li key={index}>{req}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleApplyForTender}
+                  className="w-full md:w-auto"
+                >
+                  Apply for Tender
+                </Button>
+              </div>
             </div>
-          </main>
-        </VendorLayout>
-      )}
-    </HydrationSafeLoader>
+          </CardContent>
+        </Card>
+      </div>
+    </VendorLayout>
   )
 }
 
 export default function TenderDetailsPage({ params }: { params: { id: string } }) {
-  const paramsPromise = React.useMemo(() => Promise.resolve(params), [params])
-  const resolvedParams = React.use(paramsPromise)
-
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <TenderDetailsContent id={resolvedParams.id} />
-    </Suspense>
+    <ErrorBoundary>
+      <TenderDetailsContent id={params.id} />
+    </ErrorBoundary>
   )
 }

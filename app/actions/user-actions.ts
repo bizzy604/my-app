@@ -1,49 +1,139 @@
-import { prisma } from '@/lib/prisma' // Ensure correct import path
+'use server'
 
-interface ProfileFormData {
-  name?: string
-  email?: string
-  company?: string
-  phone?: string
-  registrationNumber?: string
-  address?: string
-  city?: string
-  country?: string
-  postalCode?: string
-  businessType?: string
-  establishmentDate?: Date
+import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
+import bcrypt from 'bcryptjs'
+import { sendPasswordResetEmail } from "@/lib/email-utils"
+
+interface UserSettings {
+  emailNotifications: boolean
+  smsNotifications: boolean
+  bidUpdates: boolean
+  tenderAlerts: boolean
+  marketingEmails: boolean
+  twoFactorAuth: boolean
 }
 
-export async function updateUserProfile(id: string, data: ProfileFormData) {
+interface ProfileData {
+  name: string
+  email: string
+  company: string
+  phone: string
+  registrationNumber: string
+  address: string
+  city: string
+  country: string
+  postalCode: string
+  businessType: string
+  establishmentDate: string
+  website: string
+}
+
+export async function updateUserSettings(userId: string, settings: UserSettings) {
   try {
-    // Convert id from string to number
-    const userId = parseInt(id, 10)
-    console.log('Parsed userId:', userId) // Debugging
-
-    if (isNaN(userId)) {
-      throw new Error('Invalid user ID')
-    }
-
-    // Prepare the data object, ensuring dates are handled correctly
-    const updateData: any = {
-      ...data,
-      updatedAt: new Date(),
-    }
-
-    // If establishmentDate is provided, ensure it's a valid Date object
-    if (data.establishmentDate) {
-      updateData.establishmentDate = new Date(data.establishmentDate)
-    }
-
-    console.log('Update Data:', updateData) 
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
+    await prisma.user.update({
+      where: { id: parseInt(userId) },
+      data: {
+        settings: settings as any // Type cast needed due to Prisma schema
+      }
     })
-    return updatedUser
+
+    revalidatePath('/vendor/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating user settings:', error)
+    throw new Error('Failed to update settings')
+  }
+}
+
+export async function updateUserProfile(userId: string, data: ProfileData) {
+  try {
+    const user = await prisma.user.update({
+      where: { id: parseInt(userId) },
+      data: {
+        name: data.name,
+        company: data.company,
+        phone: data.phone,
+        registrationNumber: data.registrationNumber,
+        address: data.address,
+        city: data.city,
+        country: data.country,
+        postalCode: data.postalCode,
+        businessType: data.businessType as any,
+        establishmentDate: new Date(data.establishmentDate),
+        website: data.website
+      }
+    })
+
+    revalidatePath('/vendor/profile')
+    return { success: true, user }
   } catch (error) {
     console.error('Error updating user profile:', error)
-    throw new Error('Failed to update user profile')
+    throw new Error('Failed to update profile')
+  }
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) }
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password)
+    if (!isValid) {
+      throw new Error('Current password is incorrect')
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+    // Update password
+    await prisma.user.update({
+      where: { id: parseInt(userId) },
+      data: { password: hashedPassword }
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error changing password:', error)
+    throw error
+  }
+}
+
+export async function requestPasswordReset(email: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!user) {
+      throw new Error('No account found with this email')
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const hashedToken = await bcrypt.hash(resetToken, 10)
+
+    // Save token to database
+    await prisma.user.update({
+      where: { email },
+      data: {
+        passwordResetToken: hashedToken,
+        passwordResetTokenExpiry: new Date(Date.now() + 3600000) // 1 hour
+      }
+    })
+
+    // Send reset email
+    await sendPasswordResetEmail(email, resetToken)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error requesting password reset:', error)
+    throw error
   }
 }

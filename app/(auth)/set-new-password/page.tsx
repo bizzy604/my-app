@@ -77,23 +77,25 @@ function SetNewPasswordContent() {
 
   return (
     <AuthLayout>
-      <div className="w-[500px] max-w-md mx-auto space-y-6 p-8 bg-white rounded-lg shadow-md">
+      <div className="w-full space-y-6">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold text-[#4B0082]">Set New Password</h1>
-          <p className="text-gray-600">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-[#4B0082]">
+            Set New Password
+          </h1>
+          <p className="text-sm md:text-base text-gray-600">
             Enter a new password for your account
           </p>
         </div>
 
         {error && (
-          <div className="text-red-500 text-center mb-4">
+          <div className="text-red-500 text-center text-sm md:text-base">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="newPassword" className="text-sm md:text-base">
               New Password
             </Label>
             <Input
@@ -103,12 +105,12 @@ function SetNewPasswordContent() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               placeholder="Enter new password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="confirmPassword" className="text-sm md:text-base">
               Confirm New Password
             </Label>
             <Input
@@ -118,14 +120,14 @@ function SetNewPasswordContent() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               placeholder="Confirm new password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 text-sm md:text-base"
           >
             {isLoading ? 'Resetting...' : 'Reset Password'}
           </Button>
@@ -137,7 +139,11 @@ function SetNewPasswordContent() {
 
 export default function SetNewPasswordPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">Loading...</div>
+      </div>
+    }>
       <SetNewPasswordContent />
     </Suspense>
   )

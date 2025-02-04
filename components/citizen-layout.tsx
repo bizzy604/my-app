@@ -3,7 +3,7 @@ import Link from "next/link"
 import { useState } from 'react'
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, Award, AlertTriangle, LogOut, LayoutDashboard } from 'lucide-react'
+import { FileText, Award, AlertTriangle, LogOut, LayoutDashboard, Menu } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
@@ -26,6 +26,7 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [showAlert, setShowAlert] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleSignOut = () => {
     // Implement actual sign out logic here
@@ -35,12 +36,37 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex flex-col md:flex-row min-h-screen bg-white">
+      {/* Mobile Header */}
+      <div className="md:hidden sticky top-0 z-30 bg-white border-b p-4 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Link href="/citizen" className="flex-shrink-0">
+          <Image
+            src="/Innobid Logo.jpg"
+            alt="InnoBid Logo"
+            width={100}
+            height={40}
+            className="h-8 w-auto"
+          />
+        </Link>
+        <div className="w-8" /> {/* Spacer for alignment */}
+      </div>
+
       {/* Sidebar */}
-      <div className="w-64 border-r bg-white p-6">
-        <div className="flex h-full flex-col">
-          {/* Logo */}
-          <Link href="/citizen/dashboard" className="mb-8">
+      <div className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-white transform transition-transform duration-200 ease-in-out
+        md:relative md:translate-x-0 border-r
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="flex h-full flex-col p-4 md:p-6">
+          {/* Logo - Hidden on mobile */}
+          <Link href="/citizen" className="hidden md:block mb-8">
             <Image
               src="/Innobid Logo.jpg"
               alt="InnoBid Logo"
@@ -51,7 +77,7 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1">
+          <nav className="flex-1 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -64,6 +90,7 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#4B0082] text-white" 
                       : "text-gray-700 hover:bg-gray-100"
                   )}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-gray-400")} />
                   {item.title}
@@ -85,7 +112,7 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 p-4 md:p-6 mt-14 md:mt-0">
         <Alert
           message="You have been successfully signed out."
           isVisible={showAlert}
@@ -93,6 +120,14 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
         />
         {children}
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
     </div>
   )
 }
