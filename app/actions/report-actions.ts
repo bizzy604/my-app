@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { Prisma } from '@prisma/client'
 import { ReportStatus, ReportType } from '@prisma/client'
 import { z } from "zod"
+import { authOptions } from '@/lib/auth'
 import { getServerSession } from "@/lib/auth"
 import { cookies } from 'next/headers'
 
@@ -35,13 +36,8 @@ const ReportSchema = z.object({
 
 export async function getReports(filters?: GetReportsFilters) {
   try {
-    console.log('Attempting to fetch reports')
-    console.log('Cookies:', cookies().getAll())
-
     // Authenticate the user
-    const session = await getServerSession()
-    
-    console.log('Session retrieved:', session)
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       console.error('No active session found')
