@@ -92,10 +92,8 @@ export async function POST(request: Request) {
             type: NotificationType.BID_STATUS_UPDATE,
             userId: bid.bidderId,
             message: `Your bid for tender "${winningBid.tender.title}" was not successful.`,
-            data: {
-              tenderId,
-              bidId: bid.id
-            }
+            tenderId,
+            bidId: bid.id
           }
         })
 
