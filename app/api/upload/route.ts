@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { uploadDocument } from '@/lib/document-upload'
+import { uploadDocument } from '@/lib/s3-upload'
 import { parseMultipartFormData } from '@/lib/multipart-parser'
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable the default body parser
-  },
-}
+// export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+export const bodyParser = false
 
 export async function POST(request: Request) {
   try {
@@ -62,10 +60,12 @@ export async function POST(request: Request) {
 
     // Upload document using our document upload utility
     const document = await uploadDocument(file, {
-      userId: parseInt(session.user.id),
+      userId: session.user.id,
       tenderId,
       bidId
     })
+
+
 
     return NextResponse.json({ 
       url: document.url,

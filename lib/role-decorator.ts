@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
-import { UserRole, checkPermission } from './roles'
+import { getServerSession } from 'next-auth'
+import { authOptions } from './auth'
+import { Role } from '@prisma/client'
 
-type PermissionType = keyof import('./roles').RolePermissions
-
-export function withRoleAuthorization(
-  handler: (req: NextRequest, { params }: { params?: any }) => Promise<NextResponse>,
-  requiredPermission?: PermissionType
+export async function withAuth(
+  handler: (req: NextRequest, context: any) => Promise<NextResponse>,
+  allowedRoles?: Role[]
 ) {
-  return async (req: NextRequest, context: { params?: any }) => {
-    const token = await getToken({ req })
+  return async (req: NextRequest, context: any) => {
+    const session = await getServerSession(authOptions)
 
-    if (!token) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userRole = token.role as UserRole
-
-    if (requiredPermission && !checkPermission(userRole, requiredPermission)) {
+    if (allowedRoles && !allowedRoles.includes(session.user.role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

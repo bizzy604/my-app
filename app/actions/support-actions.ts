@@ -3,25 +3,59 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { sendSupportNotificationEmail } from '@/lib/email-utils'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 interface SupportTicket {
-  subject: string
-  message: string
+  subject?: string
+  message?: string
   userId?: string | null
 }
 
-export async function submitSupportTicket(data: SupportTicket) {
+export async function submitSupportTicket(subjectOrData: string | SupportTicket, message?: string) {
   try {
-    if (!data.userId) {
-      throw new Error('User ID is required')
+    let data: SupportTicket
+
+    // Handle both object and separate arguments
+    if (typeof subjectOrData === 'string') {
+      if (!subjectOrData || subjectOrData.trim() === '') {
+        throw new Error('Subject is required')
+      }
+      if (!message || message.trim() === '') {
+        throw new Error('Message is required')
+      }
+      data = {
+        subject: subjectOrData,
+        message: message
+      }
+    } else {
+      data = subjectOrData
+      // Validate input
+      if (!data.subject || data.subject.trim() === '') {
+        throw new Error('Subject is required')
+      }
+
+      if (!data.message || data.message.trim() === '') {
+        throw new Error('Message is required')
+      }
     }
+
+    // Get the current user session
+    const session = await getServerSession(authOptions)
+    
+    if (!session || !session.user || !session.user.id) {
+      throw new Error('You must be logged in to submit a support ticket')
+    }
+
+    // Use the user ID from the session
+    const userId = session.user.id
 
     // Create support ticket
     const ticket = await prisma.supportTicket.create({
       data: {
-        subject: data.subject,
-        message: data.message,
-        userId: data.userId,
+        subject: data.subject!.trim(),
+        message: data.message!.trim(),
+        userId: Number(userId), // Ensure it's a number
         status: 'OPEN'
       },
       include: {
@@ -51,7 +85,7 @@ export async function submitSupportTicket(data: SupportTicket) {
     // Create notification for admin
     await prisma.notification.create({
       data: {
-        userId: data.userId,
+        userId: Number(userId),
         type: 'SUPPORT_TICKET',
         message: `New support ticket: ${data.subject}`,
         isRead: false
@@ -62,7 +96,7 @@ export async function submitSupportTicket(data: SupportTicket) {
     return ticket
   } catch (error) {
     console.error('Error submitting support ticket:', error)
-    throw new Error('Failed to submit support ticket')
+    throw error instanceof Error ? error : new Error('Failed to submit support ticket')
   }
 }
 

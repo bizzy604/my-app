@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DashboardLayout } from "@/components/dashboard-layout"
+import { VendorLayout } from "@/components/vendor-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,7 +31,7 @@ export default function SupportPage() {
   }
 
   return (
-    <DashboardLayout>
+    <VendorLayout>
       <div className="container mx-auto px-4 py-8">
         <Card>
           <CardHeader>
@@ -69,6 +69,6 @@ export default function SupportPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </VendorLayout>
   )
 }

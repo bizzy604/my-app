@@ -87,7 +87,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   const resetLink = `${process.env.NEXTAUTH_URL}/set-new-password?token=${token}`
 
   const sentFrom = new Sender(
-    "noreply@trial-k68zxl2kmeklj905.mlsender.net", 
+    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
     "Innobid"
   );
 
@@ -196,7 +196,7 @@ export async function sendVerificationEmail(email: string, token: string) {
   const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
   const sentFrom = new Sender(
-    "noreply@trial-k68zxl2kmeklj905.mlsender.net", 
+    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
     "Innobid"
   );
 
@@ -288,7 +288,7 @@ export async function sendSupportNotificationEmail({
 }: EmailNotification) {
   try {
     await resend.emails.send({
-      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
+      from: 'support@trial-ynrw7gy7362g2k8e.mlsender.net',
       to: [to],
       subject: subject,
       html: `
@@ -339,7 +339,7 @@ export async function sendTenderAwardEmail({
     `
 
     const response = await resend.emails.send({
-      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
+      from: 'awards@trial-ynrw7gy7362g2k8e.mlsender.net',
       to: [to],
       subject: subject,
       html: `
@@ -389,7 +389,7 @@ export async function sendBidStatusEmail(
     const template = emailTemplates[status](data)
     
     const response = await resend.emails.send({
-      from: 'noreply@trial-k68zxl2kmeklj905.mlsender.net',
+      from: 'noreply@trial-ynrw7gy7362g2k8e.mlsender.net',
       to: [to],
       subject: template.subject,
       html: template.html,

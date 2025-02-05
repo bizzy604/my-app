@@ -23,19 +23,25 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & 
   VariantProps<typeof alertVariants> & 
-  { onClose?: () => void }
->(({ className, variant, children, onClose, ...props }, ref) => {
+  { 
+    onClose?: () => void; 
+    message?: string; 
+    isVisible?: boolean; 
+  }
+>(({ className, variant, message, isVisible = false, children, onClose, ...props }, ref) => {
   const [isClosing, setIsClosing] = React.useState(false)
 
   React.useEffect(() => {
-    if (onClose) {
+    if (onClose && isVisible) {
       const timer = setTimeout(() => {
         setIsClosing(true)
         setTimeout(onClose, 300) // Match this with the transition duration
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [onClose])
+  }, [onClose, isVisible])
+
+  if (!isVisible) return null
 
   return (
     <div
@@ -48,15 +54,13 @@ const Alert = React.forwardRef<
       )}
       {...props}
     >
-      {children}
+      {message || children}
       {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        <button 
+          onClick={onClose} 
+          className="absolute top-2 right-2 hover:opacity-75"
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
         </button>
       )}
     </div>
