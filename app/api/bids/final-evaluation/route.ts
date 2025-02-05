@@ -35,8 +35,7 @@ export async function POST(request: Request) {
       await tx.bid.update({
         where: { id: winningBidId },
         data: { 
-          status: BidStatus.ACCEPTED,
-          score: evaluations[winningBidId].totalScore
+          status: BidStatus.ACCEPTED
         }
       })
 
@@ -67,8 +66,7 @@ export async function POST(request: Request) {
         await tx.bid.update({
           where: { id: bid.id },
           data: { 
-            status: BidStatus.REJECTED,
-            score: evaluations[bid.id]?.totalScore
+            status: BidStatus.REJECTED
           }
         })
 
