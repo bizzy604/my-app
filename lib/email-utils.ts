@@ -3,7 +3,6 @@ import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { Resend } from 'resend'
 import { emailTemplates } from './email-templates'
 
 // Ensure environment variables are loaded
@@ -16,7 +15,6 @@ const mailerSend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY,
 });
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Add a logging utility
 function logEmailEvent(type: 'sent' | 'failed', email: string, context?: any) {
@@ -82,7 +80,7 @@ export async function generatePasswordResetToken(email: string): Promise<string>
 
 
 // RESETTING PASSWORD TEMPLATE
-export async function sendPasswordResetEmail(email: string, token: string) {
+export async function sendPasswordResetEmail(email: string, token: string, recipientName?: string) {
   // Change reset link to point to set-new-password page
   const resetLink = `${process.env.NEXTAUTH_URL}/set-new-password?token=${token}`
 
@@ -104,7 +102,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
         <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Password Reset</h1>
           
-          <p style="color: #333; line-height: 1.6;">Hello, </p>
+          <p style="color: #333; line-height: 1.6;">Hello${recipientName ? `, ${recipientName}` : ''},</p>
           
           <p style="color: #333; line-height: 1.6;">
             You have requested to reset your password for your Innobid account. 
@@ -192,7 +190,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 
 // EMAIL VERIFICATION TEMPLATE
-export async function sendVerificationEmail(email: string, token: string) {
+export async function sendVerificationEmail(email: string, token: string, recipientName?: string) {
   const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
   const sentFrom = new Sender(
@@ -213,7 +211,7 @@ export async function sendVerificationEmail(email: string, token: string) {
         <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Verify Your Email</h1>
           
-          <p style="color: #333; line-height: 1.6;">Hello, </p>
+          <p style="color: #333; line-height: 1.6;">Hello${recipientName ? `, ${recipientName}` : ''},</p>
           
           <p style="color: #333; line-height: 1.6;">
             Thank you for registering with Innobid. To complete your registration and activate your account, 
@@ -287,18 +285,36 @@ export async function sendSupportNotificationEmail({
   ticketId
 }: EmailNotification) {
   try {
-    await resend.emails.send({
-      from: 'support@trial-ynrw7gy7362g2k8e.mlsender.net',
-      to: [to],
-      subject: subject,
-      html: `
-        <h2>Support Ticket Update</h2>
-        <p>Your support ticket (ID: ${ticketId}) has been updated.</p>
-        <p>Please log in to your account to view the details.</p>
-      `
-    })
+    const emailParams = new EmailParams()
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Support'))
+      .setTo([new Recipient(to)])
+      .setSubject(subject || 'Support Ticket Update')
+      .setHtml(`
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2>Support Ticket Update</h2>
+          <p>Your support ticket (ID: ${ticketId}) has been updated.</p>
+          <p>Please log in to your account to view the details.</p>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="${process.env.NEXTAUTH_URL}/support-tickets/${ticketId}" 
+               style="background-color: #4B0082; color: white; padding: 10px 20px; 
+                      text-decoration: none; border-radius: 5px;">
+              View Ticket
+            </a>
+          </div>
+        </div>
+      `)
+      .setText(`Your support ticket (ID: ${ticketId}) has been updated. 
+      Please log in to your account to view the details.`)
+
+    const response = await mailerSend.email.send(emailParams)
+
+    console.log('Support notification email sent successfully:', response)
+    return true
   } catch (error) {
     console.error('Failed to send support notification email:', error)
+    // Log detailed error for debugging
+    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
+    return false
   }
 }
 
@@ -306,9 +322,12 @@ interface EmailData {
   recipientName: string
   tenderTitle: string
   message: string
-  bidAmount: string
+  bidAmount: number
   companyName: string
   tenderReference: string
+  evaluationScore?: number
+  evaluationComments?: string
+  nextSteps?: string
 }
 
 export async function sendTenderAwardEmail({
@@ -338,11 +357,11 @@ export async function sendTenderAwardEmail({
       Procurement Team
     `
 
-    const response = await resend.emails.send({
-      from: 'awards@trial-ynrw7gy7362g2k8e.mlsender.net',
-      to: [to],
-      subject: subject,
-      html: `
+    const emailParams = new EmailParams()
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
+      .setTo([new Recipient(to)])
+      .setSubject(subject || 'Tender Award Notification')
+      .setHtml(`
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Tender Award Notification</h2>
           <p>Dear ${data.recipientName},</p>
@@ -357,28 +376,21 @@ export async function sendTenderAwardEmail({
           <p>Please log in to the system to view more details and proceed with the necessary documentation.</p>
           <p>Best regards,<br>Procurement Team</p>
         </div>
-      `,
-      text: emailContent,
-    })
+      `)
+      .setText(emailContent)
+
+    const response = await mailerSend.email.send(emailParams)
 
     console.log('Email sent successfully:', response)
     return true
   } catch (error) {
     console.error('Failed to send email:', error)
+    // Log detailed error for debugging
+    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
     throw new Error('Failed to send email notification')
   }
 }
 
-interface EmailData {
-  recipientName: string
-  tenderTitle: string
-  tenderReference: string
-  bidAmount: number
-  companyName: string
-  evaluationScore?: number
-  evaluationComments?: string
-  nextSteps?: string
-}
 
 export async function sendBidStatusEmail(
   to: string,
@@ -388,17 +400,37 @@ export async function sendBidStatusEmail(
   try {
     const template = emailTemplates[status](data)
     
-    const response = await resend.emails.send({
-      from: 'noreply@trial-ynrw7gy7362g2k8e.mlsender.net',
-      to: [to],
-      subject: template.subject,
-      html: template.html,
-    })
+    const emailParams = new EmailParams()
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
+      .setTo([new Recipient(to)])
+      .setSubject(template.subject)
+      .setHtml(template.html)
+      .setText(template.subject)
+
+    const response = await mailerSend.email.send(emailParams)
 
     console.log('Email sent successfully:', response)
+    
+    // Log email event for tracking
+    logEmailEvent('sent', to, { 
+      status, 
+      templateType: status, 
+      recipientName: data.recipientName 
+    })
+
     return true
   } catch (error) {
     console.error('Failed to send email:', error)
-    throw new Error('Failed to send email notification')
+    
+    // Log detailed error for debugging
+    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
+    
+    // Log email event for failed send
+    logEmailEvent('failed', to, { 
+      status, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    })
+
+    return false
   }
 }
