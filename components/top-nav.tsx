@@ -12,9 +12,10 @@ import {
 
 interface TopNavProps {
   onMenuClick: () => void
+  logo?: React.ReactNode
 }
 
-export function TopNav({ onMenuClick }: TopNavProps) {
+export function TopNav({ onMenuClick, logo }: TopNavProps) {
   const { data: session } = useSession()
 
   return (
@@ -32,7 +33,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg md:text-xl font-bold text-[#4B0082]">Innobid</h1>
+          {logo || <h1 className="text-lg md:text-xl font-bold text-[#4B0082]">Innobid</h1>}
         </div>
 
         {session?.user && (
@@ -53,4 +54,4 @@ export function TopNav({ onMenuClick }: TopNavProps) {
       </div>
     </header>
   )
-} 
+}

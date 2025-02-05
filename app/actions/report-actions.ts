@@ -94,13 +94,8 @@ export async function getReports(filters?: GetReportsFilters) {
 
 export async function createReport(data: CreateReportInput) {
   try {
-    console.log('Attempting to create report')
-    console.log('Cookies:', cookies().getAll())
-
     // Authenticate the user
     const session = await getServerSession()
-    
-    console.log('Session retrieved:', session)
 
     if (!session) {
       console.error('No active session found')
@@ -113,7 +108,6 @@ export async function createReport(data: CreateReportInput) {
         reporterId: data.reporterId,
         type: data.type,
         description: data.description,
-        evidence: data.evidence,
         status: ReportStatus.PENDING,
       },
       include: {
@@ -142,9 +136,6 @@ export async function createReport(data: CreateReportInput) {
 
 export async function updateReportStatus(reportId: string, newStatus: ReportStatus) {
   try {
-    console.log('Attempting to update report status')
-    console.log('Cookies:', cookies().getAll())
-
     // Authenticate the user
     const session = await getServerSession()
     
@@ -210,8 +201,7 @@ export async function submitIrregularityReport(formData: z.infer<typeof ReportSc
         reporterId: session.user.id,
         type: validatedData.reportType,
         description: `${validatedData.reportSubtype ? `[${validatedData.reportSubtype}] ` : ''}${validatedData.description}`,
-        status: ReportStatus.PENDING,
-        evidence: validatedData.evidence
+        status: ReportStatus.PENDING
       },
       include: {
         tender: {

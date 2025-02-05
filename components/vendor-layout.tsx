@@ -10,14 +10,14 @@ import {
   History, 
   BookOpen, 
   Bell, 
-  Settings, 
-  HelpCircle, 
+  Settings,
   MessageSquare, 
   LogOut,
   Menu,
   X,
   User
 } from 'lucide-react'
+import { Alert } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
@@ -49,23 +49,25 @@ export function VendorLayout({ children }: VendorLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
+  const [showAlert, setShowAlert] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleSignOut = async () => {
     try {
-      await signOut({ 
-        callbackUrl: '/login',
-        redirect: true
-      })
+      await signOut({ redirect: false });
+      setShowAlert(true);
+      setTimeout(() => {
+        setShowAlert(false);
+        router.push('/login');
+      }, 3000);
     } catch (error) {
-      console.error('Sign out error:', error)
       toast({
-        title: "Sign Out Failed",
-        description: "An error occurred while signing out. Please try again.",
+        title: "Sign Out Error",
+        description: "An error occurred while signing out.",
         variant: "destructive"
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,8 +81,15 @@ export function VendorLayout({ children }: VendorLayoutProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-bold text-[#4B0082]">Innobid</h1>
-          <div className="w-10" /> {/* Spacer for alignment */}
+            <Link href="/vendor" className="mb-8">
+              <Image
+                src="/Innobid Logo.jpg"
+                alt="InnoBid Logo"
+                width={40}
+                height={30}
+                className="h-auto w-auto"
+              />
+            </Link>
         </div>
       </header>
 
@@ -142,7 +151,15 @@ export function VendorLayout({ children }: VendorLayoutProps) {
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-gray-200">
           <div className="flex flex-col flex-1 p-6">
-            <h2 className="text-lg font-bold text-[#4B0082] mb-8">Innobid</h2>
+            <Link href="/vendor" className="mb-8">
+              <Image
+                src="/Innobid Logo.jpg"
+                alt="InnoBid Logo"
+                width={120}
+                height={40}
+                className="h-auto w-auto"
+              />
+            </Link>
             <nav className="flex-1 space-y-2">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
@@ -165,11 +182,11 @@ export function VendorLayout({ children }: VendorLayoutProps) {
             </nav>
 
             <Button
-              variant="ghost"
-              className="mt-auto w-full justify-start gap-3 text-red-500 hover:bg-red-50 hover:text-red-600"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-5 w-5" />
+            variant="ghost"
+            className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 text-gray-400" />
               Sign Out
             </Button>
           </div>
@@ -177,6 +194,11 @@ export function VendorLayout({ children }: VendorLayoutProps) {
 
         {/* Main Content */}
         <main className="flex-1 md:pl-64">
+        <Alert
+            message="You have been successfully signed out."
+            isVisible={showAlert}
+            onClose={() => setShowAlert(false)}
+          />
           {children}
         </main>
       </div>

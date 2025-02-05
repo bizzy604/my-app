@@ -1,14 +1,11 @@
 import NextAuth, { 
   AuthOptions, 
   Session, 
-  User as NextAuthUser, 
-  Account, 
-  Profile
+  User as NextAuthUser 
 } from "next-auth"
-import AdapterUser from "next-auth"
 import { JWT } from "next-auth/jwt"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma'
 import bcrypt from "bcryptjs"
 import { cookies } from 'next/headers'
 import { decode } from "next-auth/jwt"
@@ -44,9 +41,8 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    sub?: string;
-    role?: Role;
     id?: number;
+    role?: Role;
   }
 }
 
@@ -58,9 +54,9 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error('Please enter an email and password')
         }
 
         const user = await prisma.user.findUnique({
@@ -68,7 +64,7 @@ export const authOptions: AuthOptions = {
         })
 
         if (!user) {
-          return null
+          throw new Error('No user found with this email')
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -77,12 +73,11 @@ export const authOptions: AuthOptions = {
         )
 
         if (!isPasswordValid) {
-          return null
+          throw new Error('Invalid password')
         }
 
-        // Return a user object that matches the NextAuth User type
         return {
-          id: user.id, // Use number type
+          id: user.id,
           email: user.email,
           name: user.name,
           role: user.role
@@ -91,31 +86,27 @@ export const authOptions: AuthOptions = {
     })
   ],
   callbacks: {
-    async session({ session, token }) {
-      // Ensure session user matches the extended Session type
-      session.user.id = token.id ? parseInt(token.id.toString(), 10) : 0
-      session.user.role = token.role || 'VENDOR'
-      return session
-    },
-    async jwt({ token, user, account, profile, trigger }) {
-      // Handle different scenarios for token generation
+    async jwt({ token, user }) {
       if (user) {
-        // During sign in or sign up
-        // Ensure id is always a number
-        token.id = typeof user.id === 'string' 
-          ? parseInt(user.id, 10) 
-          : user.id
+        token.id = user.id
         token.role = user.role
       }
-      
       return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as number
+        session.user.role = token.role as Role
+      }
+      return session
     }
   },
   pages: {
-    signIn: "/login"
+    signIn: "/login",
+    error: "/login"
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET
@@ -173,5 +164,4 @@ export async function getServerSession() {
 }
 
 export const auth = NextAuth(authOptions)
-
 export const { signIn, signOut } = auth

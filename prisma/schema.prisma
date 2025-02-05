@@ -128,7 +128,11 @@ model Notification {
   createdAt DateTime @default(now())
   userId    Int // Changed from String to Int to match User model
   user      User     @relation(fields: [userId], references: [id])
-
+  
+  // Optional fields for additional context
+  tenderId  String?
+  bidId     String?
+  
   @@index([userId])
 }
 

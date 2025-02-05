@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { withRoleAuthorization } from '@/lib/role-decorator'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { Role } from '@prisma/client'
 
-async function getUserRole(req: NextRequest) {
+export async function GET(req: NextRequest) {
+  // Check authentication first
+  const session = await getServerSession(authOptions)
+  
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Check if user has required role
+  if (![Role.PROCUREMENT, Role.VENDOR, Role.CITIZEN].includes(session.user.role)) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+  }
+
+
   const { searchParams } = new URL(req.url)
   const email = searchParams.get('email')
 
@@ -26,5 +41,3 @@ async function getUserRole(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-export const GET = withRoleAuthorization(getUserRole)

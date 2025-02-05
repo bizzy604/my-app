@@ -561,7 +561,7 @@ export async function getTenderBids(tenderId: string) {
   }
 }
 
-export async function updateBidStatus(bidId: string, status: BidStatus): Promise<void> {
+export async function updateBidStatus(bidId: string, ACCEPTED: string, status: BidStatus): Promise<void> {
   try {
     await prisma.bid.update({
       where: {
@@ -1112,8 +1112,8 @@ export async function sendAwardNotification({
     // Create notification in database
     await prisma.notification.create({
       data: {
-        type: NotificationType.TENDER_STATUS_UPDATE,
-        message: `Congratulations! Your bid for tender ${bid.tender.title} has been accepted.`,
+        type: NotificationType.TENDER_AWARD,
+        message: `Congratulations! Your bid for tender "${bid.tender.title}" has been accepted.`,
         userId: bid.bidderId,
       }
     })
@@ -1124,7 +1124,7 @@ export async function sendAwardNotification({
       subject: `Tender Award Notification - ${bid.tender.title}`,
       data: {
         recipientName,
-          tenderTitle: bid.tender.title,
+        tenderTitle: bid.tender.title,
         message,
         bidAmount: formatCurrency(bid.amount),
         companyName: bid.bidder.company || '',
@@ -1203,7 +1203,7 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
         data: { status: BidStatus.REJECTED }
       })
 
-      // Create notifications
+      // Create notification
       await prisma.notification.create({
         data: {
           type: NotificationType.TENDER_AWARD,
@@ -1226,12 +1226,14 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
           tenderReference: bid.tender.id
         }
       })
+
+      return { success: true }
     })
 
     revalidatePath(`/procurement-officer/tenders/${tenderId}`)
     revalidatePath('/procurement-officer/tenders')
     
-    return { success: true }
+    return result
   } catch (error) {
     console.error('Error in award process:', error)
     throw new Error('Failed to complete the award process')
