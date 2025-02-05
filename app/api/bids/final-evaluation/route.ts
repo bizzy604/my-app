@@ -49,6 +49,22 @@ export async function POST(request: Request) {
         }
       })
 
+      // Create bid evaluation log for the winning bid
+      await tx.bidEvaluationLog.create({
+        data: {
+          bidId: winningBidId,
+          tenderId: tenderId,
+          stage: 'FINAL_EVALUATION',
+          totalScore: evaluations[winningBidId]?.totalScore ?? 0,
+          technicalScore: evaluations[winningBidId]?.technicalScore ?? 0,
+          financialScore: evaluations[winningBidId]?.financialScore ?? 0,
+          experienceScore: evaluations[winningBidId]?.experienceScore ?? 0,
+          evaluatedBy: session.user.id,
+          evaluatorId: session.user.id,
+          comments: 'Final bid evaluation for tender award'
+        }
+      })
+
       // Update other bids
       const otherBids = await tx.bid.findMany({
         where: {
@@ -90,7 +106,7 @@ export async function POST(request: Request) {
           {
             tenderTitle: winningBid.tender.title,
             bidAmount: bid.amount,
-            comments: evaluations[bid.id]?.comments
+            comments: evaluations[bid.id]?.comments ?? 'No specific comments provided'
           }
         )
       }
