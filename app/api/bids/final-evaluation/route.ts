@@ -104,14 +104,17 @@ export async function POST(request: Request) {
           data: rejectionNotification
         })
 
-        // Send rejection email
+        // Send rejection email with complete email data
         await sendBidStatusEmail(
           bid.bidder.email,
           'rejected',
           {
+            recipientName: bid.bidder.name || bid.bidder.company || 'Bidder',
             tenderTitle: winningBid.tender.title,
-            bidAmount: bid.amount,
-            comments: evaluations[bid.id]?.comments ?? 'No specific comments provided'
+            bidAmount: bid.amount.toString(),
+            message: 'Your bid was not selected for the final award.',
+            companyName: bid.bidder.company || 'N/A',
+            tenderReference: winningBid.tender.id.slice(-6).toUpperCase()
           }
         )
       }
@@ -130,16 +133,19 @@ export async function POST(request: Request) {
         data: awardNotification
       })
 
-      // Send award email
-      await sendTenderAwardEmail(
-        winningBid.bidder.email,
-        'awarded',
-        {
+      // Send award email with complete email data
+      await sendTenderAwardEmail({
+        to: winningBid.bidder.email,
+        subject: 'Tender Award Notification',
+        data: {
+          recipientName: winningBid.bidder.name || winningBid.bidder.company || 'Bidder',
           tenderTitle: winningBid.tender.title,
-          bidAmount: winningBid.amount,
-          companyName: winningBid.bidder.company || ''
+          bidAmount: winningBid.amount.toString(),
+          message: 'Congratulations on being awarded the tender!',
+          companyName: winningBid.bidder.company || 'N/A',
+          tenderReference: winningBid.tender.id.slice(-6).toUpperCase()
         }
-      )
+      })
 
       return { winningBid }
     })
