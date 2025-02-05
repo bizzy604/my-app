@@ -30,6 +30,9 @@ export function FinalEvaluationPanel({ tenderId, shortlistedBids }: FinalEvaluat
   const [selectedBidId, setSelectedBidId] = useState<string>('')
   const [evaluations, setEvaluations] = useState<Record<string, { 
     totalScore: number
+    technicalScore: number
+    financialScore: number
+    experienceScore: number
     comments: string 
   }>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -125,6 +128,9 @@ export function FinalEvaluationPanel({ tenderId, shortlistedBids }: FinalEvaluat
                       [bid.id]: {
                         ...prev[bid.id],
                         comments: e.target.value,
+                        technicalScore: bid.technicalScore,
+                        financialScore: bid.financialScore,
+                        experienceScore: bid.experienceScore,
                         totalScore: (bid.technicalScore * 0.4) + 
                                   (bid.financialScore * 0.4) + 
                                   (bid.experienceScore * 0.2)
@@ -155,4 +161,4 @@ export function FinalEvaluationPanel({ tenderId, shortlistedBids }: FinalEvaluat
       </Card>
     </div>
   )
-} 
+}
