@@ -78,6 +78,10 @@ export async function POST(request: Request) {
       })
 
       for (const bid of otherBids) {
+        // Log bid and winning bid details for debugging
+        console.log('Bid Details:', JSON.stringify(bid, null, 2))
+        console.log('Winning Bid Details:', JSON.stringify(winningBid, null, 2))
+
         // Update bid status
         await tx.bid.update({
           where: { id: bid.id },
@@ -87,14 +91,17 @@ export async function POST(request: Request) {
         })
 
         // Create rejection notification
+        const rejectionNotification = {
+          type: 'BID_STATUS_UPDATE',
+          userId: bid.bidderId,
+          message: `Your bid for tender "${winningBid.tender.title}" was not successful.`,
+          tenderId: tenderId,
+          bidId: bid.id
+        }
+        console.log('Rejection Notification Payload:', JSON.stringify(rejectionNotification, null, 2))
+
         await tx.notification.create({
-          data: {
-            type: NotificationType.BID_STATUS_UPDATE,
-            userId: bid.bidderId,
-            message: `Your bid for tender "${winningBid.tender.title}" was not successful.`,
-            tenderId,
-            bidId: bid.id
-          }
+          data: rejectionNotification
         })
 
         // Send rejection email
@@ -110,16 +117,17 @@ export async function POST(request: Request) {
       }
 
       // Create award notification
+      const awardNotification = {
+        type: 'TENDER_AWARD',
+        userId: winningBid.bidderId,
+        message: `Congratulations! Your bid for tender "${winningBid.tender.title}" has been awarded.`,
+        tenderId: tenderId,
+        bidId: winningBidId
+      }
+      console.log('Award Notification Payload:', JSON.stringify(awardNotification, null, 2))
+
       await tx.notification.create({
-        data: {
-          type: NotificationType.TENDER_AWARD,
-          userId: winningBid.bidderId,
-          message: `Congratulations! Your bid for tender "${winningBid.tender.title}" has been awarded.`,
-          data: {
-            tenderId,
-            bidId: winningBidId
-          }
-        }
+        data: awardNotification
       })
 
       // Send award email
