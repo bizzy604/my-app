@@ -1,15 +1,20 @@
 import NextAuth, { 
   AuthOptions, 
   Session, 
-  User as NextAuthUser 
+  User as NextAuthUser, 
+  Account, 
+  Profile
 } from "next-auth"
+import AdapterUser from "next-auth"
 import { JWT } from "next-auth/jwt"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import bcrypt from "bcryptjs"
 import { cookies } from 'next/headers'
 import { decode } from "next-auth/jwt"
 import { Role } from "@prisma/client"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { NextAuthOptions } from "next-auth"
 
 // Extend default session types
 declare module "next-auth" {
@@ -41,12 +46,36 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id?: number;
+    sub?: string;
     role?: Role;
+    id?: number;
   }
 }
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  callbacks: {
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id
+        token.role = user.role
+      }
+      // Ensure token doesn't expire too quickly
+      token.exp = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id?.toString() ?? ''
+        session.user.role = token.role as Role
+      }
+      return session
+    }
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -54,9 +83,9 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please enter an email and password')
+          return null
         }
 
         const user = await prisma.user.findUnique({
@@ -64,7 +93,7 @@ export const authOptions: AuthOptions = {
         })
 
         if (!user) {
-          throw new Error('No user found with this email')
+          return null
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -73,11 +102,12 @@ export const authOptions: AuthOptions = {
         )
 
         if (!isPasswordValid) {
-          throw new Error('Invalid password')
+          return null
         }
 
+        // Return a user object that matches the NextAuth User type
         return {
-          id: user.id,
+          id: user.id, // Use number type
           email: user.email,
           name: user.name,
           role: user.role
@@ -85,31 +115,22 @@ export const authOptions: AuthOptions = {
       }
     })
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as number
-        session.user.role = token.role as Role
-      }
-      return session
-    }
-  },
   pages: {
-    signIn: "/login",
-    error: "/login"
+    signIn: '/login',
+    error: '/login'
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  secret: process.env.NEXTAUTH_SECRET
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60 // 30 days
+      }
+    }
+  }
 }
 
 // Custom server-side session handling
@@ -164,4 +185,5 @@ export async function getServerSession() {
 }
 
 export const auth = NextAuth(authOptions)
+
 export const { signIn, signOut } = auth
