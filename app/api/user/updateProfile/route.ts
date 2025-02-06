@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 
 interface ProfileFormData {
     name?: string
@@ -9,6 +11,7 @@ interface ProfileFormData {
     phone?: string
     registrationNumber?: string
     address?: string
+    website?: string
     city?: string
     country?: string
     postalCode?: string
@@ -18,44 +21,64 @@ interface ProfileFormData {
 
 export async function POST(request: NextRequest) {
     try {
-        const data = await request.json()
+        // Get the session to verify the user
+        const session = await getServerSession(authOptions)
+        
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        let data
+        try {
+            data = await request.json()
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 })
+        }
+
         const { id, profile } = data
 
-        // Convert id from string to number
-        const userId = parseInt(id, 10)
-        console.log('Parsed userId:', userId)
+        if (!id || !profile) {
+            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        }
+
+        // Verify that the logged-in user matches the requested update
+        if (session.user.id !== id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // Convert id from string to number if needed
+        const userId = typeof id === 'string' ? parseInt(id, 10) : id
 
         if (isNaN(userId)) {
             return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 })
         }
 
-        // Inline user lookup
+        // Check if the email already exists for another user
         const existingUser = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { email: profile.email },
         })
 
-        if (!existingUser) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        if (existingUser && existingUser.id !== userId) {
+            return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
         }
-
-        // Prepare the data object, ensuring dates are handled correctly
-        const updateData: any = {
-            ...profile,
-            updatedAt: new Date(),
-        }
-
-        // If establishmentDate is provided, ensure it's a valid Date object
-        if (profile.establishmentDate) {
-            updateData.establishmentDate = new Date(profile.establishmentDate)
-            console.log('Parsed establishmentDate:', updateData.establishmentDate)
-        }
-
-        console.log('Update Data:', updateData)
 
         // Update user profile
         const updatedUser = await prisma.user.update({
             where: { id: userId },
-            data: updateData
+            data: {
+                name: profile.name,
+                email: profile.email,
+                phone: profile.phone,
+                registrationNumber: profile.registrationNumber,
+                address: profile.address,
+                website: profile.website,
+                city: profile.city,
+                country: profile.country,
+                postalCode: profile.postalCode,
+                businessType: profile.businessType,
+                establishmentDate: profile.establishmentDate ? new Date(profile.establishmentDate) : undefined,
+                updatedAt: new Date(),
+            }
         })
 
         return NextResponse.json(updatedUser, { status: 200 })

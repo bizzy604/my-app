@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { VendorLayout } from "@/components/vendor-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,21 +39,79 @@ export default function ProfilePage() {
     website: ''
   })
 
+  useEffect(() => {
+    if (session?.user?.id) {
+      // Load initial profile data
+      const loadProfile = async () => {
+        try {
+          const response = await fetch(`/api/user/profile/${session.user.id}`)
+          
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error('Profile loading error:', errorText)
+            return
+          }
+          
+          const userData = await response.json()
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+            company: userData.company || '',
+            registrationNumber: userData.registrationNumber || '',
+            address: userData.address || '',
+            city: userData.city || '',
+            country: userData.country || '',
+            postalCode: userData.postalCode || '',
+            businessType: userData.businessType || '',
+            establishmentDate: userData.establishmentDate ? 
+              new Date(userData.establishmentDate).toISOString().split('T')[0] : '',
+            website: userData.website || ''
+          })
+        } catch (error) {
+          console.error('Error loading profile:', error)
+        }
+      }
+      loadProfile()
+    }
+  }, [session])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      // API call to update profile
+      // Fix the URL to match the file path case exactly
+      const response = await fetch('/api/user/updateProfile', {  // Note the capital 'P' in updateProfile
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: session?.user?.id,
+          profile: formData
+        })
+      })
+
+      // Add error logging to help debug
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Server response:', errorText)
+        throw new Error(response.status === 404 ? 'API endpoint not found' : errorText)
+      }
+
+      const result = await response.json()
+      
       toast({
         title: "Success",
         description: "Profile updated successfully",
       })
       setIsEditing(false)
     } catch (error) {
+      console.error('Submit error:', error)
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: error instanceof Error ? error.message : "Failed to update profile",
         variant: "destructive",
       })
     } finally {
@@ -167,9 +225,11 @@ export default function ProfilePage() {
                         <SelectValue placeholder="Select business type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PROFIT">For Profit</SelectItem>
-                        <SelectItem value="NON_PROFIT">Non Profit</SelectItem>
-                        <SelectItem value="GOVERNMENT">Government</SelectItem>
+                        <SelectItem value="PROFIT">Profit</SelectItem>
+                        <SelectItem value="NON_PROFIT">Non-Profit</SelectItem>
+                        <SelectItem value="ACADEMIC_INSTITUTION">Academic Institution</SelectItem>
+                        <SelectItem value="GOVERNMENT_MULTI_AGENCY">Government & Multi Agency</SelectItem>
+                        <SelectItem value="OTHERS">Others</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -21,6 +21,7 @@ import { Alert } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
+import { TopNav } from "@/components/top-nav"
 import { useToast } from "@/hooks/use-toast"
 
 interface NavItem {
@@ -71,87 +72,38 @@ export function VendorLayout({ children }: VendorLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation - Mobile */}
-      <header className="sticky top-0 z-40 md:hidden bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 h-16">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-            <Link href="/vendor" className="mb-8">
-              <Image
-                src="/Innobid Logo.jpg"
-                alt="InnoBid Logo"
-                width={40}
-                height={30}
-                className="h-auto w-auto"
-              />
-            </Link>
-        </div>
-      </header>
+      {/* Mobile menu overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-0 z-50 bg-black/80 md:hidden",
-        sidebarOpen ? "block" : "hidden"
-      )}>
+      <TopNav 
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+        logo={
+          <Link href="/procurement-officer">
+            <Image
+              src="/Innobid Logo.jpg"
+              alt="InnoBid Logo"
+              width={50}
+              height={50}
+              className="h-auto w-auto"
+            />
+          </Link>
+        }
+      />
+      
+      <div className="flex">
+        {/* Side Navigation */}
         <div className={cn(
-          "fixed inset-y-0 left-0 w-64 bg-white p-6 transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out md:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-lg font-bold text-[#4B0082]">Menu</h2>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                    isActive 
-                      ? "bg-purple-50 text-[#4B0082]" 
-                      : "text-gray-600 hover:bg-gray-100"
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.title}
-                </Link>
-              )
-            })}
-          </nav>
-
-          <Button
-            variant="ghost"
-            className="mt-auto w-full justify-start gap-3 text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
-
-      {/* Desktop Layout */}
-      <div className="flex">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-gray-200">
-          <div className="flex flex-col flex-1 p-6">
-            <Link href="/vendor" className="mb-8">
+          <div className="flex flex-col h-full pt-16">
+            <nav className="flex-1 px-4 space-y-2 py-4">
+              <Link href="/procurement-officer">
               <Image
                 src="/Innobid Logo.jpg"
                 alt="InnoBid Logo"
@@ -160,7 +112,6 @@ export function VendorLayout({ children }: VendorLayoutProps) {
                 className="h-auto w-auto"
               />
             </Link>
-            <nav className="flex-1 space-y-2">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -173,6 +124,7 @@ export function VendorLayout({ children }: VendorLayoutProps) {
                         ? "bg-purple-50 text-[#4B0082]" 
                         : "text-gray-600 hover:bg-gray-100"
                     )}
+                    onClick={() => setSidebarOpen(false)}
                   >
                     <item.icon className="h-5 w-5" />
                     {item.title}
@@ -181,28 +133,29 @@ export function VendorLayout({ children }: VendorLayoutProps) {
               })}
             </nav>
 
-            <Button
-            variant="ghost"
-            className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4 text-gray-400" />
-              Sign Out
-            </Button>
+            <div className="p-4">
+              <Button
+              variant="ghost"
+              className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4 text-gray-400" />
+                Sign Out
+              </Button>
+            </div>
           </div>
-        </aside>
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 md:pl-64">
-        <Alert
+          <Alert
             message="You have been successfully signed out."
             isVisible={showAlert}
             onClose={() => setShowAlert(false)}
           />
-          {children}
+            {children}
         </main>
       </div>
     </div>
   )
 }
-
