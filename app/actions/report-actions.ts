@@ -91,7 +91,7 @@ export async function getReports(filters?: GetReportsFilters) {
 export async function createReport(data: CreateReportInput) {
   try {
     // Authenticate the user
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       console.error('No active session found')
@@ -133,9 +133,7 @@ export async function createReport(data: CreateReportInput) {
 export async function updateReportStatus(reportId: string, newStatus: ReportStatus) {
   try {
     // Authenticate the user
-    const session = await getServerSession()
-    
-    console.log('Session retrieved:', session)
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       console.error('No active session found')
@@ -175,9 +173,7 @@ export async function submitIrregularityReport(formData: z.infer<typeof ReportSc
     console.log('Cookies:', cookies().getAll())
 
     // Authenticate the user
-    const session = await getServerSession()
-    
-    console.log('Session retrieved:', session)
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       console.error('No active session found')
