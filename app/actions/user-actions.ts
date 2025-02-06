@@ -46,22 +46,22 @@ export async function updateUserSettings(userId: string, settings: UserSettings)
   }
 }
 
-export async function updateUserProfile(userId: string, data: ProfileData) {
+export async function updateUserProfile(userId: string, profileData: ProfileData) {
   try {
     const user = await prisma.user.update({
       where: { id: parseInt(userId) },
       data: {
-        name: data.name,
-        company: data.company,
-        phone: data.phone,
-        registrationNumber: data.registrationNumber,
-        address: data.address,
-        city: data.city,
-        country: data.country,
-        postalCode: data.postalCode,
-        businessType: data.businessType as any,
-        establishmentDate: new Date(data.establishmentDate),
-        website: data.website
+        name: profileData.name,
+        company: profileData.company,
+        phone: profileData.phone,
+        registrationNumber: profileData.registrationNumber,
+        address: profileData.address,
+        city: profileData.city,
+        country: profileData.country,
+        postalCode: profileData.postalCode,
+        businessType: profileData.businessType as any,
+        establishmentDate: new Date(profileData.establishmentDate),
+        website: profileData.website
       }
     })
 

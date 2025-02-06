@@ -48,15 +48,32 @@ export default function SettingsPage() {
         email: formData.get('email') as string,
         phone: formData.get('phone') as string,
         company: formData.get('company') as string,
+        registrationNumber: formData.get('registrationNumber') as string,
+        address: formData.get('address') as string,
+        city: formData.get('city') as string,
+        country: formData.get('country') as string,
+        postalCode: formData.get('postalCode') as string,
+        businessType: formData.get('businessType') as string,
+        establishmentDate: formData.get('establishmentDate') ? new Date(formData.get('establishmentDate') as string) : null,
+        website: formData.get('website') as string
       }
 
-      await updateUserProfile(profileData)
+      if (profileData.establishmentDate && isNaN(profileData.establishmentDate.getTime())) {
+        throw new Error('Invalid establishment date.')
+      }
+
+      if (!session?.user?.id) {
+        throw new Error('User ID is not available.')
+      }
+
+      await updateUserProfile(session.user.id.toString(), profileData)
       
       toast({
         title: 'Success',
         description: 'Profile updated successfully',
         variant: 'default'
       })
+
     } catch (error) {
       console.error('Error updating profile:', error)
       toast({
@@ -76,13 +93,19 @@ export default function SettingsPage() {
         [key]: !notificationSettings[key]
       }
       setNotificationSettings(newSettings)
-      await updateUserSettings({ notifications: newSettings })
+
+      if (!session?.user?.id) {
+        throw new Error('User ID is not available.')
+      }
+
+      await updateUserSettings(session.user.id.toString(), newSettings)
       
       toast({
         title: 'Success',
         description: 'Notification settings updated',
         variant: 'default'
       })
+
     } catch (error) {
       console.error('Error updating notification settings:', error)
       toast({
