@@ -37,7 +37,7 @@ export async function getVendorDashboardStats(vendorId: string, timeRange: strin
       prisma.bid.count({
         where: {
           bidderId: parseInt(vendorId),
-          status: BidStatus.PENDING,
+          status: BidStatus.UNDER_REVIEW,
           submissionDate: { gte: startDate }
         }
       }),
@@ -55,7 +55,7 @@ export async function getVendorDashboardStats(vendorId: string, timeRange: strin
       prisma.bid.count({
         where: {
           bidderId: parseInt(vendorId),
-          status: BidStatus.EVALUATED,
+          status: BidStatus.PENDING,
           submissionDate: { gte: startDate }
         }
       }),
@@ -153,4 +153,4 @@ export async function getVendorDashboardStats(vendorId: string, timeRange: strin
     console.error('Error fetching vendor dashboard stats:', error)
     throw new Error('Failed to fetch vendor dashboard statistics')
   }
-} 
+}
