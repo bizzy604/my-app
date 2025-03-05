@@ -40,7 +40,6 @@ export default function Home() {
               <Link href="#contact" className="text-muted-foreground hover:text-primary">
                 Contact
               </Link>
-              <ThemeToggle />
             </nav>
 
             {/* Auth Buttons */}
@@ -105,7 +104,6 @@ export default function Home() {
                   Contact
                 </Link>
                 <div className="px-2">
-                  <ThemeToggle />
                 </div>
                 <div className="flex flex-col gap-2 pt-4 border-t">
                   <Link 
