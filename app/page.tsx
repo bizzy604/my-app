@@ -136,8 +136,7 @@ export default function Home() {
               <p className="text-base md:text-lg text-gray-600 mb-6">
                 Welcome to the Innobid e-Procurement Portal, where efficiency meets transparency. 
                 We're transforming how Governments, Not-for-profit Organizations and Businesses procure goods and services
-                Streamline your tendering process with InnoBid's comprehensive e-procurement platform. 
-                Secure, Efficient, and Transparent.
+                through a secure, efficient and transparent e-procurement platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link 
@@ -203,6 +202,26 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-2">Bid Anomaly Detection</h3>
               <p className="text-gray-600">The Innobid system leverages AI and Machine Learning to detect and flag anomalies in the bids submitted to predict and combat corruption before it happens.</p>
             </div>
+            <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
+              <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+                <ShieldCheck className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Secure Bidding</h3>
+              <p className="text-muted-foreground">End-to-end encrypted bidding process ensuring maximum security.</p>
+            </div>
+              <div className="bg-purple-100 p-3 rounded-full w-fit mb-4">
+                <Clock className="h-6 w-6 text-[#4B0082]" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Real-time Updates</h3>
+              <p className="text-gray-600">Get instant notifications on bid status and tender updates.</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition">
+              <div className="bg-purple-100 p-3 rounded-full w-fit mb-4">
+                <Users className="h-6 w-6 text-[#4B0082]" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Vendor Management</h3>
+              <p className="text-gray-600">Efficient vendor registration and management system.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -239,7 +258,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8">Other Services</h2>
             <p className="text-gray-600 mb-8">
-              What sets Innobid apart is, we are providing these services also.
+              When we are not busy building tech solutions, we are doing the following
             </p>
             <div className="grid sm:grid-cols-2 gap-6 md:gap-8 mt-12">
               <div className="p-6 bg-purple-50 rounded-xl">
