@@ -209,6 +209,7 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-2">Secure Bidding</h3>
               <p className="text-muted-foreground">End-to-end encrypted bidding process ensuring maximum security.</p>
             </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-purple-100 p-3 rounded-full w-fit mb-4">
                 <Clock className="h-6 w-6 text-[#4B0082]" />
               </div>
