@@ -139,10 +139,6 @@ export default function Home() {
                 Streamline your tendering process with InnoBid's comprehensive e-procurement platform. 
                 Secure, Efficient, and Transparent.
               </p>
-              <p className="text-lg md:text-xl text-gray-600">
-                Streamline your tendering process with InnoBid's comprehensive e-procurement platform.
-                Secure, efficient, and transparent.
-              </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link 
                   href="/signup" 
