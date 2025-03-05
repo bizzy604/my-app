@@ -28,8 +28,8 @@ export default function Home() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
-              <Link href="#features" className="text-muted-foreground hover:text-primary">
-                Features
+              <Link href="#why-us" className="text-muted-foreground hover:text-primary">
+                Why Us?
               </Link>
               <Link href="#about" className="text-muted-foreground hover:text-primary">
                 About
@@ -77,11 +77,11 @@ export default function Home() {
             <div className="md:hidden py-4 border-t">
               <nav className="flex flex-col gap-4">
                 <Link 
-                  href="#features" 
+                  href="#why-us" 
                   className="text-muted-foreground hover:text-primary px-2"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Features
+                  Why us?
                 </Link>
                 <Link 
                   href="#services" 
@@ -174,8 +174,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Features Section */}
-      <section id="features" className="py-16 md:py-20 bg-muted/50">
+      {/* Why us Section */}
+      <section id="why-us" className="py-16 md:py-20 bg-muted/50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 md:mb-16">
             Why Choose Innobid?
