@@ -84,6 +84,13 @@ export default function Home() {
                   Features
                 </Link>
                 <Link 
+                  href="#services" 
+                  className="text-muted-foreground hover:text-primary px-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Other Services
+                </Link>
+                <Link 
                   href="#about" 
                   className="text-muted-foreground hover:text-primary px-2"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -155,8 +162,8 @@ export default function Home() {
             </div>
             <div className="flex-1 w-full md:w-auto">
               <Image 
-                src="/papers.jpg"
-                alt="Procurement Process"
+                src="/Innobid Crew.jpeg"
+                alt="Innobid Founders"
                 width={600}
                 height={400}
                 priority
