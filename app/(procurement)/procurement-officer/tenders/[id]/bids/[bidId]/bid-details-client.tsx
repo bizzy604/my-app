@@ -11,8 +11,10 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { BidEvaluationForm } from "@/components/bid-evaluation-form"
 import { DocumentViewer } from "@/components/document-viewer"
 import { ComparativeAnalysis } from "@/components/comparative-analysis"
+import { AIAnalysisPanel } from "@/components/ai-analysis-panel"
 import { BidStatus } from "@prisma/client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useState, useEffect } from 'react'
 
 interface BidDetailsClientProps {
   params: { id: string, bidId: string }
@@ -48,6 +50,26 @@ export function BidDetailsClient({
   documents
 }: BidDetailsClientProps) {
   const router = useRouter()
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null)
+
+  // Fetch existing AI analysis if available
+  useEffect(() => {
+    const fetchAIAnalysis = async () => {
+      try {
+        const response = await fetch(`/api/ai-analysis?bidId=${params.bidId}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.analysis) {
+            setAiAnalysis(data.analysis)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching AI analysis:', error)
+      }
+    }
+
+    fetchAIAnalysis()
+  }, [params.bidId])
 
   const handleBack = () => {
     router.back()
@@ -112,6 +134,7 @@ export function BidDetailsClient({
             <TabsTrigger value="details">Bid Details</TabsTrigger>
             <TabsTrigger value="evaluation">Evaluation</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="ai-analysis">AI Analysis</TabsTrigger>
             {bid.status === 'COMPARATIVE_ANALYSIS' && (
               <TabsTrigger value="analysis">Comparative Analysis</TabsTrigger>
             )}
@@ -214,6 +237,14 @@ export function BidDetailsClient({
 
           <TabsContent value="documents">
             <DocumentViewer documents={documents} />
+          </TabsContent>
+
+          <TabsContent value="ai-analysis">
+            <AIAnalysisPanel 
+              bidId={params.bidId}
+              tenderId={params.id}
+              existingAnalysis={aiAnalysis}
+            />
           </TabsContent>
 
           {bid.status === 'COMPARATIVE_ANALYSIS' && (

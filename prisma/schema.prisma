@@ -44,6 +44,7 @@ model User {
   evaluatedBids                BidEvaluationLog[]     @relation("EvaluatedBy")
   evaluatedStages              EvaluationStage[]      @relation("Evaluator")
   awardedTenders               Tender[]               @relation("AwardedTenders")
+  aiAnalyses                   AIAnalysis[]
 }
 
 model Tender {
@@ -77,6 +78,7 @@ model Tender {
   history              TenderHistory[]
   evaluationCriteria   BidEvaluationCriteria[]
   evaluationCommittee  EvaluationCommittee[]
+  aiAnalyses           AIAnalysis[]
 }
 
 model Bid {
@@ -98,6 +100,7 @@ model Bid {
   evaluationLogs        BidEvaluationLog[]
   awardLogs             TenderAwardLog[]
   clarificationRequests ClarificationRequest[]
+  aiAnalyses             AIAnalysis[]
 
   @@unique([tenderId, bidderId]) // Ensure one bid per vendor per tender
 }
@@ -283,6 +286,32 @@ model EvaluationStage {
 
   @@index([bidId])
   @@index([evaluatedBy])
+}
+
+model AIAnalysis {
+  id                     String   @id @default(uuid())
+  bidId                  String
+  tenderId               String
+  initialScreeningScore  Float    @default(0)
+  complianceScore        Float    @default(0)
+  riskAssessmentScore    Float    @default(0)
+  comparativeScore       Float    @default(0)
+  recommendationScore    Float    @default(0)
+  initialScreeningReport String   @db.Text
+  complianceReport       String   @db.Text
+  riskAssessmentReport   String   @db.Text
+  comparativeReport      String   @db.Text
+  recommendationReport   String   @db.Text
+  createdAt              DateTime @default(now())
+  createdBy              Int
+  
+  bid                    Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  tender                 Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  user                   User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([bidId])
+  @@index([tenderId])
+  @@index([createdBy])
 }
 
 enum Role {
