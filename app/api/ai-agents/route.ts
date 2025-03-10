@@ -79,17 +79,8 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    // Check if user is a procurement officer
-    const user = await prisma.user.findUnique({
-      where: { id: Number(session.user.id) }
-    })
-    
-    if (!user || user.role !== 'PROCUREMENT_OFFICER') {
-      return NextResponse.json(
-        { error: 'Unauthorized. Only procurement officers can use AI analysis.' },
-        { status: 403 }
-      )
-    }
+    // No longer checking if user is a procurement officer
+    // Any authenticated user can use this endpoint
     
     const { bidId, tenderId } = await req.json()
     
