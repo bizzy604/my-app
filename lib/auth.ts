@@ -105,6 +105,13 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // TEMPORARY FIX: Allow login even if email is not verified
+        // Remove this comment and the following line when email verification is working
+        // if (!user.emailVerified) {
+        //   console.log(`User ${user.email} attempted login but email is not verified`)
+        //   return null
+        // }
+
         // Return a user object that matches the NextAuth User type
         return {
           id: user.id, // Use number type

@@ -434,3 +434,35 @@ export async function sendBidStatusEmail(
     return false
   }
 }
+
+/**
+ * Utility function to manually verify a user's email
+ * This is useful for development or when email sending fails
+ */
+export async function manuallyVerifyEmail(email: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      console.error(`User with email ${email} not found`);
+      return false;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null
+      }
+    });
+
+    console.log(`User ${email} has been manually verified`);
+    return true;
+  } catch (error) {
+    console.error('Error manually verifying email:', error);
+    return false;
+  }
+}
