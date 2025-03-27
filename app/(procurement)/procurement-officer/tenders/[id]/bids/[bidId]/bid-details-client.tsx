@@ -56,7 +56,7 @@ export function BidDetailsClient({
   useEffect(() => {
     const fetchAIAnalysis = async () => {
       try {
-        const response = await fetch(`/api/ai-analysis?bidId=${params.bidId}`)
+        const response = await fetch(`/api/crewai/ai-analysis?bidId=${params.bidId}`)
         if (response.ok) {
           const data = await response.json()
           if (data.analysis) {

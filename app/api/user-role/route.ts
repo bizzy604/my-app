@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Check if user has required role
-  if (![Role.PROCUREMENT, Role.VENDOR, Role.CITIZEN].includes(session.user.role)) {
+  if (![Role.PROCUREMENT, Role.VENDOR, Role.CITIZEN].includes(session.user.role as Role)) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
   }
 

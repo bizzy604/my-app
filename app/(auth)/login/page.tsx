@@ -21,6 +21,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // Check if user is already logged in and redirect
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.role) {
+      const redirectPath = getUserRedirectPath(session.user.role)
+      router.push(redirectPath)
+    }
+  }, [session, status, router])
+
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const message = searchParams.get('message')
@@ -79,12 +87,9 @@ export default function LoginPage() {
         return
       }
 
-      // Fetch user role and redirect
-      const userResponse = await fetch(`/api/user-role?email=${email}`)
-      const userData = await userResponse.json()
-
-      const redirectPath = getUserRedirectPath(userData.role)
-      router.push(redirectPath)
+      // After successful sign-in, useSession will update automatically
+      // and the useEffect above will handle the redirection
+      setIsLoading(false)
     } catch (error) {
       console.error('Login error:', error)
       setError("An unexpected error occurred")

@@ -37,7 +37,7 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
   const runAIAnalysis = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/ai-agents', {
+      const response = await fetch('/api/crewai/ai-agents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
