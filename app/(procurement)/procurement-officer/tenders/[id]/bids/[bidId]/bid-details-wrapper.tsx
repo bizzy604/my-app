@@ -35,7 +35,7 @@ export function BidDetailsWrapper({ bid, params, evaluationScores, documents }: 
       console.log('Response status:', response.status)
 
       if (!response.ok) {
-        throw new Error(error || 'Failed to start analysis')
+        throw new Error('Failed to start analysis')
       }
 
       const data = await response.json()

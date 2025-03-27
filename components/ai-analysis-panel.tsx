@@ -226,28 +226,6 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
                 
                 <Card>
                   <CardHeader className="p-4">
-                    <CardTitle className="text-sm">Comparative</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{analysis.comparativeScore.toFixed(1)}</span>
-                      {getScoreIcon(analysis.comparativeScore)}
-                    </div>
-                    <div className="mt-2">
-                      <Progress 
-                        value={analysis.comparativeScore} 
-                        className="h-2"
-                      />
-                      <div 
-                        className={`h-1 mt-0.5 rounded-full ${getScoreColor(analysis.comparativeScore)}`} 
-                        style={{width: `${analysis.comparativeScore}%`}}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="p-4">
                     <CardTitle className="text-sm">Recommendation</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
