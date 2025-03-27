@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Find the most recent analysis
-    const analyses = await prisma.AIAnalysis.findMany({
+    const analyses = await prisma.aIAnalysis.findMany({
       where: whereClause,
       orderBy: {
         createdAt: 'desc'

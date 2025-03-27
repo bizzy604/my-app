@@ -20,9 +20,9 @@ export default function Home() {
                 src="/android.png"
                 alt="InnoBid Logo"
                 width={120}
-                height={40}
+                height={80}
                 priority
-                className="w-auto h-8 md:h-10"
+                className="w-auto"
               />
             </Link>
 
