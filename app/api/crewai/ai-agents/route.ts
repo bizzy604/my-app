@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { exec } from 'child_process';
+import util from 'util';
+import path from 'path';
 
 const BASE_URL = "https://innobid-ai-agents-ef9cd140-5c78-4ea7-bdce-6-a82d6ef7.crewai.com";
 const BEARER_TOKEN = "2e92e13589ac";
+
+const execPromise = util.promisify(exec);
 
 async function postBidToCrewAI(bidData: any): Promise<any> {
     const response = await fetch(`${BASE_URL}/kickoff`, {
@@ -33,7 +38,6 @@ async function postBidToCrewAI(bidData: any): Promise<any> {
                 }
             },
             meta: "Additional metadata if needed",
-            // Optional webhook URLs can be added here
         })
     });
 
@@ -98,8 +102,18 @@ export async function POST(req: NextRequest) {
             }
         };
 
-        // Post bid data to CrewAI
-        const result = await postBidToCrewAI(bidData);
+        // Define the path to the directory where crew.py and pyproject.toml are located
+        const crewDirectory = path.join(process.cwd(), 'scripts/innobid_ai_agent');
+
+        // Run the CrewAI agent
+        const { stdout, stderr } = await execPromise('crewai run', { cwd: crewDirectory });
+
+        if (stderr) {
+            throw new Error(`Error running agent: ${stderr}`);
+        }
+
+        // Parse the output (assuming it's in JSON format)
+        const result = JSON.parse(stdout);
 
         // Store the results in the database
         const aiAnalysis = await prisma.aIAnalysis.create({
@@ -122,7 +136,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, result: aiAnalysis });
     } catch (error) {
-        console.error('API error:', error);
+        console.error('Error running AI analysis:', error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
@@ -131,16 +145,16 @@ export async function POST(req: NextRequest) {
 }
 
 async function checkTaskStatus(taskId: string): Promise<any> {
-  const response = await fetch(`${BASE_URL}/status/${taskId}`, {
-      method: 'GET',
-      headers: {
-          'Authorization': `Bearer ${BEARER_TOKEN}`
-      }
-  });
+    const response = await fetch(`${BASE_URL}/status/${taskId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${BEARER_TOKEN}`
+        }
+    });
 
-  if (!response.ok) {
-      throw new Error(`Error: ${response.statusText}`);
-  }
+    if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+    }
 
-  return await response.json();
+    return await response.json();
 }
