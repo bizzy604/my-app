@@ -2,16 +2,28 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma';
-import { Document } from '@prisma/client'
+import { uploadDocument as s3UploadDocument } from '@/lib/s3-upload';
 
-export async function uploadDocument(data: Omit<Document, 'id' | 'uploadDate'>) {
-  const document = await prisma.document.create({
-    data: {
-      ...data,
-      uploadDate: new Date(),
-    },
+export async function uploadDocument(formData: FormData) {
+  // Extract data from FormData
+  const file = formData.get('file') as File
+  const tenderId = formData.get('tenderId') as string
+  const userId = formData.get('userId') as string
+  
+  if (!file || !tenderId || !userId) {
+    throw new Error('Missing required upload parameters')
+  }
+  
+  // Use the existing S3 upload functionality
+  const document = await s3UploadDocument(file, {
+    userId,
+    tenderId
   })
-  revalidatePath(`/vendor/tenders/${data.tenderId}`)
+  
+  // Revalidate paths for both procurement officer and vendor views
+  revalidatePath(`/vendor/tenders/${tenderId}`)
+  revalidatePath(`/procurement-officer/tenders/${tenderId}`)
+  
   return document
 }
 
@@ -21,9 +33,15 @@ export async function getDocumentsByTender(tenderId: string) {
   })
 }
 
-export async function deleteDocument(id: string) {
+export async function deleteDocument(id: string, tenderId?: string) {
   const document = await prisma.document.delete({
     where: { id },
   })
-  revalidatePath(`/procurement-officer/tenders/${document.tenderId}`)
+  
+  // If tenderId is provided, use it (for new tenders), otherwise use document.tenderId
+  const tenderIdToRevalidate = tenderId || document.tenderId
+  revalidatePath(`/procurement-officer/tenders/${tenderIdToRevalidate}`)
+  revalidatePath(`/vendor/tenders/${tenderIdToRevalidate}`)
+  
+  return document
 }

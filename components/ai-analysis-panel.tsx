@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -34,17 +34,104 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
   const [analysis, setAnalysis] = useState(existingAnalysis)
   const { toast } = useToast()
 
+  const checkStatus = async (kickoffId: string) => {
+    try {
+      const response = await fetch(`/api/crewai/ai-agents?kickoff_id=${kickoffId}`);
+      if (!response.ok) {
+        console.error('Error checking status:', await response.text());
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('Status check response:', data);
+      
+      if (data.status === 'completed' && data.result) {
+        console.log('Analysis complete with results:', data.result);
+        // Analysis is complete, save results to database
+        try {
+          // The result will contain the AggregateResults structure with 5 components
+          // Ensure it has the expected structure before saving
+          if (!data.result.document_analyst || !data.result.initial_screening || 
+              !data.result.compliance || !data.result.risk_assessment || 
+              !data.result.award_recommendation) {
+            console.warn('Unexpected result structure from CrewAI:', data.result);
+          }
+          
+          const saveResponse = await fetch('/api/crewai/ai-analysis/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              bidId,
+              tenderId,
+              analysisData: data.result
+            })
+          })
+          
+          if (saveResponse.ok) {
+            const savedData = await saveResponse.json();
+            setAnalysis(savedData.analysis);
+            setIsLoading(false);
+            toast({
+              title: "Analysis Complete",
+              description: "AI analysis has been completed and saved.",
+            });
+          } else {
+            throw new Error('Failed to save analysis');
+          }
+        } catch (error) {
+          console.error('Error saving analysis:', error);
+          setIsLoading(false);
+          toast({
+            title: "Error",
+            description: "Analysis completed but failed to save results.",
+            variant: "destructive"
+          });
+        }
+      } else if (data.status === 'failed') {
+        // Analysis failed
+        setIsLoading(false);
+        toast({
+          title: "Analysis Failed",
+          description: "Failed to complete AI analysis. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        // Continue polling
+        setTimeout(() => checkStatus(kickoffId), 5000); // Check every 5 seconds
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to check analysis status.",
+        variant: "destructive"
+      });
+    }
+  };
+
+
   const runAIAnalysis = async () => {
     setIsLoading(true)
     try {
+      // First fetch the complete bid data
+      const bidResponse = await fetch(`/api/bids/${bidId}`)
+      if (!bidResponse.ok) {
+        throw new Error('Failed to fetch bid data')
+      }
+      const bidData = await bidResponse.json()
+      
+      // Now send the complete bid data to the AI analysis endpoint
       const response = await fetch('/api/crewai/ai-agents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          bidId,
-          tenderId
+          ...bidData,  // bidData is the bid object directly, not nested
+          tender: bidData.tender || { id: tenderId }
         }),
       })
 
@@ -54,12 +141,62 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
       }
 
       const data = await response.json()
-      setAnalysis(data.analysis)
+      console.log('AI analysis API response:', data)
+
+      // Extract the kickoff_id from the response
+      const kickoffId = data.kickoff_id
       
-      toast({
-        title: "Analysis Complete",
-        description: "AI analysis has been completed successfully",
-      })
+      if (kickoffId) {
+        // We have a kickoff_id, start polling for status
+        console.log('Starting status polling with kickoff_id:', kickoffId)
+        toast({
+          title: "Analysis Started",
+          description: "AI analysis is in progress.",
+        })
+        
+        // Start polling for results
+        checkStatus(kickoffId)
+      } else if (data.document_analyst || data.initial_screening) {
+        // This is the actual analysis data returned directly, save it to our database
+        try {
+          const saveResponse = await fetch('/api/crewai/ai-analysis/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              bidId,
+              tenderId,
+              analysisData: data
+            })
+          })
+          
+          if (saveResponse.ok) {
+            const savedData = await saveResponse.json()
+            setAnalysis(savedData.analysis)
+            toast({
+              title: "Analysis Complete",
+              description: "AI analysis has been completed and saved."
+            })
+          } else {
+            throw new Error('Failed to save analysis')
+          }
+        } catch (error) {
+          console.error('Error saving analysis:', error)
+          toast({
+            title: "Error",
+            description: "Analysis completed but failed to save results.",
+            variant: "destructive"
+          })
+        }
+      } else {
+        // Just a confirmation that the analysis has started
+        toast({
+          title: "Analysis Started",
+          description: "AI analysis is in progress."
+        })
+        setIsLoading(false)
+      }
     } catch (error) {
       console.error('AI analysis error:', error)
       toast({
