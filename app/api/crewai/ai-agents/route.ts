@@ -1,160 +1,225 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { exec } from 'child_process';
-import util from 'util';
-import path from 'path';
 
-const BASE_URL = "https://innobid-ai-agents-ef9cd140-5c78-4ea7-bdce-6-a82d6ef7.crewai.com";
-const BEARER_TOKEN = "2e92e13589ac";
-
-const execPromise = util.promisify(exec);
+const { CREWAI_URL, CREWAI_BEARER_TOKEN } = process.env;
 
 async function postBidToCrewAI(bidData: any): Promise<any> {
-    const response = await fetch(`${BASE_URL}/kickoff`, {
+    // Format request according to CrewAI Enterprise API documentation
+    const requestBody = {
+        inputs: {
+            bidData: bidData
+        }
+    };
+
+    try {
+        console.log('Sending to CrewAI:', JSON.stringify(requestBody));
+    } catch (error) {
+        console.log('Error stringifying request body', error);
+    }
+
+    const response = await fetch(`${CREWAI_URL}/kickoff`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${BEARER_TOKEN}`
+            'Authorization': `Bearer ${CREWAI_BEARER_TOKEN}`
         },
-        body: JSON.stringify({
-            inputs: {
-                id: bidData.id,
-                amount: bidData.amount,
-                completion_time: bidData.completion_time,
-                technical_proposal: bidData.technical_proposal,
-                vendor_experience: bidData.vendor_experience,
-                documents: bidData.documents.map((doc: { name: any; url: any; }) => ({
-                    name: doc.name,
-                    url: doc.url
-                })),
-                bidder: {
-                    company: bidData.bidder.company
-                },
-                tender: {
-                    budget: bidData.tender.budget,
-                    requirements: bidData.tender.requirements
-                }
-            },
-            meta: "Additional metadata if needed",
-        })
+        body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('CrewAI API error response:', errorText);
+        throw new Error(`Error: ${response.statusText} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('CrewAI API response:', result);
+    return result;
 }
 
+// Add the POST route handler
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        
-        if (!session?.user) {
+        // Check authentication
+        const session = await getServerSession(authOptions)
+        if (!session || !session.user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
-            );
+            )
         }
-        
-        const { bidId, tenderId } = await req.json();
-        
-        if (!bidId || !tenderId) {
+
+        // Parse the request body
+        const bidData = await req.json()
+
+        // Validate the request body
+        if (!bidData || !bidData.id) {
             return NextResponse.json(
-                { error: 'Missing required parameters' },
+                { error: 'Invalid request: Missing bid data' },
                 { status: 400 }
-            );
-        }
-        
-        // Fetch the bid data first
-        const bid = await prisma.bid.findUnique({
-            where: { id: bidId },
-            include: {
-                bidder: true,
-                tender: true,
-                documents: true
-            }
-        });
-
-        if (!bid) {
-            return NextResponse.json({ error: 'Bid not found' }, { status: 404 });
+            )
         }
 
-        // Prepare bid data
-        const bidData = {
-            id: bid.id,
-            amount: bid.amount,
-            completion_time: bid.completionTime,
-            technical_proposal: bid.technicalProposal,
-            vendor_experience: bid.vendorExperience,
-            documents: bid.documents.map(doc => ({
-                name: doc.fileName,
+        // Transform the bid data to match the expected format for CrewAI
+        // Map database fields to the inputs expected by the CrewAI model
+        const transformedBidData = {
+            id: bidData.id,
+            amount: bidData.amount,
+            completion_time: bidData.completionTime,
+            technical_proposal: bidData.technicalDetails,
+            vendor_experience: bidData.vendorExperience,
+            documents: (bidData.documents || []).map((doc: { fileName: any; name: any; url: any; }) => ({
+                name: doc.fileName || doc.name || 'Document',
                 url: doc.url
             })),
             bidder: {
-                company: bid.bidder.company || bid.bidder.name
+                company: bidData.bidder?.company
             },
             tender: {
-                budget: bid.tender.budget,
-                requirements: bid.tender.requirements
+                budget: bidData.tender?.budget,
+                requirements: bidData.tender?.requirements || bidData.tender?.description || ''
             }
         };
 
-        // Define the path to the directory where crew.py and pyproject.toml are located
-        const crewDirectory = path.join(process.cwd(), 'scripts/innobid_ai_agent');
-
-        // Run the CrewAI agent
-        const { stdout, stderr } = await execPromise('crewai run', { cwd: crewDirectory });
-
-        if (stderr) {
-            throw new Error(`Error running agent: ${stderr}`);
-        }
-
-        // Parse the output (assuming it's in JSON format)
-        const result = JSON.parse(stdout);
-
-        // Store the results in the database
-        const aiAnalysis = await prisma.aIAnalysis.create({
-            data: {
-                bidId: bid.id,
-                tenderId: tenderId,
-                initialScreeningScore: result.initial_screening.score,
-                complianceScore: result.compliance.score,
-                riskAssessmentScore: result.risk_assessment.score,
-                comparativeScore: result.comparative_analysis.score,
-                recommendationScore: result.award_recommendation.score,
-                initialScreeningReport: result.initial_screening.report,
-                complianceReport: result.compliance.report,
-                riskAssessmentReport: result.risk_assessment.report,
-                comparativeReport: result.comparative_analysis.report,
-                recommendationReport: result.award_recommendation.report,
-                createdBy: session.user.id // Assuming you have the user ID in the session
-            }
-        });
-
-        return NextResponse.json({ success: true, result: aiAnalysis });
+        // Log what we're sending for troubleshooting
+        console.log('Transformed bid data:', JSON.stringify(transformedBidData, null, 2));
+        
+        // Send the transformed bid data to CrewAI and get back a task_id
+        const result = await postBidToCrewAI(transformedBidData)
+        
+        // Return the kickoff_id to the client for status polling
+        // Make sure we're using the same field name that the frontend expects
+        console.log('Returning kickoff_id to client:', result.kickoff_id || result.task_id || result.id || result.jobId);
+        return NextResponse.json({ 
+            kickoff_id: result.kickoff_id || result.task_id || result.id || result.jobId 
+        })
     } catch (error) {
-        console.error('Error running AI analysis:', error);
+        console.error('CrewAI API error:', error)
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Unknown error' },
+            { error: error instanceof Error ? error.message : 'Failed to process bid' },
             { status: 500 }
-        );
+        )
     }
 }
 
-async function checkTaskStatus(taskId: string): Promise<any> {
-    const response = await fetch(`${BASE_URL}/status/${taskId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${BEARER_TOKEN}`
+// GET handler for checking job status
+export async function GET(req: NextRequest) {
+    try {
+        // Check authentication
+        const session = await getServerSession(authOptions)
+        if (!session || !session.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
         }
-    });
 
-    if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        // Get the kickoff_id from the query parameters
+        const url = new URL(req.url)
+        const kickoffId = url.searchParams.get('kickoff_id')
+
+        if (!kickoffId) {
+            return NextResponse.json(
+                { error: 'Missing kickoff_id parameter' },
+                { status: 400 }
+            )
+        }
+
+        console.log('Checking status for kickoff_id:', kickoffId)
+
+        // Fetch the job status from CrewAI
+        console.log(`Fetching status from: ${CREWAI_URL}/status/${kickoffId}`)
+        const response = await fetch(`${CREWAI_URL}/status/${kickoffId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${CREWAI_BEARER_TOKEN}`
+            }
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            console.error('Error fetching job status:', errorText)
+            throw new Error(`Error fetching job status: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log('CrewAI status response:', JSON.stringify(data, null, 2))
+        
+        // Structure the response based on the CrewAI API response format
+        // CrewAI Enterprise returns 'state': 'SUCCESS' with result as a JSON string
+        if (data.state === 'SUCCESS' || data.status === 'completed') {
+            console.log('CrewAI job completed, processing result...');
+            
+            // Try to extract the structured data in the expected format
+            let structuredResult;
+            
+            // The CrewAI response has the result as a JSON string in the 'result' field
+            if (data.result && typeof data.result === 'string') {
+                try {
+                    // Parse the JSON string into an object
+                    structuredResult = JSON.parse(data.result);
+                    console.log('Successfully parsed result JSON string');
+                } catch (e) {
+                    console.error('Failed to parse result JSON string:', e);
+                    structuredResult = { error: 'Failed to parse result' };
+                }
+            }
+            // If result is already an object
+            else if (data.result && typeof data.result === 'object') {
+                structuredResult = data.result;
+            }
+            // Check for output field if result isn't available
+            else if (data.output) {
+                structuredResult = data.output;
+            }
+            // Fallback to the full data
+            else {
+                structuredResult = data;
+            }
+            
+            // Create a compatible result structure that matches what the frontend expects
+            const result = {
+                document_analyst: structuredResult.document_analyst || {},
+                initial_screening: structuredResult.initial_screening || {},
+                compliance: structuredResult.compliance || {},
+                risk_assessment: structuredResult.risk_assessment || {},
+                award_recommendation: structuredResult.award_recommendation || {},
+                
+                // Also include debugging data
+                _raw_source: typeof data.result === 'string' ? data.result.substring(0, 200) + '...' : '',
+                _api_response: { state: data.state, status: data.status }
+            };
+            
+            // Return the result in the format expected by the frontend
+            return NextResponse.json({
+                status: 'completed',
+                result: result,
+                progress: 100
+            })
+        } else if (data.status === 'failed') {
+            // Handle failed jobs
+            return NextResponse.json({
+                status: 'failed',
+                error: data.error || 'Job processing failed',
+                progress: data.progress || 0
+            })
+        } else {
+            // Still in progress
+            return NextResponse.json({
+                status: data.status || 'running',
+                result: null,
+                progress: data.progress || 0
+            })
+        }
+    } catch (error) {
+        console.error('Error checking job status:', error)
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : 'Failed to check job status' },
+            { status: 500 }
+        )
     }
-
-    return await response.json();
 }
+
+// Set dynamic rendering to avoid caching issues
+export const dynamic = 'force-dynamic'

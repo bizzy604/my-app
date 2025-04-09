@@ -12,13 +12,17 @@ const nextConfig = {
   },
   images: {
     // Enable image optimization
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    domains: [
-      // Add domains where your images are hosted
-      'localhost',
-      'innobid-ew09bg30a-kevinyamatta50-gmailcoms-projects.vercel.app',
-      'vercel.app'
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.vercel.app',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      }
     ],
     path: '/_next/image',
     loader: 'default'
@@ -34,7 +38,7 @@ const nextConfig = {
   experimental: {
     typedRoutes: false,
     serverActions: {
-      bodySizeLimit: '10mb', // Increase body size limit for server actions
+      bodySizeLimit: '5mb', // Reduced from 10mb
     }
   },
   // Vercel-specific optimizations
@@ -57,6 +61,31 @@ const nextConfig = {
         tls: false,
       }
     }
+
+    // Fix for splitChunks configuration
+    if (config.optimization && config.optimization.splitChunks) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        maxInitialRequests: Infinity,
+        minSize: 0,
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name(module) {
+              // Some modules might not have a context or the expected structure
+              // So we need to safely handle this case
+              if (!module.context) return 'vendor';
+              
+              const packageNameMatch = module.context.match(/[\\/]node_modules[\\/](.+?)(?:[\\/]|$)/);
+              if (!packageNameMatch || !packageNameMatch[1]) return 'vendor';
+              
+              return `npm.${packageNameMatch[1].replace('@', '')}`;
+            },
+          },
+        },
+      };
+    }
+    
     return config
   }
 }
