@@ -1,17 +1,10 @@
 import { S3Client, GetObjectCommand, PutObjectCommandInput, ObjectCannedACL } from "@aws-sdk/client-s3"
 import { Upload } from "@aws-sdk/lib-storage"
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from './prisma'
 
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined'
-
-// Only validate environment variables on the server side
+// Validate required environment variables
 function validateEnvVars() {
-  // Skip validation in browser environment
-  if (isBrowser) return
-  
   const requiredVars = [
     'AWS_REGION', 
     'AWS_ACCESS_KEY_ID', 
@@ -26,35 +19,29 @@ function validateEnvVars() {
   }
 }
 
-// Configure S3 client
-function createS3Client() {
-  try {
-    // Call validateEnvVars (which now handles browser environment)
+// Create S3 client lazily to avoid issues during build time
+let s3Client: S3Client | null = null;
+
+// Get or create S3 client - only called server-side
+function getS3Client() {
+  // Only create the client when needed (lazy initialization)
+  if (!s3Client) {
     validateEnvVars()
     
-    // Return null in browser environment (S3 operations only happen server-side)
-    if (isBrowser) {
-      return null as unknown as S3Client
-    }
-
-    // Create real S3 client on server side
-    return new S3Client({
+    s3Client = new S3Client({
       region: process.env.AWS_REGION || 'us-east-1',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
       }
     })
-  } catch (error) {
-    console.error('S3 Client Configuration Error:', error)
-    // Return null client for browser
-    return null as unknown as S3Client
   }
+  
+  return s3Client
 }
 
-const s3Client = createS3Client()
-
-// S3 upload function with streaming to reduce memory usage
+// Server-side only S3 upload function with streaming to reduce memory usage
+// This function is only called from server components or API routes
 export async function uploadToS3(
   file: File, 
   context: {
@@ -63,31 +50,10 @@ export async function uploadToS3(
     tenderId?: string
   }
 ) {
-  // In browser, we need to use the API route for uploading
-  if (isBrowser) {
-    try {
-      // Create a mock response for client-side rendering
-      // The actual upload will happen via an API route on the server
-      console.log('Client-side S3 upload initiated - will be processed server-side')
-      
-      // For now, create a placeholder response
-      // In a real implementation, you'd use fetch to call your API route
-      const fileExtension = file.name.split('.').pop() || 'unknown'
-      const uniqueFileName = `tender-docs/${context.userId}/${context.tenderId || 'general'}/${uuidv4()}.${fileExtension}`
-      
-      // Return a temporary response - the real upload happens server-side
-      return {
-        url: `/api/upload/${uniqueFileName}`,
-        key: uniqueFileName
-      }
-    } catch (error) {
-      console.error('Browser upload error:', error)
-      throw new Error('Failed to initiate document upload')
-    }
-  }
-  
-  // Server-side upload logic
   try {
+    // Get S3 client (lazy initialization)
+    const s3Client = getS3Client()
+    
     // Generate unique filename
     const fileExtension = file.name.split('.').pop() || 'unknown'
     const uniqueFileName = `tender-docs/${context.userId}/${context.tenderId || 'general'}/${uuidv4()}.${fileExtension}`
@@ -103,7 +69,7 @@ export async function uploadToS3(
       Key: uniqueFileName,
       Body: buffer,
       ContentType: file.type,
-      ACL: ObjectCannedACL.private,
+      ACL: ObjectCannedACL.public_read, // Make objects publicly readable for permanent URLs
       Metadata: {
         originalFileName: file.name,
         uploadedBy: context.userId.toString(),
@@ -123,9 +89,11 @@ export async function uploadToS3(
     // Wait for upload to complete
     const result = await upload.done()
 
-    // Return the S3 object URL or key
+    // Return the permanent S3 object URL
+    const permanentUrl = `https://${uploadParams.Bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${uniqueFileName}`
+    
     return {
-      url: `https://${uploadParams.Bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${uniqueFileName}`,
+      url: permanentUrl,
       key: uniqueFileName
     }
   } catch (error) {
@@ -134,37 +102,12 @@ export async function uploadToS3(
   }
 }
 
-// Generate a pre-signed URL for secure, time-limited access
-export async function generatePresignedUrl(
-  s3Key: string, 
-  expiresIn: number = 3600 // 1 hour default
-) {
-  // In browser, use the API route for generating URLs
-  if (isBrowser) {
-    try {
-      console.log('Using permanent document URL')
-      // Create a permanent URL that points to our API route
-      // No expiration time in the URL - the API route will handle that
-      return `/api/download/${s3Key}`
-    } catch (error) {
-      console.error('Browser presigned URL error:', error)
-      throw new Error('Failed to generate download URL')
-    }
-  }
-  
-  // Server-side presigned URL generation (for internal use)
-  try {
-    const command = new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME || 'default-bucket',
-      Key: s3Key
-    })
-
-    const url = await getSignedUrl(s3Client, command, { expiresIn })
-    return url
-  } catch (error) {
-    console.error('Pre-signed URL generation error:', error)
-    throw new Error('Failed to generate pre-signed URL')
-  }
+// Get permanent URL for a document - no expiration time
+// This can be safely used in both client and server components
+export function getPermanentDocumentUrl(s3Key: string) {
+  // Create a permanent URL for the document
+  // This works because we set ACL to public_read when uploading
+  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`
 }
 
 // Export the uploadDocument function that's used in the upload route
@@ -180,11 +123,11 @@ export async function uploadDocument(file: File, context: {
     // Store document reference in database with permanent URL
     const document = await prisma.document.create({
       data: {
-        fileName: file.name, // Changed from name to fileName to match Prisma schema
-        url: `/api/download/${s3Result.key}`, // Permanent URL without expiration
+        fileName: file.name,
+        url: s3Result.url, // Store the permanent S3 URL directly
         s3Key: s3Result.key,
-        fileSize: file.size, // Changed from size to fileSize to match Prisma schema
-        fileType: file.type, // Changed from type to fileType to match Prisma schema
+        fileSize: file.size,
+        fileType: file.type,
         userId: typeof context.userId === 'string' ? parseInt(context.userId, 10) : context.userId,
         ...(context.tenderId && { tenderId: context.tenderId }),
         ...(context.bidId && { bidId: context.bidId }),
