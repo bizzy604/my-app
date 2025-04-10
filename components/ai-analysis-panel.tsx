@@ -309,7 +309,7 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
                         value={analysis.initialScreeningScore} 
                         className="h-2"
                       />
-                      <div 
+                      <div
                         className={`h-1 mt-0.5 rounded-full ${getScoreColor(analysis.initialScreeningScore)}`} 
                         style={{width: `${analysis.initialScreeningScore}%`}}
                       />

@@ -17,6 +17,20 @@ export default withAuth(
     // Check if user is accessing paths they shouldn't
     const userRole = token?.role as UserRole
     const allowedPaths = rolePathMap[userRole] || []
+    
+    // Check if the current path is allowed for user's role
+    const basePathSegments = path.split('/')
+    const basePath = '/' + (basePathSegments[1] || '')
+    
+    // If user is trying to access a path that's not allowed for their role
+    if (!allowedPaths.includes(basePath) && basePathSegments[1] !== '') {
+      // Redirect to home or dashboard based on role
+      const homePath = userRole ? (rolePathMap[userRole][0] || '/') : '/'
+      return NextResponse.redirect(new URL(homePath, req.url))
+    }
+    
+    // Allow the request to proceed
+    return NextResponse.next()
   },
   {
     callbacks: {

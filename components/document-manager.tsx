@@ -2,14 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FileText, Trash2, Download } from 'lucide-react'
 import { uploadDocument, getDocumentsByTender, deleteDocument } from "@/app/actions/document-action"
-import { generatePresignedUrl } from "@/lib/s3-upload"
+import { formatFileSize, formatDate } from "@/lib/client-document-utils"
 import { useToast } from "@/hooks/use-toast"
+
+// Dynamically import the document downloader component (client-only)
+const DocumentDownloader = dynamic(
+  () => import('./document-downloader').then(mod => mod.DocumentDownloader),
+  { ssr: false }
+)
 
 type DocumentType = {
   id: string
@@ -110,39 +117,69 @@ export function DocumentManager({ tenderId, userId }: { tenderId: string, userId
     }
   }
 
-  const handleDownload = async (document: DocumentType) => {
+  const [downloadState, setDownloadState] = useState<{
+    isDownloading: boolean;
+    documentId: string | null;
+    url: string | null;
+    fileName: string | null;
+  }>({
+    isDownloading: false,
+    documentId: null,
+    url: null,
+    fileName: null
+  });
+
+  const handleDownload = (document: DocumentType) => {
     try {
-      setIsGeneratingUrl({...isGeneratingUrl, [document.id]: true})
-      // Generate pre-signed URL for secure download
-      const presignedUrl = await generatePresignedUrl(document.s3Key)
+      setIsGeneratingUrl({...isGeneratingUrl, [document.id]: true});
       
-      // Create an invisible anchor and trigger download
-      // Use window.document instead of document (which might refer to the DocumentType interface)
-      const link = window.document.createElement('a')
-      link.href = presignedUrl
-      link.download = document.fileName  // Changed from name to fileName
-      window.document.body.appendChild(link)
-      link.click()
-      window.document.body.removeChild(link)
+      // Set state for download component
+      setDownloadState({
+        isDownloading: true,
+        documentId: document.id,
+        url: document.url,
+        fileName: document.fileName
+      });
       
       toast({
         title: "Success",
         description: "Download started",
-      })
+      });
     } catch (error) {
-      console.error('Error downloading document:', error)
+      console.error('Error initiating document download:', error);
       toast({
         title: "Error",
         description: "Failed to download document. Please try again.",
         variant: "destructive"
-      })
-    } finally {
-      setIsGeneratingUrl({...isGeneratingUrl, [document.id]: false})
+      });
+      setIsGeneratingUrl({...isGeneratingUrl, [document.id]: false});
     }
+  };
+
+  const handleDownloadComplete = () => {
+    if (downloadState.documentId) {
+      setIsGeneratingUrl({...isGeneratingUrl, [downloadState.documentId]: false});
+    }
+    setDownloadState({
+      isDownloading: false,
+      documentId: null,
+      url: null,
+      fileName: null
+    });
   }
 
   return (
     <div className="space-y-4">
+      {/* Client-side only document downloader component */}
+      {downloadState.isDownloading && downloadState.url && downloadState.fileName && (
+        <DocumentDownloader
+          url={downloadState.url}
+          fileName={downloadState.fileName}
+          isTriggered={downloadState.isDownloading}
+          onComplete={handleDownloadComplete}
+        />
+      )}
+      
       <div className="w-full">
         <Label htmlFor="document-upload" className="block text-sm font-medium text-gray-700 mb-2">
           Upload Document
@@ -187,12 +224,10 @@ export function DocumentManager({ tenderId, userId }: { tenderId: string, userId
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {(doc.fileSize / 1024).toFixed(2)} KB
+                    {formatFileSize(doc.fileSize)}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {doc.uploadDate instanceof Date
-                      ? doc.uploadDate.toLocaleDateString()
-                      : new Date(doc.uploadDate).toLocaleDateString()}
+                    {formatDate(doc.uploadDate)}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
