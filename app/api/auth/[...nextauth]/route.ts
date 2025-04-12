@@ -1,8 +1,6 @@
-import { authOptions } from "@/lib/auth"
-import NextAuth from "next-auth"
+import NextAuth from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
-// For NextAuth 4.22.1 with App Router
-const handler = NextAuth(authOptions)
-
-// Export the GET and POST handlers
-export { handler as GET, handler as POST }
+// Export the NextAuth v4 API handler with proper App Router exports
+export const GET = NextAuth(authOptions);
+export const POST = NextAuth(authOptions);

@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { BidStatus, TenderStatus } from '@prisma/client'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getServerSession } from '@/lib/auth'
 
 export interface BidEvaluationCriteria {
   technicalScore?: number
@@ -17,7 +16,7 @@ export async function evaluateBid(
   criteria: BidEvaluationCriteria
 ) {
   // Ensure only procurement officers can evaluate
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession()
   if (!session || session.user.role !== 'PROCUREMENT') {
     throw new Error('Unauthorized: Only procurement officers can evaluate bids')
   }
@@ -92,7 +91,7 @@ export async function awardTenderToBid(
   tenderId: string
 ) {
   // Ensure only procurement officers can award
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession()
   if (!session || session.user.role !== 'PROCUREMENT') {
     throw new Error('Unauthorized: Only procurement officers can award tenders')
   }

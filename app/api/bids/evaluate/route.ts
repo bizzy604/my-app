@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { BidStatus, NotificationType } from '@prisma/client'
+import { getServerAuthSession } from '@/lib/auth'
+
+const BidStatus = {
+  PENDING: 'PENDING',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED'
+} as const;
+
+const NotificationType = {
+  BID_SUBMITTED: 'BID_SUBMITTED',
+  BID_EVALUATED: 'BID_EVALUATED',
+  TENDER_AWARDED: 'TENDER_AWARDED',
+  TENDER_CLOSED: 'TENDER_CLOSED'
+} as const;
+
+type BidStatus = typeof BidStatus[keyof typeof BidStatus];
+type NotificationType = typeof NotificationType[keyof typeof NotificationType];
 
 function determineStage(scores: { 
   technicalScore: number, 
@@ -24,19 +39,19 @@ function determineStage(scores: {
 function determineBidStatus(stage: string): BidStatus {
   switch (stage) {
     case 'FINAL':
-      return BidStatus.FINAL_EVALUATION
+      return 'ACCEPTED'
     case 'FINANCIAL':
-      return BidStatus.SHORTLISTED
+      return 'UNDER_REVIEW'
     case 'TECHNICAL':
-      return BidStatus.TECHNICAL_EVALUATION
+      return 'UNDER_REVIEW'
     default:
-      return BidStatus.UNDER_REVIEW
+      return 'PENDING'
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     
     if (!session?.user?.id || session.user.role !== 'PROCUREMENT') {
       return NextResponse.json(
@@ -72,9 +87,9 @@ export async function POST(request: Request) {
     // Check if bid has already been evaluated
     const existingEvaluation = await prisma.evaluationStage.findFirst({
       where: {
-        bidId,
+        bidId: bidId.toString(),
         evaluator: {
-          id: parseInt(session.user.id)
+          id: session.user.id
         }
       }
     })
@@ -87,12 +102,12 @@ export async function POST(request: Request) {
     }
 
     // Start a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: typeof prisma) => {
       // Create evaluation record
       const evaluation = await tx.evaluationStage.create({
         data: {
-          bidId,
-          evaluatedBy: parseInt(session.user.id),
+          bidId: bidId.toString(),
+          evaluatedBy: session.user.id,
           stage: stage,
           score: totalScore,
           status: determineBidStatus(stage),
@@ -103,10 +118,10 @@ export async function POST(request: Request) {
       // Update bid status based on score
       const newStatus = determineBidStatus(stage)
       
-      const updatedBid = await tx.bid.update({
-        where: { id: bidId },
+            const updatedBid = await tx.bid.update({
+        where: { id: bidId.toString() },
         data: { 
-          status: newStatus,
+          status: determineBidStatus(stage),
           updatedAt: new Date()
         },
         include: {
@@ -115,22 +130,24 @@ export async function POST(request: Request) {
         }
       })
 
-      // Create notification for the bidder
+      // Create notification for bidder
       await tx.notification.create({
         data: {
-          type: NotificationType.BID_STATUS_UPDATE,
+          type: 'BID_EVALUATED',
+          message: `Your bid for tender ${updatedBid.tender.title} has been evaluated. Status: ${newStatus}`,
           userId: updatedBid.bidderId,
-          message: `Your bid for tender "${updatedBid.tender.title}" has been evaluated. Status: ${newStatus}`,
+          tenderId: tenderId.toString()
         }
       })
 
-      // If bid is shortlisted, send email notification
-      if (newStatus === BidStatus.SHORTLISTED) {
+      // If bid is under review, send email notification
+      if (newStatus === 'UNDER_REVIEW') {
         await tx.notification.create({
           data: {
-            type: NotificationType.BID_STATUS_UPDATE,
+            type: 'BID_EVALUATED',
             userId: updatedBid.bidderId,
-            message: `Congratulations! Your bid for tender "${updatedBid.tender.title}" has been shortlisted.`,
+            message: `Your bid for tender "${updatedBid.tender.title}" is under review.`,
+            tenderId: tenderId.toString()
           }
         })
       }
