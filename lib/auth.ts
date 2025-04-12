@@ -1,7 +1,7 @@
-// Import required dependencies - properly structured for NextAuth 5
-import NextAuth from "next-auth";
+// Import required dependencies for NextAuth v4
+import { NextAuthOptions, getServerSession as getNextAuthServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
+import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from '@/lib/prisma'
 import bcrypt from "bcryptjs"
@@ -43,21 +43,19 @@ declare module "next-auth/jwt" {
   }
 }
 
-// Define auth options that work with NextAuth 5
-export const authOptions = NextAuth({
+// Define auth configuration for NextAuth v4
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = Number(user.id)
         token.role = user.role
       }
-      // Ensure token doesn't expire too quickly
-      token.exp = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
       return token
     },
     async session({ session, token }) {
@@ -75,7 +73,7 @@ export const authOptions = NextAuth({
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
@@ -106,35 +104,18 @@ export const authOptions = NextAuth({
         }
       }
     }),
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
   ],
   pages: {
     signIn: '/login',
     error: '/login'
-  },
-  cookies: {
-    sessionToken: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 30 * 24 * 60 * 60 // For Next.js Pages API Routes - better compatibility with memory constraints
-      }
-    }
   }
-})
-
-const { handlers, signIn, signOut, auth } = NextAuth(authOptions);
-
-export { handlers, auth, signIn, signOut };
+}
 
 // Create a helper function to get session on server
 export async function getServerAuthSession() {
-  // Use getServerSession with authOptions
-  return await authOptions.getServerSession();
+  return await getNextAuthServerSession(authOptions);
 }
