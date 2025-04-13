@@ -2,6 +2,16 @@
 
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from './prisma'
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+  }
+});
 
 // Define the result type without AWS SDK imports
 type S3UploadResult = {
@@ -25,9 +35,7 @@ function validateEnvVars() {
   }
 }
 
-// Server-side S3 upload function without AWS SDK imports to avoid 'self is not defined' errors
-// This is a temporary implementation that returns permanent URLs without actually uploading to S3
-// IMPORTANT: This needs to be replaced with actual S3 upload functionality after fixing the build issues
+// Server-side S3 upload function using AWS SDK
 export async function uploadToS3(
   file: File, 
   context: {
@@ -39,20 +47,32 @@ export async function uploadToS3(
   try {
     validateEnvVars();
     
-    // Generate unique filename (same as before)
-    const fileExtension = file.name.split('.').pop() || 'unknown';
-    const uniqueFileName = `tender-docs/${context.userId}/${context.tenderId || 'general'}/${uuidv4()}.${fileExtension}`;
-
-    // Create a permanent URL for the document
-    // This provides a permanent URL with no expiration time as required
+    // Generate unique filename
+    const fileExtension = file.name.split('.').pop();
+    const timestamp = Date.now();
+    const uniqueFileName = context.bidId 
+      ? `bid-docs/${context.userId}/${context.bidId}/${timestamp}-${uuidv4()}.${fileExtension}`
+      : context.tenderId 
+        ? `tender-docs/${context.userId}/${context.tenderId}/${timestamp}-${uuidv4()}.${fileExtension}`
+        : `user-docs/${context.userId}/${timestamp}-${uuidv4()}.${fileExtension}`;
+    
+    // Convert File to Buffer for S3 upload
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    
+    // Upload file to S3
+    const uploadParams = {
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: uniqueFileName,
+      Body: fileBuffer,
+      ContentType: file.type || 'application/octet-stream',
+      ACL: 'public-read' // This is critical for permanent URLs to work
+    };
+    
+    await s3Client.send(new PutObjectCommand(uploadParams));
+    
+    // Generate permanent URL
     const permanentUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${uniqueFileName}`;
-    
-    // For actual production use, uncomment the AWS SDK code to perform the actual upload
-    // This is temporarily commented out to fix the build issue
-    
-    // Log the file details for debugging
-    console.log(`Mock S3 upload for file: ${file.name}, size: ${file.size}, type: ${file.type}`);
-    console.log(`Generated permanent URL: ${permanentUrl}`);
+  
     
     return {
       url: permanentUrl,

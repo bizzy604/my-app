@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerAuthSession } from '@/lib/auth'
 
-const BidStatus = {
-  PENDING: 'PENDING',
-  UNDER_REVIEW: 'UNDER_REVIEW',
-  ACCEPTED: 'ACCEPTED',
-  REJECTED: 'REJECTED'
-} as const;
+import { BidStatus } from '@prisma/client';
 
 const NotificationType = {
   BID_SUBMITTED: 'BID_SUBMITTED',
@@ -16,7 +11,7 @@ const NotificationType = {
   TENDER_CLOSED: 'TENDER_CLOSED'
 } as const;
 
-type BidStatus = typeof BidStatus[keyof typeof BidStatus];
+
 type NotificationType = typeof NotificationType[keyof typeof NotificationType];
 
 function determineStage(scores: { 
@@ -39,13 +34,13 @@ function determineStage(scores: {
 function determineBidStatus(stage: string): BidStatus {
   switch (stage) {
     case 'FINAL':
-      return 'ACCEPTED'
+      return BidStatus.ACCEPTED
     case 'FINANCIAL':
-      return 'UNDER_REVIEW'
+      return BidStatus.UNDER_REVIEW
     case 'TECHNICAL':
-      return 'UNDER_REVIEW'
+      return BidStatus.UNDER_REVIEW
     default:
-      return 'PENDING'
+      return BidStatus.PENDING
   }
 }
 
@@ -102,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     // Start a transaction
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Create evaluation record
       const evaluation = await tx.evaluationStage.create({
         data: {

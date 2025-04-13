@@ -6,31 +6,19 @@ import { revalidatePath } from 'next/cache'
 type ReportData = {
   id: string
   tenderId: string
-  reporterId: string
-  type: string
+  reporterId: number
+  type: ReportType
   description: string
-  status: string
+  status: ReportStatus
   createdAt: Date
   updatedAt: Date
 }
 
-const ReportStatus = {
-  PENDING: 'PENDING',
-  INVESTIGATING: 'INVESTIGATING',
-  RESOLVED: 'RESOLVED',
-  DISMISSED: 'DISMISSED'
-} as const;
 
-const ReportType = {
-  IRREGULARITY: 'IRREGULARITY',
-  BID_RIGGING: 'BID_RIGGING',
-  CORRUPTION: 'CORRUPTION',
-  FRAUD: 'FRAUD',
-  OTHER: 'OTHER'
-} as const;
 
-type ReportStatus = typeof ReportStatus[keyof typeof ReportStatus];
-type ReportType = typeof ReportType[keyof typeof ReportType];
+import { ReportType, ReportStatus } from '@prisma/client';
+
+
 import { z } from "zod"
 import { getServerAuthSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
@@ -53,7 +41,7 @@ type GetReportsFilters = {
 const ReportSchema = z.object({
   tenderId: z.string().min(1, "Tender ID is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  reportType: z.nativeEnum(ReportType).default(ReportType.IRREGULARITY),
+  reportType: z.nativeEnum(ReportType).default('IRREGULARITY'),
   reportSubtype: z.string().optional(),
   reporterName: z.string().optional(),
   contactInfo: z.string().optional(),
