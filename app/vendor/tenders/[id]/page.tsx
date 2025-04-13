@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Bookmark, FileText, Upload } from 'lucide-react'
+import { Bookmark, FileText, Upload, Download, ArrowLeft, MapPin, Calendar, DollarSign } from 'lucide-react'
 import { VendorLayout } from "@/components/vendor-layout"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -21,7 +21,6 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Calendar, DollarSign, ArrowLeft } from 'lucide-react'
 
 type TenderDataWithBidStatus = Awaited<ReturnType<typeof getTenderById>> & { 
   hasBid: boolean;
@@ -162,6 +161,37 @@ function TenderDetailsContent({ id }: { id: string }) {
                   ))}
                 </ul>
               </div>
+
+              {/* Tender Documents Section */}
+              {tender.documents && tender.documents.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Tender Documents</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {tender.documents.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between border rounded-md p-3 bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-[#4B0082]" />
+                          <div>
+                            <p className="font-medium">{doc.fileName}</p>
+                            <p className="text-xs text-gray-500">
+                              {(doc.fileSize / 1024 / 1024).toFixed(2)} MB • {new Date(doc.uploadDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm text-[#4B0082] hover:underline"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Download</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <Button

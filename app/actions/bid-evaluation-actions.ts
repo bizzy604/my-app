@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { BidStatus, TenderStatus } from '@prisma/client'
-import { getServerSession } from '@/lib/auth'
+import { getServerAuthSession } from '@/lib/auth'
 
 export interface BidEvaluationCriteria {
   technicalScore?: number
@@ -16,7 +16,7 @@ export async function evaluateBid(
   criteria: BidEvaluationCriteria
 ) {
   // Ensure only procurement officers can evaluate
-  const session = await getServerSession()
+  const session = await getServerAuthSession()
   if (!session || session.user.role !== 'PROCUREMENT') {
     throw new Error('Unauthorized: Only procurement officers can evaluate bids')
   }
@@ -58,13 +58,8 @@ export async function evaluateBid(
         tenderId: tenderId 
       },
       data: {
-        status: BidStatus.EVALUATED,
-        evaluationScore: totalScore,
-        technicalScore,
-        financialScore,
-        experienceScore,
-        evaluationComments: comments,
-        statusUpdatedAt: new Date()
+        status: BidStatus.FINAL_EVALUATION,
+        updatedAt: new Date()
       }
     })
 
@@ -74,10 +69,12 @@ export async function evaluateBid(
         bidId,
         tenderId,
         evaluatedBy: session.user.id,
-        technicalScore,
-        financialScore,
-        experienceScore,
-        totalScore,
+        evaluatorId: session.user.id,
+        stage: 'FINAL',
+        totalScore: totalScore,
+        technicalScore: technicalScore,
+        financialScore: financialScore,
+        experienceScore: experienceScore,
         comments
       }
     })
@@ -91,7 +88,7 @@ export async function awardTenderToBid(
   tenderId: string
 ) {
   // Ensure only procurement officers can award
-  const session = await getServerSession()
+  const session = await getServerAuthSession()
   if (!session || session.user.role !== 'PROCUREMENT') {
     throw new Error('Unauthorized: Only procurement officers can award tenders')
   }
@@ -117,7 +114,7 @@ export async function awardTenderToBid(
       },
       data: { 
         status: BidStatus.ACCEPTED,
-        approvalDate: new Date()
+        updatedAt: new Date()
       }
     })
 
@@ -185,7 +182,7 @@ export async function getTenderBidsWithDetails(tenderId: string) {
     },
     orderBy: [
       { status: 'asc' },
-      { evaluationScore: 'desc' }
+      { createdAt: 'desc' }
     ]
   })
 }
