@@ -7,8 +7,7 @@ import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 import { Tender } from '@prisma/client'
 import { formatCurrency } from "@/lib/utils"
 import { uploadToS3 } from '@/lib/s3-upload'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getServerSession } from '@/lib/auth'
 
 type BidSubmissionData = {
   tenderId: string;

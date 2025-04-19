@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerAuthSession } from '@/lib/auth';
 
 const { CREWAI_URL, CREWAI_BEARER_TOKEN } = process.env;
 
@@ -42,7 +41,7 @@ async function postBidToCrewAI(bidData: any): Promise<any> {
 export async function POST(req: NextRequest) {
     try {
         // Check authentication
-        const session = await getServerSession(authOptions)
+        const session = await getServerAuthSession()
         if (!session || !session.user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
@@ -107,7 +106,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     try {
         // Check authentication
-        const session = await getServerSession(authOptions)
+        const session = await getServerAuthSession()
         if (!session || !session.user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },

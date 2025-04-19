@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { uploadDocument } from '@/lib/s3-upload'
+import { getServerAuthSession } from '@/lib/auth'
+import { uploadToS3 } from '@/lib/s3-upload'
 import { parseMultipartFormData } from '@/lib/multipart-parser'
+import { prisma } from '@/lib/prisma'
 
 // export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ export const bodyParser = false
 export async function POST(request: Request) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -58,11 +58,26 @@ export async function POST(request: Request) {
       )
     }
 
-    // Upload document using our document upload utility
-    const document = await uploadDocument(file, {
+    // Upload file to S3 using our optimized utility
+    const s3Result = await uploadToS3(file, {
       userId: session.user.id,
       tenderId,
       bidId
+    })
+    
+    // Store document reference in database
+    const document = await prisma.document.create({
+      data: {
+        fileName: file.name,
+        url: s3Result.url,
+        s3Key: s3Result.key,
+        fileSize: file.size,
+        fileType: file.type,
+        userId: session.user.id,
+        tenderId,
+        bidId,
+        uploadDate: new Date()
+      }
     })
 
 
