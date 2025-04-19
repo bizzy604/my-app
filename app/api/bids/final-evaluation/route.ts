@@ -1,13 +1,36 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { BidStatus, NotificationType, TenderStatus } from '@prisma/client'
+import { getServerAuthSession } from '@/lib/auth'
+
+const BidStatus = {
+  PENDING: 'PENDING',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED'
+} as const;
+
+const NotificationType = {
+  BID_SUBMITTED: 'BID_SUBMITTED',
+  BID_EVALUATED: 'BID_EVALUATED',
+  TENDER_AWARDED: 'TENDER_AWARDED',
+  TENDER_CLOSED: 'TENDER_CLOSED'
+} as const;
+
+const TenderStatus = {
+  OPEN: 'OPEN',
+  CLOSED: 'CLOSED',
+  AWARDED: 'AWARDED',
+  CANCELLED: 'CANCELLED'
+} as const;
+
+type BidStatus = typeof BidStatus[keyof typeof BidStatus];
+type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     
     if (!session?.user?.id || session.user.role !== 'PROCUREMENT') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,10 +40,10 @@ export async function POST(request: Request) {
     const { tenderId, winningBidId, evaluations } = data
 
     // Start transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Get winning bid with related data
       const winningBid = await tx.bid.findUnique({
-        where: { id: winningBidId },
+        where: { id: parseInt(winningBidId) },
         include: {
           bidder: true,
           tender: true
@@ -30,21 +53,31 @@ export async function POST(request: Request) {
       if (!winningBid) {
         throw new Error('Winning bid not found')
       }
+      const updateBidAndTender = async (tx: any) => {
+        // Get winning bid with related data
+        const winningBid = await tx.bid.findUnique({
+          where: { id: winningBidId },
+          include: {
+            bidder: true,
+            tender: true
+          }
+        })
+        }
 
       // Update winning bid status
       await tx.bid.update({
-        where: { id: winningBidId },
+        where: { id: parseInt(winningBidId) },
         data: { 
-          status: BidStatus.ACCEPTED
+          status: 'ACCEPTED'
         }
       })
 
       // Update tender status
       await tx.tender.update({
-        where: { id: tenderId },
+        where: { id: tenderId.toString() },
         data: {
-          status: TenderStatus.AWARDED,
-          awardedBidId: winningBidId,
+          status: 'AWARDED',
+          awardedBidId: winningBidId.toString(),
           awardedById: session.user.id
         }
       })
@@ -65,12 +98,26 @@ export async function POST(request: Request) {
         }
       })
 
-      // Update other bids
+      // Update other bids to rejected
+      await tx.bid.updateMany({
+        where: {
+          tenderId: tenderId.toString(),
+          id: {
+            not: parseInt(winningBidId)
+          }
+        },
+        data: {
+          status: 'REJECTED'
+        }
+      })
+
+      // Notify other bidders
       const otherBids = await tx.bid.findMany({
         where: {
-          tenderId,
-          id: { not: winningBidId },
-          status: BidStatus.FINAL_EVALUATION
+          tenderId: tenderId.toString(),
+          id: {
+            not: parseInt(winningBidId)
+          }
         },
         include: {
           bidder: true
@@ -78,30 +125,13 @@ export async function POST(request: Request) {
       })
 
       for (const bid of otherBids) {
-        // Log bid and winning bid details for debugging
-        console.log('Bid Details:', JSON.stringify(bid, null, 2))
-        console.log('Winning Bid Details:', JSON.stringify(winningBid, null, 2))
-
-        // Update bid status
-        await tx.bid.update({
-          where: { id: bid.id },
-          data: { 
-            status: BidStatus.REJECTED
-          }
-        })
-
-        // Create rejection notification
-        const rejectionNotification = {
-          type: 'BID_STATUS_UPDATE',
-          userId: bid.bidderId,
-          message: `Your bid for tender "${winningBid.tender.title}" was not successful.`,
-          tenderId: tenderId,
-          bidId: bid.id
-        }
-        console.log('Rejection Notification Payload:', JSON.stringify(rejectionNotification, null, 2))
-
         await tx.notification.create({
-          data: rejectionNotification
+          data: {
+            type: 'BID_EVALUATED',
+            message: `Your bid for tender ${winningBid.tender.title} was not selected.`,
+            userId: bid.bidderId,
+            tenderId: tenderId.toString()
+          }
         })
 
         // Send rejection email with complete email data
@@ -119,18 +149,14 @@ export async function POST(request: Request) {
         )
       }
 
-      // Create award notification
-      const awardNotification = {
-        type: 'TENDER_AWARD',
-        userId: winningBid.bidderId,
-        message: `Congratulations! Your bid for tender "${winningBid.tender.title}" has been awarded.`,
-        tenderId: tenderId,
-        bidId: winningBidId
-      }
-      console.log('Award Notification Payload:', JSON.stringify(awardNotification, null, 2))
-
+      // Notify winning bidder
       await tx.notification.create({
-        data: awardNotification
+        data: {
+          type: 'TENDER_AWARDED',
+          message: `Congratulations! Your bid for tender ${winningBid.tender.title} has been accepted.`,
+          userId: winningBid.bidderId,
+          tenderId: tenderId.toString()
+        }
       })
 
       // Send award email with complete email data

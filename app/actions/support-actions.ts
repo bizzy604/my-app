@@ -3,8 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { sendSupportNotificationEmail } from '@/lib/email-utils'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getServerAuthSession } from '@/lib/auth'
 
 interface SupportTicket {
   subject?: string
@@ -41,7 +40,7 @@ export async function submitSupportTicket(subjectOrData: string | SupportTicket,
     }
 
     // Get the current user session
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     
     if (!session || !session.user || !session.user.id) {
       throw new Error('You must be logged in to submit a support ticket')

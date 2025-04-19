@@ -2,16 +2,30 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache'
-import type { Prisma } from '@prisma/client'
-import { ReportStatus, ReportType } from '@prisma/client'
+
+type ReportData = {
+  id: string
+  tenderId: string
+  reporterId: number
+  type: ReportType
+  description: string
+  status: ReportStatus
+  createdAt: Date
+  updatedAt: Date
+}
+
+
+
+import { ReportType, ReportStatus } from '@prisma/client';
+
+
 import { z } from "zod"
-import { authOptions } from '@/lib/auth'
-import { getServerSession } from "@/lib/auth"
+import { getServerAuthSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
 type CreateReportInput = {
   tenderId: string
-  reporterId: number
+  reporterId: string
   type: ReportType
   description: string
   evidence?: string
@@ -19,7 +33,7 @@ type CreateReportInput = {
 
 type GetReportsFilters = {
   tenderId?: string
-  reporterId?: number
+  reporterId?: string
   status?: ReportStatus
 }
 
@@ -27,7 +41,7 @@ type GetReportsFilters = {
 const ReportSchema = z.object({
   tenderId: z.string().min(1, "Tender ID is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  reportType: z.nativeEnum(ReportType).default(ReportType.IRREGULARITY),
+  reportType: z.nativeEnum(ReportType).default('IRREGULARITY'),
   reportSubtype: z.string().optional(),
   reporterName: z.string().optional(),
   contactInfo: z.string().optional(),
@@ -37,14 +51,14 @@ const ReportSchema = z.object({
 export async function getReports(filters?: GetReportsFilters) {
   try {
     // Authenticate the user
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
 
     if (!session) {
       console.error('No active session found')
       throw new Error("Unauthorized")
     }
 
-    const where: Prisma.ReportWhereInput = {}
+    const where: any = {}
 
     // Filter by status if provided
     if (filters?.status) {
@@ -72,7 +86,10 @@ export async function getReports(filters?: GetReportsFilters) {
     })
 
     // Transform the reports to match the expected client-side type
-    return reports.map(report => ({
+    return reports.map((report: ReportData & {
+      tender: { title: string },
+      reporter: { name: string }
+    }) => ({
       id: report.id,
       tenderId: report.tenderId,
       tenderTitle: report.tender.title,
@@ -91,7 +108,7 @@ export async function getReports(filters?: GetReportsFilters) {
 export async function createReport(data: CreateReportInput) {
   try {
     // Authenticate the user
-    const session = await getServerSession()
+    const session = await getServerAuthSession()
 
     if (!session) {
       console.error('No active session found')
@@ -133,7 +150,7 @@ export async function createReport(data: CreateReportInput) {
 export async function updateReportStatus(reportId: string, newStatus: ReportStatus) {
   try {
     // Authenticate the user
-    const session = await getServerSession()
+    const session = await getServerAuthSession()
 
     if (!session) {
       console.error('No active session found')
@@ -170,7 +187,7 @@ export async function updateReportStatus(reportId: string, newStatus: ReportStat
 export async function submitIrregularityReport(formData: z.infer<typeof ReportSchema>) {
   try {
     // Authenticate the user
-    const session = await getServerSession()
+    const session = await getServerAuthSession()
 
     if (!session) {
       console.error('No active session found')

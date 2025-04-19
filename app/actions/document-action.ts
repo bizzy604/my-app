@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma';
-import { uploadDocument as s3UploadDocument } from '@/lib/s3-upload';
+import { uploadToS3 } from '@/lib/s3-upload';
 
 export async function uploadDocument(formData: FormData) {
   // Extract data from FormData
@@ -14,10 +14,24 @@ export async function uploadDocument(formData: FormData) {
     throw new Error('Missing required upload parameters')
   }
   
-  // Use the existing S3 upload functionality
-  const document = await s3UploadDocument(file, {
+  // Upload file to S3 using our optimized utility
+  const s3Result = await uploadToS3(file, {
     userId,
     tenderId
+  })
+  
+  // Store document reference in database with permanent URL
+  const document = await prisma.document.create({
+    data: {
+      fileName: file.name,
+      url: s3Result.url,
+      s3Key: s3Result.key,
+      fileSize: file.size,
+      fileType: file.type,
+      userId: typeof userId === 'string' ? parseInt(userId, 10) : userId,
+      tenderId,
+      uploadDate: new Date()
+    }
   })
   
   // Revalidate paths for both procurement officer and vendor views
