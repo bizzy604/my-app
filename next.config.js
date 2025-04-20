@@ -21,7 +21,10 @@ const nextConfig = {
       }
     ],
     path: '/_next/image',
-    loader: 'default'
+    loader: 'default',
+    domains: ['localhost'],
+    unoptimized: process.env.NODE_ENV !== 'production',
+
   },
   
   reactStrictMode: false,
@@ -34,6 +37,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
+  
   
   // Vercel-specific optimizations
   output: 'standalone', 
