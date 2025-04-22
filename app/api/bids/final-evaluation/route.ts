@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx: any) => {
       // Get winning bid with related data
       const winningBid = await tx.bid.findUnique({
-        where: { id: parseInt(winningBidId) },
+        where: { id: winningBidId },
         include: {
           bidder: true,
           tender: true
@@ -53,20 +53,10 @@ export async function POST(request: Request) {
       if (!winningBid) {
         throw new Error('Winning bid not found')
       }
-      const updateBidAndTender = async (tx: any) => {
-        // Get winning bid with related data
-        const winningBid = await tx.bid.findUnique({
-          where: { id: winningBidId },
-          include: {
-            bidder: true,
-            tender: true
-          }
-        })
-        }
 
       // Update winning bid status
       await tx.bid.update({
-        where: { id: parseInt(winningBidId) },
+        where: { id: winningBidId },
         data: { 
           status: 'ACCEPTED'
         }
@@ -103,7 +93,7 @@ export async function POST(request: Request) {
         where: {
           tenderId: tenderId.toString(),
           id: {
-            not: parseInt(winningBidId)
+            not: winningBidId
           }
         },
         data: {
@@ -116,7 +106,7 @@ export async function POST(request: Request) {
         where: {
           tenderId: tenderId.toString(),
           id: {
-            not: parseInt(winningBidId)
+            not: winningBidId
           }
         },
         include: {
