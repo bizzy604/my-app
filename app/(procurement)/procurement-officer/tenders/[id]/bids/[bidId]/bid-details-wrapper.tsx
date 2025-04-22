@@ -2,7 +2,7 @@
 
 import { BidDetailsClient } from './bid-details-client'
 import { BidAnalysisProgress } from '@/components/BidAnalysisProgress'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 
 interface BidDetailsWrapperProps {
@@ -15,9 +15,37 @@ interface BidDetailsWrapperProps {
 export function BidDetailsWrapper({ bid, params, evaluationScores, documents }: BidDetailsWrapperProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [canUseAI, setCanUseAI] = useState(false)
+
+  // Check if user has access to AI features
+  useEffect(() => {
+    const checkAIAccess = async () => {
+      try {
+        const response = await fetch('/api/user/subscription-access?tier=ai')
+        if (response.ok) {
+          const data = await response.json()
+          setCanUseAI(data.hasAccess)
+        } else {
+          setCanUseAI(false)
+        }
+      } catch (error) {
+        console.error('Error checking AI access:', error)
+        setCanUseAI(false)
+      }
+    }
+    
+    checkAIAccess()
+  }, [])
 
   const startAnalysis = async () => {
     try {
+      // If user doesn't have AI access, show error and return
+      if (!canUseAI) {
+        setError('You need an AI subscription tier to use this feature. Please upgrade your plan.')
+        toast.error('AI analysis requires Innobid AI subscription. Please upgrade your plan.')
+        return
+      }
+      
       setIsAnalyzing(true)
       setError(null)
 
@@ -35,7 +63,8 @@ export function BidDetailsWrapper({ bid, params, evaluationScores, documents }: 
       console.log('Response status:', response.status)
 
       if (!response.ok) {
-        throw new Error('Failed to start analysis')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start analysis')
       }
 
       const data = await response.json()
@@ -71,6 +100,13 @@ export function BidDetailsWrapper({ bid, params, evaluationScores, documents }: 
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{error}</span>
+          {!canUseAI && (
+            <div className="mt-2">
+              <a href="/pricing" className="underline font-medium">
+                Upgrade to Innobid AI
+              </a>
+            </div>
+          )}
         </div>
       )}
 
@@ -89,11 +125,22 @@ export function BidDetailsWrapper({ bid, params, evaluationScores, documents }: 
         className={`px-4 py-2 rounded-md ${
           isAnalyzing
             ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700'
+            : canUseAI 
+              ? 'bg-blue-600 hover:bg-blue-700' 
+              : 'bg-gray-400 cursor-not-allowed'
         } text-white font-medium`}
       >
-        {isAnalyzing ? 'Analysis in Progress...' : 'Start AI Analysis'}
+        {isAnalyzing ? 'Analysis in Progress...' : canUseAI ? 'Start AI Analysis' : 'AI Analysis (Requires Subscription)'}
       </button>
+      
+      {!canUseAI && !error && (
+        <div className="text-sm text-gray-600 mt-2">
+          AI analysis requires an Innobid AI subscription. 
+          <a href="/pricing" className="ml-1 underline text-blue-600">
+            Upgrade your plan
+          </a>
+        </div>
+      )}
     </div>
   )
 }

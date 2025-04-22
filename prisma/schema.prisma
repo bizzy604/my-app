@@ -28,6 +28,11 @@ model User {
   postalCode                   String?
   website                      String?
   establishmentDate            DateTime?
+  stripeCustomerId             String?
+  subscriptionId               String?
+  subscriptionStatus           String?                // 'active', 'past_due', 'canceled', etc.
+  subscriptionTier             String?                // 'standard', 'ai'
+  subscriptionEndDate          DateTime?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
   bids                         Bid[]

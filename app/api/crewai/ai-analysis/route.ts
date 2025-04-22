@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerAuthSession } from '@/lib/auth'
+import { checkSubscriptionAccess } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,6 +11,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+    
+    // Check if user has AI subscription
+    const hasAIAccess = await checkSubscriptionAccess('ai')
+    
+    if (!hasAIAccess && session.user.role !== 'PROCUREMENT') {
+      return NextResponse.json(
+        { 
+          error: 'AI analysis requires an active Innobid AI subscription',
+          upgradeUrl: '/pricing'
+        },
+        { status: 403 }
       )
     }
     
@@ -64,4 +78,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

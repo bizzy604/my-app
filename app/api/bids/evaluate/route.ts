@@ -34,13 +34,13 @@ function determineStage(scores: {
 function determineBidStatus(stage: string): BidStatus {
   switch (stage) {
     case 'FINAL':
-      return BidStatus.ACCEPTED
+      return BidStatus.FINAL_EVALUATION
     case 'FINANCIAL':
-      return BidStatus.UNDER_REVIEW
+      return BidStatus.SHORTLISTED
     case 'TECHNICAL':
-      return BidStatus.UNDER_REVIEW
+      return BidStatus.TECHNICAL_EVALUATION
     default:
-      return BidStatus.PENDING
+      return BidStatus.UNDER_REVIEW
   }
 }
 
@@ -110,10 +110,26 @@ export async function POST(request: Request) {
         }
       })
 
+      // Create bid evaluation log with detailed scores
+      await tx.bidEvaluationLog.create({
+        data: {
+          bidId: bidId.toString(),
+          tenderId: tenderId.toString(),
+          evaluatedBy: session.user.id,
+          evaluatorId: session.user.id,
+          stage: stage,
+          totalScore: totalScore,
+          technicalScore: technicalScore,
+          financialScore: financialScore,
+          experienceScore: experienceScore,
+          comments: comments || ''
+        }
+      })
+
       // Update bid status based on score
       const newStatus = determineBidStatus(stage)
       
-            const updatedBid = await tx.bid.update({
+      const updatedBid = await tx.bid.update({
         where: { id: bidId.toString() },
         data: { 
           status: determineBidStatus(stage),

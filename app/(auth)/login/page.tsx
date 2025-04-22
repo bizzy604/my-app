@@ -37,7 +37,7 @@ export default function LoginPage() {
       toast({
         title: "Password Reset",
         description: "Your password has been successfully reset. Please log in.",
-        variant: "success"
+        variant: "default"
       })
 
       // Clear the message from URL to prevent repeated toasts

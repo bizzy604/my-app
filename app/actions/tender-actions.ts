@@ -7,7 +7,7 @@ import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 import { Tender } from '@prisma/client'
 import { formatCurrency } from "@/lib/utils"
 import { uploadToS3 } from '@/lib/s3-upload'
-import { getServerSession } from '@/lib/auth'
+import { getServerAuthSession } from '@/lib/auth'
 
 type BidSubmissionData = {
   tenderId: string;
@@ -721,7 +721,11 @@ export async function evaluateBid(
         data: {
           recipientName: bid.bidder.name,
           tenderTitle: bid.tender.title,
-          status: 'shortlisted'
+          status: 'shortlisted',
+          message: 'Your bid has been shortlisted for further evaluation.',
+          bidAmount: bid.amount,
+          companyName: bid.bidder.company || 'N/A',
+          tenderReference: bid.tender.id
         }
       })
     }
@@ -778,7 +782,7 @@ export async function awardTender(
         message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
         bidAmount: formatCurrency(bid.amount),
         companyName: bid.bidder.company || 'N/A',
-        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+        tenderReference: bid.tender.id
       }
     })
 
@@ -1127,7 +1131,7 @@ export async function sendAwardNotification({
         message,
         bidAmount: formatCurrency(bid.amount),
         companyName: bid.bidder.company || '',
-        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+        tenderReference: bid.tender.id
       }
     })
 
@@ -1146,16 +1150,16 @@ export async function sendAwardNotification({
 
 export async function awardTenderAndNotify(tenderId: string, bidId: string, userId: string) {
   try {
-    // Since userId is passed, let's use it directly but validate it
-    const awardedById = Number(userId)
-    
-    if (isNaN(awardedById) || awardedById <= 0) {
-      throw new Error('Invalid user ID provided')
+    // Validate that the user has permission to award this tender
+    const userIdNumber = parseInt(userId);
+    if (isNaN(userIdNumber)) {
+      throw new Error('Invalid userId provided');
     }
-
-    const result = await prisma.$transaction(async (prisma) => {
-      // Get bid details first
-      const bid = await prisma.bid.findUnique({
+    
+    // Award the tender
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the bid details
+      const bid = await tx.bid.findUnique({
         where: { id: bidId },
         include: {
           tender: true,
@@ -1167,34 +1171,34 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
         throw new Error('Bid not found')
       }
 
-      // Update tender status
-      const updatedTender = await prisma.tender.update({
+      // Update the tender status and set the awarded bid
+      await tx.tender.update({
         where: { id: tenderId },
         data: {
           status: TenderStatus.AWARDED,
           awardedBidId: bidId,
-          updatedAt: new Date()
+          awardedById: userIdNumber,
         }
       })
 
       // Create award log
-      const awardLog = await prisma.tenderAwardLog.create({
+      const awardLog = await tx.tenderAwardLog.create({
         data: {
           tenderId,
           bidId,
-          awardedBy: awardedById,
+          awardedBy: userIdNumber,
           createdAt: new Date()
         }
       })
 
       // Update winning bid status
-      await prisma.bid.update({
+      await tx.bid.update({
         where: { id: bidId },
         data: { status: BidStatus.ACCEPTED }
       })
 
       // Update other bids as rejected
-      await prisma.bid.updateMany({
+      await tx.bid.updateMany({
         where: {
           tenderId,
           id: { not: bidId }
@@ -1203,7 +1207,7 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
       })
 
       // Create notification
-      await prisma.notification.create({
+      await tx.notification.create({
         data: {
           type: NotificationType.TENDER_AWARD,
           message: `Congratulations! Your bid for tender "${bid.tender.title}" has been accepted.`,
@@ -1241,10 +1245,14 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
 
 export async function getShortlistedBids(tenderId: string) {
   try {
+    console.log(`Fetching shortlisted bids for tender: ${tenderId}`)
+    
     const shortlistedBids = await prisma.bid.findMany({
       where: {
         tenderId,
-        status: BidStatus.SHORTLISTED
+        status: {
+          in: [BidStatus.SHORTLISTED, BidStatus.FINAL_EVALUATION, BidStatus.ACCEPTED]
+        }
       },
       include: {
         bidder: {
@@ -1267,32 +1275,77 @@ export async function getShortlistedBids(tenderId: string) {
             createdAt: 'desc'
           },
           take: 1
-        }
-      },
-      orderBy: {
-        // Order by latest evaluation
-        evaluationLogs: {
-          _count: 'desc'
+        },
+        evaluationStages: {
+          select: {
+            stage: true,
+            score: true,
+            comments: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 3
         }
       }
     })
+    
+    console.log(`Found ${shortlistedBids.length} shortlisted bids`)
+    
+    // Log the first bid to debug
+    if (shortlistedBids.length > 0) {
+      console.log('First bid data:', JSON.stringify({
+        id: shortlistedBids[0].id,
+        evaluationLogs: shortlistedBids[0].evaluationLogs,
+        evaluationStages: shortlistedBids[0].evaluationStages
+      }, null, 2))
+    }
 
     // Transform the data to match the expected format
-    return shortlistedBids.map(bid => ({
-      id: bid.id,
-      amount: bid.amount,
-      status: bid.status,
-      score: bid.evaluationLogs[0]?.totalScore || 0,
-      bidder: {
-        name: bid.bidder.name,
-        company: bid.bidder.company
-      },
-      evaluationStages: [{
-        stage: bid.evaluationLogs[0]?.stage || '',
-        score: bid.evaluationLogs[0]?.totalScore || 0,
-        comments: bid.evaluationLogs[0]?.comments || ''
-      }]
-    }))
+    const transformedBids = shortlistedBids.map(bid => {
+      // Try to get scores from evaluationLogs first
+      let technicalScore = bid.evaluationLogs[0]?.technicalScore;
+      let financialScore = bid.evaluationLogs[0]?.financialScore;
+      let experienceScore = bid.evaluationLogs[0]?.experienceScore;
+      let totalScore = bid.evaluationLogs[0]?.totalScore;
+      
+      // Calculate a score if we have evaluation stages but no logs
+      if ((!technicalScore || !financialScore || !experienceScore) && bid.evaluationStages.length > 0) {
+        // Get the score from the most recent evaluation stage
+        const totalFromStages = bid.evaluationStages[0]?.score || 0;
+        
+        // If we have at least one stage with a score, distribute it proportionally
+        if (totalFromStages > 0) {
+          if (!technicalScore) technicalScore = Math.round(totalFromStages * 0.4 * 100) / 100;
+          if (!financialScore) financialScore = Math.round(totalFromStages * 0.4 * 100) / 100;
+          if (!experienceScore) experienceScore = Math.round(totalFromStages * 0.2 * 100) / 100;
+          if (!totalScore) totalScore = totalFromStages;
+        }
+      }
+      
+      // Create a comprehensive bid object
+      return {
+        id: bid.id,
+        amount: bid.amount,
+        status: bid.status,
+        score: totalScore || 0,
+        technicalScore: technicalScore || 0,
+        financialScore: financialScore || 0,
+        experienceScore: experienceScore || 0,
+        bidder: {
+          name: bid.bidder.name,
+          company: bid.bidder.company
+        },
+        evaluationStages: bid.evaluationStages.map(stage => ({
+          stage: stage.stage || '',
+          score: stage.score || 0,
+          comments: stage.comments || ''
+        }))
+      };
+    });
+    
+    // Sort by score in descending order
+    return transformedBids.sort((a, b) => b.score - a.score);
 
   } catch (error) {
     console.error('Error fetching shortlisted bids:', error)
