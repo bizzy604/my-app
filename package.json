@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "migrate": "prisma migrate deploy && node prisma/migrations-post/apply-rls.js",
+    "migrate:dev": "prisma migrate dev && node prisma/migrations-post/apply-rls.js",
+    "db:push": "prisma db push && node prisma/migrations-post/apply-rls.js",
+    "db:rls": "node prisma/migrations-post/apply-rls.js"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.1",

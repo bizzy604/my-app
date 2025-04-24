@@ -117,5 +117,19 @@ export const authOptions: NextAuthOptions = {
 
 // Create a helper function to get session on server
 export async function getServerAuthSession() {
-  return await getNextAuthServerSession(authOptions);
+  const session = await getNextAuthServerSession(authOptions);
+  
+  // Set RLS context based on the session user
+  if (session?.user?.id) {
+    try {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+      if (session.user.role) {
+        await prisma.$executeRaw`SELECT set_config('app.user_role', ${session.user.role}, true)`;
+      }
+    } catch (error) {
+      console.error('Error setting RLS context in auth session:', error);
+    }
+  }
+  
+  return session;
 }

@@ -78,7 +78,25 @@ export async function getTenders(filters?: {
   category?: TenderCategory
 }) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
     const where: Prisma.TenderWhereInput = {}
+    
+    // Only apply procurement officer isolation for users with PROCUREMENT role
+    // Vendors and citizens should see all tenders
+    if (session?.user?.role === 'PROCUREMENT') {
+      // Only show tenders where this procurement officer is the issuer or assigned procurement officer
+      where.OR = [
+        { issuerId: session.user.id },
+        { procurementOfficerId: session.user.id }
+      ];
+    }
     
     if (filters?.status) {
       where.status = filters.status
@@ -212,6 +230,9 @@ export async function createTender(data: CreateTenderData) {
     const closingDate = new Date(data.closingDate).toISOString()
     const { issuerId, ...tenderData } = data
 
+    // Set RLS context for the current user to fix circular dependency issue
+    await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${issuerId.toString()}, true)`
+    
     const tender = await prisma.tender.create({
       data: {
         ...tenderData,
@@ -242,6 +263,33 @@ export async function createTender(data: CreateTenderData) {
 
 export async function getTenderById(id: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to this tender');
+      }
+    }
+    
     const tender = await prisma.tender.findUnique({
       where: { id },
       include: {
@@ -274,6 +322,33 @@ export async function getTenderById(id: string) {
 
 export async function updateTender(id: string, data: Partial<Tender>) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to update this tender');
+      }
+    }
+    
     // Convert closingDate string to ISO format if it exists
     const closingDate = data.closingDate ? new Date(data.closingDate).toISOString() : undefined
 
@@ -295,10 +370,42 @@ export async function updateTender(id: string, data: Partial<Tender>) {
 }
 
 export async function deleteTender(id: string) {
+  try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to delete this tender');
+      }
+    }
+    
     await prisma.tender.delete({
-    where: { id }
+      where: { id }
     })
     revalidatePath('/procurement-officer/tenders')
+  } catch (error) {
+    console.error('Error deleting tender:', error)
+    throw new Error('Failed to delete tender')
+  }
 }
 
 export async function submitBid(data: BidSubmissionData) {
@@ -524,6 +631,33 @@ export async function checkVendorBidStatus(tenderId: string, vendorId: number): 
 
 export async function getTenderBids(tenderId: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender's bids
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id: tenderId,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to the bids for this tender');
+      }
+    }
+    
     const bids = await prisma.bid.findMany({
       where: { tenderId },
       include: {
@@ -580,6 +714,44 @@ export async function updateBidStatus(bidId: string, ACCEPTED: string, status: B
 
 export async function getBidById(bidId: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to the tender associated with this bid
+    if (session?.user?.role === 'PROCUREMENT') {
+      // First get the bid to find its tenderId
+      const bidInfo = await prisma.bid.findUnique({
+        where: { id: bidId },
+        select: { tenderId: true }
+      });
+      
+      if (!bidInfo) {
+        throw new Error('Bid not found');
+      }
+      
+      // Now check if the procurement officer has access to this tender
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id: bidInfo.tenderId,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to this bid');
+      }
+    }
+    
     const bid = await prisma.bid.findUnique({
       where: { id: bidId },
       include: {
