@@ -1,9 +1,27 @@
 'use server'
 
 import { prisma } from "@/lib/prisma"
+import { getServerAuthSession } from "@/lib/auth"
 
 export async function getDashboardStats(timeRange: string = 'month') {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, we'll filter based on their ID
+    // For other roles (vendors, citizens), we show all data
+    const procurementFilter = session?.user?.role === 'PROCUREMENT' ? {
+      OR: [
+        { issuerId: session.user.id },
+        { procurementOfficerId: session.user.id }
+      ]
+    } : {};
+    
     const startDate = new Date()
     switch (timeRange) {
       case 'week':
@@ -36,7 +54,8 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.tender.count({
         where: {
           status: 'OPEN',
-          createdAt: { gte: startDate }
+          createdAt: { gte: startDate },
+          ...procurementFilter  // Apply procurement officer filter
         }
       }),
 
@@ -44,7 +63,8 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.bid.count({
         where: {
           status: 'TECHNICAL_EVALUATION',
-          submissionDate: { gte: startDate }
+          submissionDate: { gte: startDate },
+          tender: procurementFilter // Apply procurement officer filter to associated tender
         }
       }),
 
@@ -52,7 +72,8 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.tender.count({
         where: {
           status: 'AWARDED',
-          updatedAt: { gte: startDate }
+          updatedAt: { gte: startDate },
+          ...procurementFilter  // Apply procurement officer filter
         }
       }),
 
@@ -60,7 +81,8 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.bid.count({
         where: {
           status: 'PENDING',
-          submissionDate: { gte: startDate }
+          submissionDate: { gte: startDate },
+          tender: procurementFilter // Apply procurement officer filter to associated tender
         }
       }),
 
@@ -68,7 +90,8 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.report.count({
         where: {
           type: 'IRREGULARITY',
-          createdAt: { gte: startDate }
+          createdAt: { gte: startDate },
+          tender: procurementFilter // Apply procurement officer filter to associated tender
         }
       }),
 
@@ -76,14 +99,15 @@ export async function getDashboardStats(timeRange: string = 'month') {
       prisma.supportTicket.count({
         where: {
           status: 'OPEN',
-          createdAt: { gte: startDate }
+          createdAt: { gte: startDate },
         }
       }),
 
       // Recent Activities
       prisma.tender.findMany({
         where: {
-          createdAt: { gte: startDate }
+          createdAt: { gte: startDate },
+          ...procurementFilter  // Apply procurement officer filter
         },
         orderBy: {
           createdAt: 'desc'
