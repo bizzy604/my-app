@@ -887,19 +887,18 @@ export async function evaluateBid(
 
     // If bid is shortlisted, send notification
     if (data.status === BidStatus.SHORTLISTED) {
-      await sendBidStatusEmail({
-        to: bid.bidder.email,
-        subject: `Bid Shortlisted - ${bid.tender.title}`,
-        data: {
+      await sendBidStatusEmail(
+        bid.bidder.email,
+        'shortlisted',
+        {
           recipientName: bid.bidder.name,
           tenderTitle: bid.tender.title,
-          status: 'shortlisted',
           message: 'Your bid has been shortlisted for further evaluation.',
           bidAmount: bid.amount,
           companyName: bid.bidder.company || 'N/A',
           tenderReference: bid.tender.id
         }
-      })
+      )
     }
 
     return bid
@@ -952,7 +951,7 @@ export async function awardTender(
         recipientName: bid.bidder.name,
         tenderTitle: bid.tender.title,
         message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
-        bidAmount: formatCurrency(bid.amount),
+        bidAmount: bid.amount,
         companyName: bid.bidder.company || 'N/A',
         tenderReference: bid.tender.id
       }
@@ -1024,7 +1023,34 @@ export async function getTenderReports(timeRange: string) {
 
 export async function getTenderHistory(tenderId?: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
     if (tenderId) {
+      // For procurement officers, verify they have access to this tender
+      if (session?.user?.role === 'PROCUREMENT') {
+        const userTender = await prisma.tender.findFirst({
+          where: {
+            id: tenderId,
+            OR: [
+              { issuerId: session.user.id },
+              { procurementOfficerId: session.user.id }
+            ]
+          },
+          select: { id: true }
+        });
+        
+        // If no tender found, this officer doesn't have access
+        if (!userTender) {
+          throw new Error('You do not have access to this tender history');
+        }
+      }
+      
       const tenderExists = await prisma.tender.findUnique({
         where: { id: tenderId },
         select: { id: true }
@@ -1051,7 +1077,20 @@ export async function getTenderHistory(tenderId?: string) {
 
       return history
     } else {
+      // Build the where clause for the tender query
+      const where: Prisma.TenderWhereInput = {};
+      
+      // Only apply procurement officer isolation for users with PROCUREMENT role
+      if (session?.user?.role === 'PROCUREMENT') {
+        // Only show tenders where this procurement officer is the issuer or assigned procurement officer
+        where.OR = [
+          { issuerId: session.user.id },
+          { procurementOfficerId: session.user.id }
+        ];
+      }
+      
       const tenders = await prisma.tender.findMany({
+        where,
         include: {
           bids: {
             where: {
@@ -1301,7 +1340,7 @@ export async function sendAwardNotification({
         recipientName,
         tenderTitle: bid.tender.title,
         message,
-        bidAmount: formatCurrency(bid.amount),
+        bidAmount: bid.amount,
         companyName: bid.bidder.company || '',
         tenderReference: bid.tender.id
       }
@@ -1396,7 +1435,8 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
         data: {
           recipientName: bid.bidder.name,
           tenderTitle: bid.tender.title,
-          bidAmount: formatCurrency(bid.amount),
+          message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
+          bidAmount: bid.amount,
           companyName: bid.bidder.company || '',
           tenderReference: bid.tender.id
         }
