@@ -32,7 +32,28 @@ interface AIAnalysisProps {
 export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysisProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [analysis, setAnalysis] = useState(existingAnalysis)
+  const [canUseAI, setCanUseAI] = useState(false)
   const { toast } = useToast()
+
+  // Check if user has access to AI features
+  useEffect(() => {
+    const checkAIAccess = async () => {
+      try {
+        const response = await fetch('/api/user/subscription-access?tier=ai')
+        if (response.ok) {
+          const data = await response.json()
+          setCanUseAI(data.hasAccess)
+        } else {
+          setCanUseAI(false)
+        }
+      } catch (error) {
+        console.error('Error checking AI access:', error)
+        setCanUseAI(false)
+      }
+    }
+    
+    checkAIAccess()
+  }, [])
 
   const checkStatus = async (kickoffId: string) => {
     try {
@@ -112,8 +133,17 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
     }
   };
 
-
   const runAIAnalysis = async () => {
+    // If user doesn't have AI access, show error and return
+    if (!canUseAI) {
+      toast({
+        title: "Subscription Required",
+        description: "You need an AI subscription tier to use this feature. Please upgrade your plan.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     setIsLoading(true)
     try {
       // First fetch the complete bid data
@@ -238,8 +268,10 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
             </p>
             <Button 
               onClick={runAIAnalysis} 
-              disabled={isLoading}
-              className="w-full md:w-auto"
+              disabled={isLoading || !canUseAI}
+              className={`w-full md:w-auto ${
+                !canUseAI ? 'bg-gray-400 cursor-not-allowed hover:bg-gray-400' : ''
+              }`}
             >
               {isLoading ? (
                 <>
@@ -247,9 +279,17 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
                   Running Analysis...
                 </>
               ) : (
-                "Run AI Analysis"
+                canUseAI ? "Run AI Analysis" : "AI Analysis (Requires Subscription)"
               )}
             </Button>
+            {!canUseAI && (
+              <div className="text-sm text-gray-600 mt-2">
+                AI analysis requires an Innobid AI subscription. 
+                <a href="/pricing" className="ml-1 underline text-blue-600">
+                  Upgrade your plan
+                </a>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -269,7 +309,8 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
           <Button 
             variant="outline" 
             onClick={runAIAnalysis} 
-            disabled={isLoading}
+            disabled={isLoading || !canUseAI}
+            className={!canUseAI ? 'bg-gray-100 text-gray-400 cursor-not-allowed hover:bg-gray-100' : ''}
           >
             {isLoading ? (
               <>
@@ -277,7 +318,7 @@ export function AIAnalysisPanel({ bidId, tenderId, existingAnalysis }: AIAnalysi
                 Updating...
               </>
             ) : (
-              "Update Analysis"
+              canUseAI ? "Update Analysis" : "Update (Requires Subscription)"
             )}
           </Button>
         </div>

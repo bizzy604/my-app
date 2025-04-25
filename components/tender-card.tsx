@@ -56,7 +56,7 @@ export function TenderCard({ tender, onEdit, onDelete }: TenderCardProps) {
             <Badge variant={
               status === 'OPEN' ? 'default' :
               status === 'CLOSED' ? 'secondary' :
-              status === 'AWARDED' ? 'success' :
+              status === 'AWARDED' ? 'default' :
               'outline'
             }>
               {status}

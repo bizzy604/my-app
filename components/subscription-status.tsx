@@ -53,11 +53,13 @@ export default function SubscriptionStatus({
 
   return (
     <div 
-      className={`p-4 rounded-lg border ${getBgColor()} ${getBorderColor()} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${className}`}
+      className={`p-4 rounded-lg border ${getBgColor()} ${getBorderColor()} flex flex-col justify-between items-start gap-3 w-full max-w-full overflow-hidden ${className}`}
     >
-      <div className="flex items-center gap-3">
-        {getIcon()}
-        <div>
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-shrink-0">
+          {getIcon()}
+        </div>
+        <div className="min-w-0 flex-grow">
           <p className={`font-medium ${getTextColor()}`}>
             {isActive ? tierName : 'No active subscription'}
           </p>
@@ -71,7 +73,7 @@ export default function SubscriptionStatus({
         <Button
           variant="outline"
           size="sm"
-          className="shrink-0"
+          className="mt-1 w-full md:w-auto"
           onClick={() => router.push('/pricing')}
         >
           {isActive ? (
