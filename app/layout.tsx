@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "swagger-ui-react/swagger-ui.css";
 import { Poppins } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NextAuthProvider } from '@/components/next-auth-provider'
@@ -10,12 +11,12 @@ import { Providers } from './providers'
 
 const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-poppins",
   weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
-  title: "InnoBid",
+  title: "Innobid",
   description: "Streamline your procurement process with InnoBid",
   icons: {
     icon: [
@@ -34,22 +35,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable}`} suppressHydrationWarning>
-      <body className={poppins.variable}>
+    <html lang="en" suppressHydrationWarning>
+      <body>
         <Providers>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
             <QueryProvider>
               <NextAuthProvider>
                 {children}
                 <SpeedInsights />
               </NextAuthProvider>
             </QueryProvider>
-          </ThemeProvider>
         </Providers>
         <Toaster />
       </body>

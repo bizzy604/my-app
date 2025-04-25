@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getTenders, deleteTender } from "@/app/actions/tender-actions"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
-import { useToast } from '@/components/ui/use-toast'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,18 +34,18 @@ interface SimplifiedTender {
 
 export default function TendersPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [isDeleting, setIsDeleting] = useState(false)
   const [tenderToDelete, setTenderToDelete] = useState<string | null>(null)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [statusMessage, setStatusMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null)
 
   const { data: tendersData = [], isLoading } = useHydrationSafeClient(() => getTenders(), [refreshKey])
 
   // Simplify the tender data to match the TenderCard component's expectations
-  const tenders: SimplifiedTender[] = tendersData.map(tender => ({
+  const tenders: SimplifiedTender[] = Array.isArray(tendersData) ? tendersData.map(tender => ({
     id: tender.id,
     title: tender.title,
     description: tender.description,
@@ -56,7 +55,7 @@ export default function TendersPage() {
     status: tender.status,
     budget: tender.budget,
     closingDate: tender.closingDate.toString()
-  }));
+  })) : [];
 
   const handleEdit = (tenderId: string) => {
     router.push(`/procurement-officer/tenders/${tenderId}/edit`)
@@ -73,30 +72,44 @@ export default function TendersPage() {
     setIsDeleting(true)
     try {
       await deleteTender(tenderToDelete)
-      toast({
-        title: "Tender deleted",
-        description: "The tender has been successfully deleted.",
-        variant: "default",
+      setStatusMessage({
+        message: "Tender has been successfully deleted.",
+        type: "success"
       })
       // Trigger a refresh by incrementing the key
       setRefreshKey(prev => prev + 1)
     } catch (error) {
       console.error('Error deleting tender:', error)
-      toast({
-        title: "Error",
-        description: "Failed to delete tender. Please try again.",
-        variant: "destructive",
+      setStatusMessage({
+        message: "Failed to delete tender. Please try again.",
+        type: "error"
       })
     } finally {
       setIsDeleting(false)
       setTenderToDelete(null)
       setIsAlertOpen(false)
+      
+      // Clear status message after 3 seconds
+      setTimeout(() => {
+        setStatusMessage(null)
+      }, 3000)
     }
   }
 
   return (
     <DashboardLayout>
       <div className="p-4 md:p-8 space-y-6">
+        {/* Status Message */}
+        {statusMessage && (
+          <div className={`p-4 rounded-md ${
+            statusMessage.type === 'success' 
+              ? 'bg-green-50 text-green-800 border border-green-200' 
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}>
+            {statusMessage.message}
+          </div>
+        )}
+      
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

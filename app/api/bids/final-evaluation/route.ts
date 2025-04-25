@@ -1,177 +1,182 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerAuthSession } from '@/lib/auth'
+import { createSecureHandler } from '@/lib/api-middleware'
+import { ApiToken } from '@/lib/api-auth'
+import { BidStatus } from '@prisma/client'
 
-const BidStatus = {
-  PENDING: 'PENDING',
-  UNDER_REVIEW: 'UNDER_REVIEW',
-  ACCEPTED: 'ACCEPTED',
-  REJECTED: 'REJECTED'
-} as const;
-
+// Important constants
 const NotificationType = {
   BID_SUBMITTED: 'BID_SUBMITTED',
   BID_EVALUATED: 'BID_EVALUATED',
+  BID_AWARDED: 'BID_AWARDED',
+  BID_REJECTED: 'BID_REJECTED',
   TENDER_AWARDED: 'TENDER_AWARDED',
   TENDER_CLOSED: 'TENDER_CLOSED'
 } as const;
 
+type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
 const TenderStatus = {
-  OPEN: 'OPEN',
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
   CLOSED: 'CLOSED',
   AWARDED: 'AWARDED',
   CANCELLED: 'CANCELLED'
 } as const;
 
-type BidStatus = typeof BidStatus[keyof typeof BidStatus];
-type NotificationType = typeof NotificationType[keyof typeof NotificationType];
 type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 
-export async function POST(request: Request) {
+export const POST = createSecureHandler(async (req: NextRequest, token: ApiToken) => {
   try {
-    const session = await getServerAuthSession()
-    
-    if (!session?.user?.id || session.user.role !== 'PROCUREMENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Only procurement officers can perform final evaluation
+    if (token.role !== 'PROCUREMENT') {
+      return NextResponse.json(
+        { error: 'Permission denied', message: 'Only procurement officers can finalize bid evaluations' },
+        { status: 403 }
+      )
     }
-
-    const data = await request.json()
+    
+    const data = await req.json()
     const { tenderId, winningBidId, evaluations } = data
-
-    // Start transaction
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Get winning bid with related data
+    
+    // Start a database transaction for all the updates
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the winning bid with bidder info
       const winningBid = await tx.bid.findUnique({
-        where: { id: winningBidId },
+        where: { 
+          id: winningBidId,
+        },
         include: {
-          bidder: true,
+          bidder: {
+            select: {
+              id: true,
+              email: true,
+              name: true
+            }
+          },
           tender: true
         }
       })
-
+      
       if (!winningBid) {
         throw new Error('Winning bid not found')
       }
-
-      // Update winning bid status
-      await tx.bid.update({
-        where: { id: winningBidId },
-        data: { 
-          status: 'ACCEPTED'
-        }
-      })
-
+      
       // Update tender status
       await tx.tender.update({
         where: { id: tenderId.toString() },
         data: {
           status: 'AWARDED',
-          awardedBidId: winningBidId.toString(),
-          awardedById: session.user.id
         }
       })
-
-      // Create bid evaluation log for the winning bid
-      await tx.bidEvaluationLog.create({
+      
+      // Log the evaluation
+      await tx.evaluationStage.create({
         data: {
           bidId: winningBidId,
-          tenderId: tenderId,
-          stage: 'FINAL_EVALUATION',
-          totalScore: evaluations[winningBidId]?.totalScore ?? 0,
-          technicalScore: evaluations[winningBidId]?.technicalScore ?? 0,
-          financialScore: evaluations[winningBidId]?.financialScore ?? 0,
-          experienceScore: evaluations[winningBidId]?.experienceScore ?? 0,
-          evaluatedBy: session.user.id,
-          evaluatorId: session.user.id,
+          evaluatedBy: token.userId,
+          stage: 'FINAL',
+          status: 'ACCEPTED', 
+          score: 100,
           comments: 'Final bid evaluation for tender award'
         }
       })
-
-      // Update other bids to rejected
+      
+      // Update winning bid status
+      await tx.bid.update({
+        where: { id: winningBidId },
+        data: {
+          status: 'ACCEPTED', 
+        }
+      })
+      
+      // Create notification for winner
+      await tx.notification.create({
+        data: {
+          type: NotificationType.BID_AWARDED,
+          userId: winningBid.bidderId,
+          message: `Your bid for ${winningBid.tender.title} has been selected as the winning bid.`,
+          tenderId: tenderId.toString()
+        }
+      })
+      
+      // Update other bids to rejected status and notify bidders
       await tx.bid.updateMany({
         where: {
           tenderId: tenderId.toString(),
-          id: {
-            not: winningBidId
-          }
+          id: { not: winningBidId }
         },
         data: {
           status: 'REJECTED'
         }
       })
-
-      // Notify other bidders
-      const otherBids = await tx.bid.findMany({
+      
+      // Get all rejected bids to create notifications
+      const rejectedBids = await tx.bid.findMany({
         where: {
           tenderId: tenderId.toString(),
-          id: {
-            not: winningBidId
-          }
+          id: { not: winningBidId }
         },
         include: {
-          bidder: true
+          bidder: true,
+          tender: true
         }
       })
-
-      for (const bid of otherBids) {
+      
+      // Create notifications for rejected bidders
+      for (const bid of rejectedBids) {
         await tx.notification.create({
           data: {
-            type: 'BID_EVALUATED',
-            message: `Your bid for tender ${winningBid.tender.title} was not selected.`,
+            type: NotificationType.BID_REJECTED,
             userId: bid.bidderId,
+            message: `Your bid for tender ${winningBid.tender.title} was not selected.`,
             tenderId: tenderId.toString()
           }
         })
-
+        
         // Send rejection email with complete email data
         await sendBidStatusEmail(
           bid.bidder.email,
           'rejected',
           {
-            recipientName: bid.bidder.name || bid.bidder.company || 'Bidder',
+            recipientName: bid.bidder.name || 'Bidder',
             tenderTitle: winningBid.tender.title,
-            bidAmount: bid.amount.toString(),
+            bidAmount: bid.amount,
             message: 'Your bid was not selected for the final award.',
-            companyName: bid.bidder.company || 'N/A',
+            companyName: 'N/A',
             tenderReference: winningBid.tender.id.slice(-6).toUpperCase()
           }
         )
       }
-
-      // Notify winning bidder
-      await tx.notification.create({
-        data: {
-          type: 'TENDER_AWARDED',
-          message: `Congratulations! Your bid for tender ${winningBid.tender.title} has been accepted.`,
-          userId: winningBid.bidderId,
-          tenderId: tenderId.toString()
-        }
-      })
-
-      // Send award email with complete email data
+      
+      // Send email to winner
       await sendTenderAwardEmail({
         to: winningBid.bidder.email,
         subject: 'Tender Award Notification',
         data: {
-          recipientName: winningBid.bidder.name || winningBid.bidder.company || 'Bidder',
+          recipientName: winningBid.bidder.name || 'Bidder',
           tenderTitle: winningBid.tender.title,
-          bidAmount: winningBid.amount.toString(),
+          bidAmount: winningBid.amount,
           message: 'Congratulations on being awarded the tender!',
-          companyName: winningBid.bidder.company || 'N/A',
+          companyName: 'N/A',
           tenderReference: winningBid.tender.id.slice(-6).toUpperCase()
         }
       })
-
-      return { winningBid }
+      
+      return { winningBid, rejectedBids }
     })
-
-    return NextResponse.json(result)
+    
+    return NextResponse.json({ 
+      message: 'Tender awarded successfully',
+      winningBid: result.winningBid,
+      rejectedCount: result.rejectedBids.length
+    })
   } catch (error) {
-    console.error('Award process error:', error)
+    console.error('Error in final evaluation:', error)
     return NextResponse.json(
-      { error: 'Failed to complete award process' },
+      { error: 'Failed to process final evaluation' },
       { status: 500 }
     )
   }
-} 
+})
