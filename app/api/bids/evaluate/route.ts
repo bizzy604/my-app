@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerAuthSession } from '@/lib/auth'
+import { createSecureHandler } from '@/lib/api-middleware'
+import { ApiToken } from '@/lib/api-auth'
 
 import { BidStatus } from '@prisma/client';
 
@@ -10,7 +11,6 @@ const NotificationType = {
   TENDER_AWARDED: 'TENDER_AWARDED',
   TENDER_CLOSED: 'TENDER_CLOSED'
 } as const;
-
 
 type NotificationType = typeof NotificationType[keyof typeof NotificationType];
 
@@ -44,21 +44,18 @@ function determineBidStatus(stage: string): BidStatus {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = createSecureHandler(async (req: NextRequest, token: ApiToken) => {
   try {
-    const session = await getServerAuthSession()
-    
-    if (!session?.user?.id || session.user.role !== 'PROCUREMENT') {
+    if (token.role !== 'PROCUREMENT') {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+        { error: 'Permission denied', message: 'Only procurement officers can evaluate bids' },
+        { status: 403 }
+      );
     }
-
-    const data = await request.json()
+    
+    const data = await req.json()
     const { bidId, tenderId, technicalScore, financialScore, experienceScore, comments } = data
 
-    // Validate scores
     if (
       technicalScore < 0 || technicalScore > 100 ||
       financialScore < 0 || financialScore > 100 ||
@@ -70,7 +67,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calculate total score
     const scores = { technicalScore, financialScore, experienceScore }
     const stage = determineStage(scores)
     const totalScore = (
@@ -79,12 +75,11 @@ export async function POST(request: Request) {
       (experienceScore * 0.2)
     )
 
-    // Check if bid has already been evaluated
     const existingEvaluation = await prisma.evaluationStage.findFirst({
       where: {
         bidId: bidId.toString(),
         evaluator: {
-          id: session.user.id
+          id: token.userId
         }
       }
     })
@@ -96,13 +91,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // Start a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create evaluation record
       const evaluation = await tx.evaluationStage.create({
         data: {
           bidId: bidId.toString(),
-          evaluatedBy: session.user.id,
+          evaluatedBy: token.userId,
           stage: stage,
           score: totalScore,
           status: determineBidStatus(stage),
@@ -110,13 +103,12 @@ export async function POST(request: Request) {
         }
       })
 
-      // Create bid evaluation log with detailed scores
       await tx.bidEvaluationLog.create({
         data: {
           bidId: bidId.toString(),
           tenderId: tenderId.toString(),
-          evaluatedBy: session.user.id,
-          evaluatorId: session.user.id,
+          evaluatedBy: token.userId,
+          evaluatorId: token.userId,
           stage: stage,
           totalScore: totalScore,
           technicalScore: technicalScore,
@@ -126,7 +118,6 @@ export async function POST(request: Request) {
         }
       })
 
-      // Update bid status based on score
       const newStatus = determineBidStatus(stage)
       
       const updatedBid = await tx.bid.update({
@@ -141,7 +132,6 @@ export async function POST(request: Request) {
         }
       })
 
-      // Create notification for bidder
       await tx.notification.create({
         data: {
           type: 'BID_EVALUATED',
@@ -151,7 +141,6 @@ export async function POST(request: Request) {
         }
       })
 
-      // If bid is under review, send email notification
       if (newStatus === 'UNDER_REVIEW') {
         await tx.notification.create({
           data: {
@@ -174,4 +163,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-}
+})

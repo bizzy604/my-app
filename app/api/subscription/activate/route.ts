@@ -86,13 +86,6 @@ export async function POST(req: NextRequest) {
     // Force the subscription status to 'active' regardless of what Stripe reports
     const subscriptionStatus = 'active';
     
-    // Calculate end date
-    const endDate = new Date(
-      (typeof subscription === 'string' ? 0 : subscription.current_period_end) * 1000
-    );
-    
-    console.log(`Setting subscription end date to: ${endDate.toISOString()}`);
-    
     // Update the user's subscription information with explicit values
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -100,7 +93,7 @@ export async function POST(req: NextRequest) {
         subscriptionId: typeof subscription === 'string' ? subscription : subscription.id,
         subscriptionStatus: subscriptionStatus,
         subscriptionTier: subscriptionTier,
-        subscriptionEndDate: endDate,
+        subscriptionEndDate: typeof subscription !== 'string' && (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000).toISOString() : null,
         // Update the stripeCustomerId if not already set
         stripeCustomerId: user.stripeCustomerId || (checkoutSession.customer as string),
         // Force update the timestamp to trigger JWT refresh
