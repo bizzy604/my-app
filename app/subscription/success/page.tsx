@@ -1,31 +1,71 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { prisma } from '@/lib/prisma';
-import { CheckCircle } from 'lucide-react';
+'use client';
 
-export default async function SubscriptionSuccessPage({
-  searchParams,
-}: {
-  searchParams: { session_id?: string };
-}) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    redirect('/login?callbackUrl=/subscription/success');
-  }
-  
-  const user = session.user?.email
-    ? await prisma.user.findUnique({
-        where: { email: session.user.email }
-      })
-    : null;
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CheckCircle, Loader2 } from 'lucide-react';
 
-  // Safely access subscription information
-  const subscriptionTier = user?.subscriptionTier || 'Standard';
-  const planName = subscriptionTier === 'ai' ? 'Innobid AI' : 'Innobid Standard';
+export default function SubscriptionSuccessPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('session_id');
+  const [planName, setPlanName] = useState('your plan');
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState('Activating your subscription...');
+  
+  useEffect(() => {
+    async function updateSubscriptionAndRedirect() {
+      if (!sessionId) {
+        // No session ID, redirect to dashboard anyway with the subscribed flag
+        router.push('/procurement-officer?subscribed=true');
+        return;
+      }
+      
+      try {
+        // First, directly update the subscription status
+        const updateResponse = await fetch('/api/subscription/activate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            sessionId,
+          }),
+        });
+        
+        if (!updateResponse.ok) {
+          console.error('Failed to activate subscription:', await updateResponse.text());
+          setMessage('Having trouble activating your subscription. Trying an alternative method...');
+        } else {
+          setMessage('Subscription activated! Updating your session...');
+        }
+        
+        // Then get subscription info to show the correct plan
+        const response = await fetch('/api/user/subscription');
+        if (response.ok) {
+          const data = await response.json();
+          setPlanName(data.subscriptionTier === 'ai' ? 'Innobid AI' : 'Innobid Standard');
+        }
+        
+        // Now force a session refresh to ensure the token has the latest subscription data
+        // This approach is more reliable than the subscribed query parameter
+        setMessage('Refreshing your session...');
+        
+        // Use the refresh-session endpoint to immediately update the JWT token
+        // with fresh subscription data from the database
+        window.location.href = '/api/refresh-session?redirect=/procurement-officer';
+        
+      } catch (error) {
+        console.error('Error processing subscription:', error);
+        // Still redirect even if there's an error
+        setTimeout(() => {
+          setIsLoading(false);
+          router.push('/procurement-officer?subscribed=true');
+        }, 2000);
+      }
+    }
+    
+    updateSubscriptionAndRedirect();
+  }, [router, sessionId]);
   
   return (
     <div className="container max-w-lg mx-auto px-4 py-16 text-center">
@@ -36,26 +76,18 @@ export default async function SubscriptionSuccessPage({
       <h1 className="text-3xl font-bold mb-4">Subscription Successful!</h1>
       
       <p className="text-gray-600 mb-8">
-        Thank you for subscribing to {planName}. Your subscription is now active, and you can access all the features included in your plan.
+        Thank you for subscribing to {planName}. Your subscription is now active!
       </p>
       
-      {subscriptionTier === 'ai' && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-8">
-          <h2 className="text-lg font-medium text-purple-800 mb-2">AI Features Unlocked</h2>
-          <p className="text-purple-700">
-            You now have access to our advanced AI bid analysis tools. Use them to gain deeper insights into your procurement process.
-          </p>
-        </div>
-      )}
-      
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/procurement-officer">
-          <Button>Go to Dashboard</Button>
-        </Link>
-        
-        <Link href="/procurement-officer/tenders">
-          <Button variant="outline">View Tenders</Button>
-        </Link>
+      <div className="flex flex-col items-center mt-8">
+        {isLoading ? (
+          <>
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-2" />
+            <p>{message}</p>
+          </>
+        ) : (
+          <p>Redirecting to your dashboard...</p>
+        )}
       </div>
     </div>
   );
