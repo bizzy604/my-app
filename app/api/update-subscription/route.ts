@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerAuthSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import { INNOBID_STANDARD_PRICE_ID, INNOBID_AI_PRICE_ID } from '@/lib/stripe';
 
 export async function POST(req: Request) {
   try {
+    const stripe = getStripeClient();
+
     const session = await getServerAuthSession();
     if (!session?.user?.email) {
       return NextResponse.json(

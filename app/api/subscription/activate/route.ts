@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   try {
+    // Get the stripe client instance
+    const stripe = getStripeClient();
+    
     // Get the session to verify the user
     const session = await getServerSession(authOptions);
     

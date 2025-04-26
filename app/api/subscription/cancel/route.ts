@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getServerAuthSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe } from '@/lib/stripe'
+import { getStripeClient } from '@/lib/stripe'
 
 export async function POST(request: Request) {
   try {
+    const stripe = getStripeClient();
+
     // Authenticate the user
     const session = await getServerAuthSession()
 

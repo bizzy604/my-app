@@ -1,32 +1,33 @@
 import Stripe from 'stripe';
 
-// Get the Stripe secret key from environment variables
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+// Singleton instance variable
+let stripeInstance: Stripe | null = null;
 
-// In development, we can use a fake key to prevent crashes
-const isDev = process.env.NODE_ENV === 'development';
-const apiKey = stripeSecretKey || (isDev ? 'sk_test_fake_key_for_development_only' : undefined);
+// Function to get or create the Stripe instance
+export function getStripeClient(): Stripe {
+  if (!stripeInstance) {
+    // Get the Stripe secret key from environment variables
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
-if (!apiKey) {
-  throw new Error('Missing STRIPE_SECRET_KEY in environment variables and not in development mode');
-}
+    // Determine API key based on environment
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    const apiKey = stripeSecretKey || (isDev ? 'sk_test_fake_key_for_testing' : undefined);
 
-// Initialize Stripe with the API key
-export const stripe = new Stripe(apiKey, {
-  apiVersion: '2023-10-16',
-  // In development with a fake key, we'll just log API calls instead of making them
-  ...(isDev && !stripeSecretKey ? { 
-    httpClient: {
-      fetchAsync: async (path: string) => {
-        return { 
-          status: 200, 
-          body: '{"object": "list", "data": [], "url": null}',
-          headers: new Headers()
-        };
-      }
+    if (!apiKey) {
+      throw new Error('Missing STRIPE_SECRET_KEY in environment variables and not in dev/test mode');
     }
-  } : {})
-});
+
+    // Initialize Stripe with the API key
+    stripeInstance = new Stripe(apiKey, {
+      apiVersion: '2023-10-16',
+      // Add custom fetch implementation for testing if needed, or rely on global polyfill
+      // httpClient: Stripe.createFetchHttpClient(), // Example if needed
+    });
+    
+    console.log(`Stripe client initialized using ${apiKey === 'sk_test_fake_key_for_testing' ? 'fake test key' : 'real key'}.`);
+  }
+  return stripeInstance;
+}
 
 // Use the actual price IDs
 export const INNOBID_STANDARD_PRICE_ID = process.env.STANDARD_PRICE_ID || 'price_1RGfVyFfxdujiyuqt9MDfcpB';
