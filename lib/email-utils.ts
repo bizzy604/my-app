@@ -149,7 +149,6 @@ export async function sendPasswordResetEmail(email: string, token: string, recip
   try {
     const response = await mailerSend.email.send(emailParams);
     logEmailEvent('sent', email, { type: 'password_reset', response });
-    console.log('Password reset email sent successfully', response);
     return true;
   } catch (error) {
     // Log the full error for debugging
@@ -308,7 +307,6 @@ export async function sendSupportNotificationEmail({
 
     const response = await mailerSend.email.send(emailParams)
 
-    console.log('Support notification email sent successfully:', response)
     return true
   } catch (error) {
     console.error('Failed to send support notification email:', error)
@@ -432,37 +430,5 @@ export async function sendBidStatusEmail(
     })
 
     return false
-  }
-}
-
-/**
- * Utility function to manually verify a user's email
- * This is useful for development or when email sending fails
- */
-export async function manuallyVerifyEmail(email: string): Promise<boolean> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user) {
-      console.error(`User with email ${email} not found`);
-      return false;
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationTokenExpiry: null
-      }
-    });
-
-    console.log(`User ${email} has been manually verified`);
-    return true;
-  } catch (error) {
-    console.error('Error manually verifying email:', error);
-    return false;
   }
 }

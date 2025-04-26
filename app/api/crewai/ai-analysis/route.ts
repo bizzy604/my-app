@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = "force-dynamic";
 import { prisma } from '@/lib/prisma'
-import { getServerAuthSession } from '@/lib/auth'
+import { createSecureHandler } from '@/lib/api-middleware'
+import { ApiToken } from '@/lib/api-auth'
+import { checkSubscriptionTier } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest) {
+export const GET = createSecureHandler(async (req: NextRequest, token: ApiToken) => {
   try {
-    const session = await getServerAuthSession()
+    // Check if user has AI subscription tier
+    const hasAIAccess = await checkSubscriptionTier(token, 'ai')
     
-    if (!session || !session.user) {
+    if (!hasAIAccess) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { 
+          error: 'AI analysis requires an active Innobid AI subscription',
+          upgradeUrl: '/pricing'
+        },
+        { status: 403 }
       )
     }
     
@@ -25,7 +32,7 @@ export async function GET(req: NextRequest) {
       )
     }
     
-    // Query to find analyses
+    // Construct query based on provided parameters
     const whereClause: any = {}
     
     if (bidId) {
@@ -36,7 +43,7 @@ export async function GET(req: NextRequest) {
       whereClause.tenderId = tenderId
     }
     
-    // Find the most recent analysis
+    // Fetch analyses from the database
     const analyses = await prisma.aIAnalysis.findMany({
       where: whereClause,
       orderBy: {
@@ -64,4 +71,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
-} 
+})

@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/select"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
 import { getDashboardStats } from "@/app/actions/dashboard-actions"
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface DashboardStats {
   openTenders: number
@@ -48,6 +51,39 @@ interface DashboardStats {
 export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState('month')
   
+  const { data: session, update } = useSession();
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const hasJustSubscribed = searchParams.get('subscribed') === 'true';
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    const forceRefresh = getCookie('force-session-refresh');
+    
+    if (hasJustSubscribed || forceRefresh) {
+      console.log('Refreshing session after subscription...');
+      
+      update();
+      
+      if (forceRefresh) {
+        document.cookie = 'force-session-refresh=; Path=/; Max-Age=0';
+      }
+    }
+    
+    const redirectPath = getCookie('redirect-after-load');
+    if (redirectPath) {
+      document.cookie = 'redirect-after-load=; Path=/; Max-Age=0';
+      
+      setTimeout(() => {
+        window.history.replaceState({}, '', redirectPath);
+      }, 100);
+    }
+  }, [searchParams, update]);
+
   const { data: stats, isLoading } = useHydrationSafeClient<DashboardStats>(
     () => getDashboardStats(timeRange)
   )

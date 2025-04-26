@@ -15,6 +15,9 @@ interface ShortlistedBidsPanelProps {
     amount: number
     status: string
     score: number
+    technicalScore: number
+    financialScore: number
+    experienceScore: number
     bidder: {
       name: string
       company: string
@@ -62,6 +65,30 @@ export function ShortlistedBidsPanel({ tenderId, bids }: ShortlistedBidsPanelPro
                       <span>{bid.score}%</span>
                     </div>
                     <Progress value={bid.score} />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Technical Score</span>
+                      <span>{bid.technicalScore}%</span>
+                    </div>
+                    <Progress value={bid.technicalScore} className="bg-blue-100" />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Financial Score</span>
+                      <span>{bid.financialScore}%</span>
+                    </div>
+                    <Progress value={bid.financialScore} className="bg-green-100" />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Experience Score</span>
+                      <span>{bid.experienceScore}%</span>
+                    </div>
+                    <Progress value={bid.experienceScore} className="bg-purple-100" />
                   </div>
 
                   {bid.evaluationStages.map((stage, index) => (

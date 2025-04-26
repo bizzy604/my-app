@@ -1,23 +1,47 @@
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { NextResponse } from "next/server"
+export const dynamic = "force-dynamic";
+import { NextRequest, NextResponse } from "next/server"
+import { createSecureHandler } from "@/lib/api-middleware"
+import { ApiToken } from "@/lib/api-auth"
+import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export const GET = createSecureHandler(async (req: NextRequest, token: ApiToken) => {
   try {
-    const session = await getServerSession(authOptions)
+    // Token is already validated by middleware, we can use token.userId directly
+    const user = await prisma.user.findUnique({
+      where: { id: token.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        city: true,
+        country: true,
+        postalCode: true,
+        businessType: true,
+        establishmentDate: true,
+        address: true,
+        registrationNumber: true,
+        phone: true,
+        company: true,
+        subscriptionStatus: true,
+        subscriptionTier: true,
+        // Don't include password or other sensitive fields
+      }
+    });
     
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
-        { error: "Not authenticated" }, 
-        { status: 401 }
+        { error: "User not found" }, 
+        { status: 404 }
       )
     }
 
-    return NextResponse.json(session.user)
+    return NextResponse.json(user)
   } catch (error) {
+    console.error('Error fetching user data:', error)
     return NextResponse.json(
       { error: "Failed to fetch user" }, 
       { status: 500 }
     )
   }
-}
+})

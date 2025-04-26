@@ -22,11 +22,13 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
     },
+    "types": ["jest", "node"],
     "forceConsistentCasingInFileNames": true
   },
   "include": [

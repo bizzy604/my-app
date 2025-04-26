@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
+export const dynamic = "force-dynamic";
 
 interface ProfileFormData {
     name?: string
@@ -89,6 +90,3 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
     }
 }
-
-// Explicitly set dynamic rendering to avoid caching issues
-export const dynamic = 'force-dynamic'

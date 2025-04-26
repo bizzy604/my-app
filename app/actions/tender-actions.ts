@@ -7,7 +7,7 @@ import { sendTenderAwardEmail, sendBidStatusEmail } from '@/lib/email-utils'
 import { Tender } from '@prisma/client'
 import { formatCurrency } from "@/lib/utils"
 import { uploadToS3 } from '@/lib/s3-upload'
-import { getServerSession } from '@/lib/auth'
+import { getServerAuthSession } from '@/lib/auth'
 
 type BidSubmissionData = {
   tenderId: string;
@@ -78,7 +78,25 @@ export async function getTenders(filters?: {
   category?: TenderCategory
 }) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
     const where: Prisma.TenderWhereInput = {}
+    
+    // Only apply procurement officer isolation for users with PROCUREMENT role
+    // Vendors and citizens should see all tenders
+    if (session?.user?.role === 'PROCUREMENT') {
+      // Only show tenders where this procurement officer is the issuer or assigned procurement officer
+      where.OR = [
+        { issuerId: session.user.id },
+        { procurementOfficerId: session.user.id }
+      ];
+    }
     
     if (filters?.status) {
       where.status = filters.status
@@ -212,6 +230,9 @@ export async function createTender(data: CreateTenderData) {
     const closingDate = new Date(data.closingDate).toISOString()
     const { issuerId, ...tenderData } = data
 
+    // Set RLS context for the current user to fix circular dependency issue
+    await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${issuerId.toString()}, true)`
+    
     const tender = await prisma.tender.create({
       data: {
         ...tenderData,
@@ -242,6 +263,33 @@ export async function createTender(data: CreateTenderData) {
 
 export async function getTenderById(id: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to this tender');
+      }
+    }
+    
     const tender = await prisma.tender.findUnique({
       where: { id },
       include: {
@@ -274,6 +322,33 @@ export async function getTenderById(id: string) {
 
 export async function updateTender(id: string, data: Partial<Tender>) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to update this tender');
+      }
+    }
+    
     // Convert closingDate string to ISO format if it exists
     const closingDate = data.closingDate ? new Date(data.closingDate).toISOString() : undefined
 
@@ -295,10 +370,42 @@ export async function updateTender(id: string, data: Partial<Tender>) {
 }
 
 export async function deleteTender(id: string) {
+  try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to delete this tender');
+      }
+    }
+    
     await prisma.tender.delete({
-    where: { id }
+      where: { id }
     })
     revalidatePath('/procurement-officer/tenders')
+  } catch (error) {
+    console.error('Error deleting tender:', error)
+    throw new Error('Failed to delete tender')
+  }
 }
 
 export async function submitBid(data: BidSubmissionData) {
@@ -524,6 +631,33 @@ export async function checkVendorBidStatus(tenderId: string, vendorId: number): 
 
 export async function getTenderBids(tenderId: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to this tender's bids
+    if (session?.user?.role === 'PROCUREMENT') {
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id: tenderId,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to the bids for this tender');
+      }
+    }
+    
     const bids = await prisma.bid.findMany({
       where: { tenderId },
       include: {
@@ -580,6 +714,44 @@ export async function updateBidStatus(bidId: string, ACCEPTED: string, status: B
 
 export async function getBidById(bidId: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
+    // For procurement officers, verify they have access to the tender associated with this bid
+    if (session?.user?.role === 'PROCUREMENT') {
+      // First get the bid to find its tenderId
+      const bidInfo = await prisma.bid.findUnique({
+        where: { id: bidId },
+        select: { tenderId: true }
+      });
+      
+      if (!bidInfo) {
+        throw new Error('Bid not found');
+      }
+      
+      // Now check if the procurement officer has access to this tender
+      const userTender = await prisma.tender.findFirst({
+        where: {
+          id: bidInfo.tenderId,
+          OR: [
+            { issuerId: session.user.id },
+            { procurementOfficerId: session.user.id }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      // If no tender found, this officer doesn't have access
+      if (!userTender) {
+        throw new Error('You do not have access to this bid');
+      }
+    }
+    
     const bid = await prisma.bid.findUnique({
       where: { id: bidId },
       include: {
@@ -715,15 +887,18 @@ export async function evaluateBid(
 
     // If bid is shortlisted, send notification
     if (data.status === BidStatus.SHORTLISTED) {
-      await sendBidStatusEmail({
-        to: bid.bidder.email,
-        subject: `Bid Shortlisted - ${bid.tender.title}`,
-        data: {
+      await sendBidStatusEmail(
+        bid.bidder.email,
+        'shortlisted',
+        {
           recipientName: bid.bidder.name,
           tenderTitle: bid.tender.title,
-          status: 'shortlisted'
+          message: 'Your bid has been shortlisted for further evaluation.',
+          bidAmount: bid.amount,
+          companyName: bid.bidder.company || 'N/A',
+          tenderReference: bid.tender.id
         }
-      })
+      )
     }
 
     return bid
@@ -776,9 +951,9 @@ export async function awardTender(
         recipientName: bid.bidder.name,
         tenderTitle: bid.tender.title,
         message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
-        bidAmount: formatCurrency(bid.amount),
+        bidAmount: bid.amount,
         companyName: bid.bidder.company || 'N/A',
-        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+        tenderReference: bid.tender.id
       }
     })
 
@@ -848,7 +1023,34 @@ export async function getTenderReports(timeRange: string) {
 
 export async function getTenderHistory(tenderId?: string) {
   try {
+    // Get the user session
+    const session = await getServerAuthSession();
+    
+    // Set RLS context if we have a user ID
+    if (session?.user?.id) {
+      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
+    }
+    
     if (tenderId) {
+      // For procurement officers, verify they have access to this tender
+      if (session?.user?.role === 'PROCUREMENT') {
+        const userTender = await prisma.tender.findFirst({
+          where: {
+            id: tenderId,
+            OR: [
+              { issuerId: session.user.id },
+              { procurementOfficerId: session.user.id }
+            ]
+          },
+          select: { id: true }
+        });
+        
+        // If no tender found, this officer doesn't have access
+        if (!userTender) {
+          throw new Error('You do not have access to this tender history');
+        }
+      }
+      
       const tenderExists = await prisma.tender.findUnique({
         where: { id: tenderId },
         select: { id: true }
@@ -875,7 +1077,20 @@ export async function getTenderHistory(tenderId?: string) {
 
       return history
     } else {
+      // Build the where clause for the tender query
+      const where: Prisma.TenderWhereInput = {};
+      
+      // Only apply procurement officer isolation for users with PROCUREMENT role
+      if (session?.user?.role === 'PROCUREMENT') {
+        // Only show tenders where this procurement officer is the issuer or assigned procurement officer
+        where.OR = [
+          { issuerId: session.user.id },
+          { procurementOfficerId: session.user.id }
+        ];
+      }
+      
       const tenders = await prisma.tender.findMany({
+        where,
         include: {
           bids: {
             where: {
@@ -1125,9 +1340,9 @@ export async function sendAwardNotification({
         recipientName,
         tenderTitle: bid.tender.title,
         message,
-        bidAmount: formatCurrency(bid.amount),
+        bidAmount: bid.amount,
         companyName: bid.bidder.company || '',
-        tenderReference: bid.tender.id.slice(0, 8).toUpperCase()
+        tenderReference: bid.tender.id
       }
     })
 
@@ -1146,16 +1361,16 @@ export async function sendAwardNotification({
 
 export async function awardTenderAndNotify(tenderId: string, bidId: string, userId: string) {
   try {
-    // Since userId is passed, let's use it directly but validate it
-    const awardedById = Number(userId)
-    
-    if (isNaN(awardedById) || awardedById <= 0) {
-      throw new Error('Invalid user ID provided')
+    // Validate that the user has permission to award this tender
+    const userIdNumber = parseInt(userId);
+    if (isNaN(userIdNumber)) {
+      throw new Error('Invalid userId provided');
     }
-
-    const result = await prisma.$transaction(async (prisma) => {
-      // Get bid details first
-      const bid = await prisma.bid.findUnique({
+    
+    // Award the tender
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the bid details
+      const bid = await tx.bid.findUnique({
         where: { id: bidId },
         include: {
           tender: true,
@@ -1167,34 +1382,34 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
         throw new Error('Bid not found')
       }
 
-      // Update tender status
-      const updatedTender = await prisma.tender.update({
+      // Update the tender status and set the awarded bid
+      await tx.tender.update({
         where: { id: tenderId },
         data: {
           status: TenderStatus.AWARDED,
           awardedBidId: bidId,
-          updatedAt: new Date()
+          awardedById: userIdNumber,
         }
       })
 
       // Create award log
-      const awardLog = await prisma.tenderAwardLog.create({
+      const awardLog = await tx.tenderAwardLog.create({
         data: {
           tenderId,
           bidId,
-          awardedBy: awardedById,
+          awardedBy: userIdNumber,
           createdAt: new Date()
         }
       })
 
       // Update winning bid status
-      await prisma.bid.update({
+      await tx.bid.update({
         where: { id: bidId },
         data: { status: BidStatus.ACCEPTED }
       })
 
       // Update other bids as rejected
-      await prisma.bid.updateMany({
+      await tx.bid.updateMany({
         where: {
           tenderId,
           id: { not: bidId }
@@ -1203,7 +1418,7 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
       })
 
       // Create notification
-      await prisma.notification.create({
+      await tx.notification.create({
         data: {
           type: NotificationType.TENDER_AWARD,
           message: `Congratulations! Your bid for tender "${bid.tender.title}" has been accepted.`,
@@ -1220,7 +1435,8 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
         data: {
           recipientName: bid.bidder.name,
           tenderTitle: bid.tender.title,
-          bidAmount: formatCurrency(bid.amount),
+          message: 'Congratulations! Your bid has been accepted and you have been awarded the tender.',
+          bidAmount: bid.amount,
           companyName: bid.bidder.company || '',
           tenderReference: bid.tender.id
         }
@@ -1241,10 +1457,14 @@ export async function awardTenderAndNotify(tenderId: string, bidId: string, user
 
 export async function getShortlistedBids(tenderId: string) {
   try {
+    console.log(`Fetching shortlisted bids for tender: ${tenderId}`)
+    
     const shortlistedBids = await prisma.bid.findMany({
       where: {
         tenderId,
-        status: BidStatus.SHORTLISTED
+        status: {
+          in: [BidStatus.SHORTLISTED, BidStatus.FINAL_EVALUATION, BidStatus.ACCEPTED]
+        }
       },
       include: {
         bidder: {
@@ -1267,32 +1487,77 @@ export async function getShortlistedBids(tenderId: string) {
             createdAt: 'desc'
           },
           take: 1
-        }
-      },
-      orderBy: {
-        // Order by latest evaluation
-        evaluationLogs: {
-          _count: 'desc'
+        },
+        evaluationStages: {
+          select: {
+            stage: true,
+            score: true,
+            comments: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 3
         }
       }
     })
+    
+    console.log(`Found ${shortlistedBids.length} shortlisted bids`)
+    
+    // Log the first bid to debug
+    if (shortlistedBids.length > 0) {
+      console.log('First bid data:', JSON.stringify({
+        id: shortlistedBids[0].id,
+        evaluationLogs: shortlistedBids[0].evaluationLogs,
+        evaluationStages: shortlistedBids[0].evaluationStages
+      }, null, 2))
+    }
 
     // Transform the data to match the expected format
-    return shortlistedBids.map(bid => ({
-      id: bid.id,
-      amount: bid.amount,
-      status: bid.status,
-      score: bid.evaluationLogs[0]?.totalScore || 0,
-      bidder: {
-        name: bid.bidder.name,
-        company: bid.bidder.company
-      },
-      evaluationStages: [{
-        stage: bid.evaluationLogs[0]?.stage || '',
-        score: bid.evaluationLogs[0]?.totalScore || 0,
-        comments: bid.evaluationLogs[0]?.comments || ''
-      }]
-    }))
+    const transformedBids = shortlistedBids.map(bid => {
+      // Try to get scores from evaluationLogs first
+      let technicalScore = bid.evaluationLogs[0]?.technicalScore;
+      let financialScore = bid.evaluationLogs[0]?.financialScore;
+      let experienceScore = bid.evaluationLogs[0]?.experienceScore;
+      let totalScore = bid.evaluationLogs[0]?.totalScore;
+      
+      // Calculate a score if we have evaluation stages but no logs
+      if ((!technicalScore || !financialScore || !experienceScore) && bid.evaluationStages.length > 0) {
+        // Get the score from the most recent evaluation stage
+        const totalFromStages = bid.evaluationStages[0]?.score || 0;
+        
+        // If we have at least one stage with a score, distribute it proportionally
+        if (totalFromStages > 0) {
+          if (!technicalScore) technicalScore = Math.round(totalFromStages * 0.4 * 100) / 100;
+          if (!financialScore) financialScore = Math.round(totalFromStages * 0.4 * 100) / 100;
+          if (!experienceScore) experienceScore = Math.round(totalFromStages * 0.2 * 100) / 100;
+          if (!totalScore) totalScore = totalFromStages;
+        }
+      }
+      
+      // Create a comprehensive bid object
+      return {
+        id: bid.id,
+        amount: bid.amount,
+        status: bid.status,
+        score: totalScore || 0,
+        technicalScore: technicalScore || 0,
+        financialScore: financialScore || 0,
+        experienceScore: experienceScore || 0,
+        bidder: {
+          name: bid.bidder.name,
+          company: bid.bidder.company
+        },
+        evaluationStages: bid.evaluationStages.map(stage => ({
+          stage: stage.stage || '',
+          score: stage.score || 0,
+          comments: stage.comments || ''
+        }))
+      };
+    });
+    
+    // Sort by score in descending order
+    return transformedBids.sort((a, b) => b.score - a.score);
 
   } catch (error) {
     console.error('Error fetching shortlisted bids:', error)

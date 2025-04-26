@@ -30,21 +30,26 @@ model User {
   establishmentDate            DateTime?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
+  stripeCustomerId             String?
+  subscriptionEndDate          DateTime?
+  subscriptionId               String?
+  subscriptionStatus           String?
+  subscriptionTier             String?
+  aiAnalyses                   AIAnalysis[]
   bids                         Bid[]
+  evaluatedBids                BidEvaluationLog[]     @relation("EvaluatedBy")
+  clarificationRequests        ClarificationRequest[] @relation("RequestedByUser")
   documents                    Document[]
+  evaluationCommittees         EvaluationCommittee[]
+  evaluatedStages              EvaluationStage[]      @relation("Evaluator")
   feedbacks                    Feedback[]
   notifications                Notification[]
   reports                      Report[]
   supportTickets               SupportTicket[]
+  awardedTenders               Tender[]               @relation("AwardedTenders")
   tenders                      Tender[]               @relation("TenderIssuer")
   procuredTenders              Tender[]               @relation("TenderProcurementOfficer")
   tenderHistory                TenderHistory[]
-  evaluationCommittees         EvaluationCommittee[]
-  clarificationRequests        ClarificationRequest[] @relation("RequestedByUser")
-  evaluatedBids                BidEvaluationLog[]     @relation("EvaluatedBy")
-  evaluatedStages              EvaluationStage[]      @relation("Evaluator")
-  awardedTenders               Tender[]               @relation("AwardedTenders")
-  aiAnalyses                   AIAnalysis[]
 }
 
 model Tender {
@@ -64,21 +69,21 @@ model Tender {
   procurementOfficerId Int?
   departmentId         Int?
   awardedBidId         String?
-  awardedBy            User?                   @relation("AwardedTenders", fields: [awardedById], references: [id])
   awardedById          Int?
+  aiAnalyses           AIAnalysis[]
   bids                 Bid[]
+  evaluationCriteria   BidEvaluationCriteria[]
   bidEvaluationLogs    BidEvaluationLog[]
   documents            Document[]
+  evaluationCommittee  EvaluationCommittee[]
   feedbacks            Feedback[]
   reports              Report[]
+  awardedBy            User?                   @relation("AwardedTenders", fields: [awardedById], references: [id])
   department           Department?             @relation(fields: [departmentId], references: [id])
   issuer               User                    @relation("TenderIssuer", fields: [issuerId], references: [id])
   procurementOfficer   User?                   @relation("TenderProcurementOfficer", fields: [procurementOfficerId], references: [id])
   tenderAwardLogs      TenderAwardLog[]
   history              TenderHistory[]
-  evaluationCriteria   BidEvaluationCriteria[]
-  evaluationCommittee  EvaluationCommittee[]
-  aiAnalyses           AIAnalysis[]
 }
 
 model Bid {
@@ -91,18 +96,18 @@ model Bid {
   completionTime        String
   technicalProposal     String
   vendorExperience      String?
-  documents             Document[]
-  evaluationStages      EvaluationStage[]
-  tender                Tender                 @relation(fields: [tenderId], references: [id])
-  bidder                User                   @relation(fields: [bidderId], references: [id])
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
+  aiAnalyses            AIAnalysis[]
+  bidder                User                   @relation(fields: [bidderId], references: [id])
+  tender                Tender                 @relation(fields: [tenderId], references: [id])
   evaluationLogs        BidEvaluationLog[]
-  awardLogs             TenderAwardLog[]
   clarificationRequests ClarificationRequest[]
-  aiAnalyses             AIAnalysis[]
+  documents             Document[]
+  evaluationStages      EvaluationStage[]
+  awardLogs             TenderAwardLog[]
 
-  @@unique([tenderId, bidderId]) // Ensure one bid per vendor per tender
+  @@unique([tenderId, bidderId])
 }
 
 model Document {
@@ -116,26 +121,24 @@ model Document {
   tenderId   String?
   bidId      String?
   userId     Int
+  reportId   String?
   bid        Bid?     @relation(fields: [bidId], references: [id])
+  Report     Report?  @relation("ReportAttachments", fields: [reportId], references: [id])
   tender     Tender?  @relation(fields: [tenderId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
-  Report     Report?  @relation("ReportAttachments", fields: [reportId], references: [id])
-  reportId   String?
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  type      String // TENDER, BID, SUPPORT_TICKET, SYSTEM
+  type      String
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-  userId    Int // Changed from String to Int to match User model
-  user      User     @relation(fields: [userId], references: [id])
-  
-  // Optional fields for additional context
-  tenderId  String?
+  userId    Int
   bidId     String?
-  
+  tenderId  String?
+  user      User     @relation(fields: [userId], references: [id])
+
   @@index([userId])
 }
 
@@ -164,15 +167,15 @@ model SupportTicket {
 model Report {
   id          String       @id @default(cuid())
   tenderId    String
-  tender      Tender       @relation(fields: [tenderId], references: [id])
   type        ReportType
   description String
   status      ReportStatus @default(PENDING)
   reporterId  Int
-  reporter    User         @relation(fields: [reporterId], references: [id])
-  attachments Document[]   @relation("ReportAttachments")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  attachments Document[]   @relation("ReportAttachments")
+  reporter    User         @relation(fields: [reporterId], references: [id])
+  tender      Tender       @relation(fields: [tenderId], references: [id])
 }
 
 model Department {
@@ -184,19 +187,19 @@ model Department {
 model BidEvaluationLog {
   id              String   @id @default(cuid())
   bidId           String
-  bid             Bid      @relation(fields: [bidId], references: [id])
   stage           String
   totalScore      Float
   comments        String?
   evaluatedBy     Int
   evaluatorId     Int
-  evaluator       User     @relation("EvaluatedBy", fields: [evaluatedBy], references: [id])
   createdAt       DateTime @default(now())
   tenderId        String
-  tender          Tender   @relation(fields: [tenderId], references: [id])
   technicalScore  Float
   financialScore  Float
   experienceScore Float
+  bid             Bid      @relation(fields: [bidId], references: [id])
+  evaluator       User     @relation("EvaluatedBy", fields: [evaluatedBy], references: [id])
+  tender          Tender   @relation(fields: [tenderId], references: [id])
 
   @@index([bidId])
   @@index([tenderId])
@@ -216,14 +219,14 @@ model TenderAwardLog {
 model TenderHistory {
   id             String       @id @default(cuid())
   tenderId       String
-  tender         Tender       @relation(fields: [tenderId], references: [id])
   status         TenderStatus
   changedBy      Int
-  changedByUser  User         @relation(fields: [changedBy], references: [id])
   changeDate     DateTime     @default(now())
-  comments       String?      @db.Text
+  comments       String?
   previousValues Json?
   newValues      Json?
+  changedByUser  User         @relation(fields: [changedBy], references: [id])
+  tender         Tender       @relation(fields: [tenderId], references: [id])
 
   @@index([tenderId])
   @@index([changedBy])
@@ -232,12 +235,12 @@ model TenderHistory {
 model BidEvaluationCriteria {
   id           String  @id @default(cuid())
   tenderId     String
-  tender       Tender  @relation(fields: [tenderId], references: [id])
   criteriaName String
   weight       Float
-  description  String? @db.Text
+  description  String?
   minScore     Float?
   maxScore     Float
+  tender       Tender  @relation(fields: [tenderId], references: [id])
 
   @@index([tenderId])
 }
@@ -245,12 +248,12 @@ model BidEvaluationCriteria {
 model EvaluationCommittee {
   id            String   @id @default(cuid())
   tenderId      String
-  tender        Tender   @relation(fields: [tenderId], references: [id])
   userId        Int
-  user          User     @relation(fields: [userId], references: [id])
-  role          String // CHAIRMAN, SECRETARY, MEMBER
+  role          String
   appointedDate DateTime @default(now())
   active        Boolean  @default(true)
+  tender        Tender   @relation(fields: [tenderId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 
   @@index([tenderId])
   @@index([userId])
@@ -259,14 +262,14 @@ model EvaluationCommittee {
 model ClarificationRequest {
   id              String    @id @default(cuid())
   bidId           String
-  bid             Bid       @relation(fields: [bidId], references: [id])
-  question        String    @db.Text
-  response        String?   @db.Text
+  question        String
+  response        String?
   requestedBy     Int
-  requestedByUser User      @relation("RequestedByUser", fields: [requestedBy], references: [id])
   requestDate     DateTime  @default(now())
   responseDate    DateTime?
-  status          String // PENDING, ANSWERED, CLOSED
+  status          String
+  bid             Bid       @relation(fields: [bidId], references: [id])
+  requestedByUser User      @relation("RequestedByUser", fields: [requestedBy], references: [id])
 
   @@index([bidId])
 }
@@ -274,15 +277,15 @@ model ClarificationRequest {
 model EvaluationStage {
   id          String    @id @default(cuid())
   bidId       String
-  bid         Bid       @relation(fields: [bidId], references: [id])
-  stage       String // INITIAL, TECHNICAL, FINANCIAL, FINAL
+  stage       String
   score       Float
   status      BidStatus
   comments    String?
   evaluatedBy Int
-  evaluator   User      @relation("Evaluator", fields: [evaluatedBy], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  bid         Bid       @relation(fields: [bidId], references: [id])
+  evaluator   User      @relation("Evaluator", fields: [evaluatedBy], references: [id])
 
   @@index([bidId])
   @@index([evaluatedBy])
@@ -297,17 +300,16 @@ model AIAnalysis {
   riskAssessmentScore    Float    @default(0)
   comparativeScore       Float    @default(0)
   recommendationScore    Float    @default(0)
-  initialScreeningReport String   @db.Text
-  complianceReport       String   @db.Text
-  riskAssessmentReport   String   @db.Text
-  comparativeReport      String   @db.Text
-  recommendationReport   String   @db.Text
+  initialScreeningReport String
+  complianceReport       String
+  riskAssessmentReport   String
+  comparativeReport      String
+  recommendationReport   String
   createdAt              DateTime @default(now())
   createdBy              Int
-  
   bid                    Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
-  tender                 Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
   user                   User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  tender                 Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
 
   @@index([bidId])
   @@index([tenderId])

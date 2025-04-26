@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { generateEmailVerificationToken, sendVerificationEmail } from '@/lib/email-utils'
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
 
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim()
+
+    // Validate password length
+    if (password.length < 8) {
+      return NextResponse.json({ 
+        message: 'Password must be at least 8 characters long.' 
+      }, { status: 400 })
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 
@@ -21,7 +29,7 @@ export async function POST(req: NextRequest) {
         message: 'User with this email already exists.' 
       }, { status: 400 })
     }
-
+    
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 

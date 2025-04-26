@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = "force-dynamic";
 import { getServerAuthSession } from '@/lib/auth';
+import { checkSubscriptionAccess } from '@/lib/subscription';
 
 const { CREWAI_URL, CREWAI_BEARER_TOKEN } = process.env;
 
@@ -46,6 +48,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
+            )
+        }
+
+        // Check if user has AI subscription
+        const hasAIAccess = await checkSubscriptionAccess('ai')
+        
+        if (!hasAIAccess) {
+            return NextResponse.json(
+                { 
+                    error: 'AI analysis requires an active Innobid AI subscription',
+                    upgradeUrl: '/pricing'
+                },
+                { status: 403 }
             )
         }
 
@@ -111,6 +126,19 @@ export async function GET(req: NextRequest) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
+            )
+        }
+
+        // Check if user has AI subscription
+        const hasAIAccess = await checkSubscriptionAccess('ai')
+        
+        if (!hasAIAccess) {
+            return NextResponse.json(
+                { 
+                    error: 'AI analysis requires an active Innobid AI subscription',
+                    upgradeUrl: '/pricing'
+                },
+                { status: 403 }
             )
         }
 
@@ -219,6 +247,3 @@ export async function GET(req: NextRequest) {
         )
     }
 }
-
-// Set dynamic rendering to avoid caching issues
-export const dynamic = 'force-dynamic'

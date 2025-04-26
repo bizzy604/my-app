@@ -4,7 +4,9 @@ const nextConfig = {
     typedRoutes: false,
     serverActions: {
       bodySizeLimit: '5mb',
-    }
+    },
+    // Add optimized handling of package imports
+    optimizePackageImports: ['swagger-ui-react']
   },
   
   images: {
@@ -37,17 +39,44 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
-  
-  
-  // Vercel-specific optimizations
-  output: 'standalone', 
+ 
+  output: 'standalone',
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
   
-  // Static export configuration
-  trailingSlash: true,
-  assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX || '',
+  // Transpile swagger-ui-react
+  transpilePackages: ['swagger-ui-react', 'swagger-ui-dist'],
+  
+  // Configure webpack 
+  webpack: (config, { isServer, dev }) => {
+    // Optimize client-side bundle
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        maxInitialRequests: 25,
+        maxAsyncRequests: 25,
+        cacheGroups: {
+          vendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            reuseExistingChunk: true,
+          },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+        },
+      };
+
+      // Limit the number of modules in each chunk
+      config.optimization.splitChunks.maxSize = 244000;
+      config.optimization.splitChunks.minSize = 20000;
+    }
+
+    return config;
+  }
 }
 
 module.exports = nextConfig

@@ -8,10 +8,11 @@ import { LayoutDashboard, FileText, History, BookOpen, Bell, Settings, HelpCircl
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
-import { signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import { SideNav } from "@/components/side-nav"
 import { TopNav } from "@/components/top-nav"
+import SubscriptionStatus from "@/components/subscription-status"
 
 interface NavItem {
   title: string
@@ -39,6 +40,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [showAlert, setShowAlert] = useState(false)
   const { toast } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { data: session } = useSession()
+  
+  // Get subscription data directly from the session
+  const subscriptionData = {
+    tier: session?.user?.subscriptionTier,
+    status: session?.user?.hasActiveSubscription ? 'active' : 'inactive'
+  }
 
   const handleSignOut = async () => {
     try {
@@ -99,6 +107,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="h-auto w-auto"
               />
             </Link>
+              
+              {/* Subscription Status Component */}
+              {session?.user?.role === 'PROCUREMENT' && (
+                <div className="mb-4 mt-4">
+                  <SubscriptionStatus 
+                    tier={subscriptionData.tier} 
+                    status={subscriptionData.status}
+                    showManageButton={true}
+                  />
+                </div>
+              )}
+
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
