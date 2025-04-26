@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSecureHandler } from '@/lib/api-middleware';
 import { checkSubscriptionTier } from '@/lib/api-middleware';
+export const dynamic = "force-dynamic";
 import { ApiToken } from '@/lib/api-auth';
 
 // This is a secure API endpoint that requires a valid API token

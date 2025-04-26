@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createSecureHandler } from '@/lib/api-middleware'
 import { ApiToken } from '@/lib/api-auth'
-import { BidStatus } from '@prisma/client'
+export const dynamic = "force-dynamic";
 
 // Important constants
 const NotificationType = {

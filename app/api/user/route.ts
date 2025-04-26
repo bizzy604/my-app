@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server"
 import { createSecureHandler } from "@/lib/api-middleware"
 import { ApiToken } from "@/lib/api-auth"

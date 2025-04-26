@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = "force-dynamic";
 import { getServerAuthSession } from '@/lib/auth';
 import { checkSubscriptionAccess } from '@/lib/subscription';
 
@@ -30,6 +31,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-// Set dynamic rendering to avoid caching issues
-export const dynamic = 'force-dynamic';

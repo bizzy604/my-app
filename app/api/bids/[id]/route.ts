@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getBidById } from '@/app/actions/tender-actions'
+export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request,

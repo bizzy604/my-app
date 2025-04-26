@@ -1,11 +1,10 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server'
 import { getServerAuthSession } from '@/lib/auth'
 import { uploadToS3 } from '@/lib/s3-upload'
 import { parseMultipartFormData } from '@/lib/multipart-parser'
 import { prisma } from '@/lib/prisma'
 
-// export const runtime = 'edge'
-export const dynamic = 'force-dynamic'
 export const bodyParser = false
 
 export async function POST(request: Request) {
