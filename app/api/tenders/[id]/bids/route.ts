@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTenderBids } from '@/app/actions/tender-actions'
 import { createSecureHandler } from '@/lib/api-middleware'
 import { ApiToken } from '@/lib/api-auth'
+export const dynamic = "force-dynamic"
 
 export const GET = createSecureHandler(async (
   req: NextRequest,

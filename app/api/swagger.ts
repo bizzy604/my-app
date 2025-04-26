@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getApiDocs } from '@/lib/swagger';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession } from '@/lib/auth';

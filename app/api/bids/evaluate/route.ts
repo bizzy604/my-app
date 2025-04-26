@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createSecureHandler } from '@/lib/api-middleware'
+export const dynamic = "force-dynamic";
 import { ApiToken } from '@/lib/api-auth'
 
 import { BidStatus } from '@prisma/client';
