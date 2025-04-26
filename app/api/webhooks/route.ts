@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
-import type { Stripe } from 'stripe';
+import { getStripeClient } from '@/lib/stripe';
+import Stripe from 'stripe';
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = headers().get('stripe-signature');
+  const signature = headers().get('Stripe-Signature') as string;
+  const stripe = getStripeClient();
 
   if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
     return NextResponse.json(
@@ -72,6 +73,8 @@ export async function POST(req: Request) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription, customerId: string) {
   try {
+    const stripe = getStripeClient();
+
     // Get the first subscription item
     const subscriptionItem = subscription.items.data[0];
     if (!subscriptionItem) return;

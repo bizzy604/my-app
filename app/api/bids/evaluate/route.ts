@@ -164,3 +164,5 @@ export const POST = createSecureHandler(async (req: NextRequest, token: ApiToken
     )
   }
 })
+
+export { determineStage, determineBidStatus };
