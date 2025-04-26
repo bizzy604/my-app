@@ -85,7 +85,7 @@ export async function sendPasswordResetEmail(email: string, token: string, recip
   const resetLink = `${process.env.NEXTAUTH_URL}/set-new-password?token=${token}`
 
   const sentFrom = new Sender(
-    "hello@innobid.net", 
+    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
     "Innobid"
   );
 
@@ -193,7 +193,7 @@ export async function sendVerificationEmail(email: string, token: string, recipi
   const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
   const sentFrom = new Sender(
-    "hello@innobid.net", 
+    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
     "Innobid"
   );
 
@@ -285,7 +285,7 @@ export async function sendSupportNotificationEmail({
 }: EmailNotification) {
   try {
     const emailParams = new EmailParams()
-      .setFrom(new Sender('hello@innobid.net', 'Innobid Support'))
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Support'))
       .setTo([new Recipient(to)])
       .setSubject(subject || 'Support Ticket Update')
       .setHtml(`
@@ -356,7 +356,7 @@ export async function sendTenderAwardEmail({
     `
 
     const emailParams = new EmailParams()
-      .setFrom(new Sender('hello@innobid.net', 'Innobid Notifications'))
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
       .setTo([new Recipient(to)])
       .setSubject(subject || 'Tender Award Notification')
       .setHtml(`
@@ -399,7 +399,7 @@ export async function sendBidStatusEmail(
     const template = emailTemplates[status](data)
     
     const emailParams = new EmailParams()
-      .setFrom(new Sender('hello@innobid.net', 'Innobid Notifications'))
+      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
       .setTo([new Recipient(to)])
       .setSubject(template.subject)
       .setHtml(template.html)
