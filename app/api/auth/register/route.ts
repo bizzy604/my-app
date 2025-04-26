@@ -12,6 +12,13 @@ export async function POST(req: NextRequest) {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim()
 
+    // Validate password length
+    if (password.length < 8) {
+      return NextResponse.json({ 
+        message: 'Password must be at least 8 characters long.' 
+      }, { status: 400 })
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 
       where: { email: normalizedEmail } 

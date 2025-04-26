@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "node .next/standalone/server.js",
+    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=2048 next build",
+    "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy && node prisma/migrations-post/apply-rls.js",

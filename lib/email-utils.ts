@@ -85,7 +85,7 @@ export async function sendPasswordResetEmail(email: string, token: string, recip
   const resetLink = `${process.env.NEXTAUTH_URL}/set-new-password?token=${token}`
 
   const sentFrom = new Sender(
-    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
+    "hello@innobid.net", 
     "Innobid"
   );
 
@@ -149,7 +149,6 @@ export async function sendPasswordResetEmail(email: string, token: string, recip
   try {
     const response = await mailerSend.email.send(emailParams);
     logEmailEvent('sent', email, { type: 'password_reset', response });
-    console.log('Password reset email sent successfully', response);
     return true;
   } catch (error) {
     // Log the full error for debugging
@@ -194,7 +193,7 @@ export async function sendVerificationEmail(email: string, token: string, recipi
   const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
   const sentFrom = new Sender(
-    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
+    "hello@innobid.net", 
     "Innobid"
   );
 
@@ -286,7 +285,7 @@ export async function sendSupportNotificationEmail({
 }: EmailNotification) {
   try {
     const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Support'))
+      .setFrom(new Sender('hello@innobid.net', 'Innobid Support'))
       .setTo([new Recipient(to)])
       .setSubject(subject || 'Support Ticket Update')
       .setHtml(`
@@ -308,7 +307,6 @@ export async function sendSupportNotificationEmail({
 
     const response = await mailerSend.email.send(emailParams)
 
-    console.log('Support notification email sent successfully:', response)
     return true
   } catch (error) {
     console.error('Failed to send support notification email:', error)
@@ -358,7 +356,7 @@ export async function sendTenderAwardEmail({
     `
 
     const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
+      .setFrom(new Sender('hello@innobid.net', 'Innobid Notifications'))
       .setTo([new Recipient(to)])
       .setSubject(subject || 'Tender Award Notification')
       .setHtml(`
@@ -401,7 +399,7 @@ export async function sendBidStatusEmail(
     const template = emailTemplates[status](data)
     
     const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
+      .setFrom(new Sender('hello@innobid.net', 'Innobid Notifications'))
       .setTo([new Recipient(to)])
       .setSubject(template.subject)
       .setHtml(template.html)
@@ -432,37 +430,5 @@ export async function sendBidStatusEmail(
     })
 
     return false
-  }
-}
-
-/**
- * Utility function to manually verify a user's email
- * This is useful for development or when email sending fails
- */
-export async function manuallyVerifyEmail(email: string): Promise<boolean> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user) {
-      console.error(`User with email ${email} not found`);
-      return false;
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationTokenExpiry: null
-      }
-    });
-
-    console.log(`User ${email} has been manually verified`);
-    return true;
-  } catch (error) {
-    console.error('Error manually verifying email:', error);
-    return false;
   }
 }

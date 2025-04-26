@@ -1,3 +1,8 @@
+// Add dynamic directive to the layout to prevent static generation
+export const dynamic = 'force-dynamic';
+// Add proper revalidate value
+export const revalidate = 0;
+
 import React from 'react';
 import { getServerAuthSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';

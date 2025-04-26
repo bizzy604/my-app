@@ -176,6 +176,7 @@ export const authOptions: NextAuthOptions = {
             name: true,
             password: true,
             role: true,
+            emailVerified: true,
             subscriptionStatus: true,
             subscriptionTier: true,
             updatedAt: true
@@ -184,6 +185,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) {
           return null
+        }
+
+        // Check if email is verified
+        if (!user.emailVerified) {
+          throw new Error("Please verify your email before logging in")
         }
 
         const isPasswordValid = await bcrypt.compare(

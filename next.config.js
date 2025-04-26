@@ -4,7 +4,9 @@ const nextConfig = {
     typedRoutes: false,
     serverActions: {
       bodySizeLimit: '5mb',
-    }
+    },
+    // Add optimized handling of package imports
+    optimizePackageImports: ['swagger-ui-react']
   },
   
   images: {
@@ -35,21 +37,17 @@ const nextConfig = {
     ignoreDuringBuilds: true
   },
   
-  // Vercel-specific optimizations
-  output: 'standalone', 
+  // For Vercel deployments, simply use the default settings
+  // This ensures Vercel's optimized build process handles everything correctly
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
-  
-  // Static export configuration
-  trailingSlash: true,
-  assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX || '',
   
   // Transpile swagger-ui-react
   transpilePackages: ['swagger-ui-react', 'swagger-ui-dist'],
   
   // Configure webpack 
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Optimize client-side bundle
     if (!isServer) {
       config.optimization.splitChunks = {
@@ -75,8 +73,42 @@ const nextConfig = {
       config.optimization.splitChunks.minSize = 20000;
     }
 
+    // Handle Swagger CSS in production builds
+    if (!dev) {
+      config.module.rules.push({
+        test: /swagger-ui\.css$/,
+        use: 'null-loader',
+      });
+      
+      // Handle additional swagger-related resources for production
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'swagger-ui-react/swagger-ui.css': 'null-loader',
+      };
+    } else {
+      // For development only - use style and css loaders
+      config.module.rules.push({
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+        include: [
+          /node_modules\/swagger-ui-react/,
+          /node_modules\/swagger-ui-dist/,
+        ],
+      });
+    }
+
+    // Add a rule for processing Tailwind CSS files with postcss-loader
+    config.module.rules.push({
+      test: /\.css$/,
+      use: ['postcss-loader'],
+      exclude: [
+        /node_modules\/swagger-ui-react/,
+        /node_modules\/swagger-ui-dist/,
+      ],
+    });
+
     return config;
-  },
+  }
 }
 
 module.exports = nextConfig
