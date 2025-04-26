@@ -23,7 +23,10 @@ const nextConfig = {
       }
     ],
     path: '/_next/image',
-    loader: 'default'
+    loader: 'default',
+    domains: ['localhost'],
+    unoptimized: process.env.NODE_ENV !== 'production',
+
   },
   
   reactStrictMode: false,
@@ -36,9 +39,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
-  
-  // For Vercel deployments, simply use the default settings
-  // This ensures Vercel's optimized build process handles everything correctly
+ 
+  output: 'standalone',
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
