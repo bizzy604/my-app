@@ -35,6 +35,17 @@ export default function SignupPage() {
       return
     }
 
+    // Validate password length
+    if (password.length < 8) {
+      toast({
+        title: 'Password Too Short',
+        description: 'Password must be at least 8 characters long',
+        variant: 'destructive'
+      })
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',

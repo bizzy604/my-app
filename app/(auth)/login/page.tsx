@@ -66,7 +66,7 @@ export default function LoginPage() {
 
       if (result?.error) {
         // Check for email verification error
-        if (result.error.includes('verify your email')) {
+        if (result.error.includes('Please verify your email')) {
           toast({
             title: 'Email Not Verified',
             description: 'Please verify your email before logging in. Check your inbox or resend verification.',
