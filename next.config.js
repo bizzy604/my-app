@@ -73,40 +73,6 @@ const nextConfig = {
       config.optimization.splitChunks.minSize = 20000;
     }
 
-    // Handle Swagger CSS in production builds
-    if (!dev) {
-      config.module.rules.push({
-        test: /swagger-ui\.css$/,
-        use: 'null-loader',
-      });
-      
-      // Handle additional swagger-related resources for production
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'swagger-ui-react/swagger-ui.css': 'null-loader',
-      };
-    } else {
-      // For development only - use style and css loaders
-      config.module.rules.push({
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
-        include: [
-          /node_modules\/swagger-ui-react/,
-          /node_modules\/swagger-ui-dist/,
-        ],
-      });
-    }
-
-    // Add a rule for processing Tailwind CSS files with postcss-loader
-    config.module.rules.push({
-      test: /\.css$/,
-      use: ['postcss-loader'],
-      exclude: [
-        /node_modules\/swagger-ui-react/,
-        /node_modules\/swagger-ui-dist/,
-      ],
-    });
-
     return config;
   }
 }
