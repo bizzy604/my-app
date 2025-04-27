@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/copy-public-dir.js",
     "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "postinstall": "prisma generate",

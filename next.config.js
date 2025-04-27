@@ -23,10 +23,7 @@ const nextConfig = {
       }
     ],
     path: '/_next/image',
-    loader: 'default',
-    domains: ['localhost'],
-    unoptimized: process.env.NODE_ENV !== 'production',
-
+    loader: 'default'
   },
   
   reactStrictMode: false,
@@ -39,47 +36,21 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
- 
-  output: 'standalone',
+  
+  // For Vercel deployments, use the default settings
+  // This ensures Vercel's optimized build process handles everything correctly
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
+  
   // Ensure Vercel treats this as a server/standalone build and not a static export
-  // This prevents "ENOENT .next/export-detail.json" errors during deployment
   output: 'standalone',
   
   // Transpile swagger-ui-react
   transpilePackages: ['swagger-ui-react', 'swagger-ui-dist'],
   
-  // Configure webpack 
-  webpack: (config, { isServer, dev }) => {
-    // Optimize client-side bundle
-    if (!isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        maxInitialRequests: 25,
-        maxAsyncRequests: 25,
-        cacheGroups: {
-          vendors: {
-            test: /[\\/]node_modules[\\/]/,
-            priority: -10,
-            reuseExistingChunk: true,
-          },
-          default: {
-            minChunks: 2,
-            priority: -20,
-            reuseExistingChunk: true,
-          },
-        },
-      };
-
-      // Limit the number of modules in each chunk
-      config.optimization.splitChunks.maxSize = 244000;
-      config.optimization.splitChunks.minSize = 20000;
-    }
-
-    return config;
-  }
+  // Enable file tracing for standalone mode
+  outputFileTracing: true,
 }
 
 module.exports = nextConfig
