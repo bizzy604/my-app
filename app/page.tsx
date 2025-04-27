@@ -4,7 +4,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, ShieldCheck, Clock, Users, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -19,8 +18,8 @@ export default function Home() {
               <Image
                 src="/android.png"
                 alt="InnoBid Logo"
-                width={120}
-                height={80}
+                width={100}
+                height={50}
                 priority
                 className="w-auto"
               />

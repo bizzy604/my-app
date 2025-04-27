@@ -7,7 +7,6 @@ import { FileText, Award, AlertTriangle, LogOut, LayoutDashboard, Menu } from 'l
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
-import { signOut } from "next-auth/react"
 
 interface NavItem {
   title: string
