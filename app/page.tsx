@@ -16,12 +16,12 @@ export default function Home() {
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <Image
-                src="/android.png"
+                src="/Innobid Logo.jpg"
                 alt="InnoBid Logo"
-                width={100}
-                height={50}
+                width={200}
+                height={100}
                 priority
-                className="w-auto"
+                className="h-8 w-auto max-h-full object-contain"
               />
             </Link>
 

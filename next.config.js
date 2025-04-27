@@ -23,6 +23,7 @@ const nextConfig = {
     ],
     path: '/_next/image',
     loader: 'default',
+    unoptimized: true,
   },
   
   reactStrictMode: false,
@@ -37,6 +38,7 @@ const nextConfig = {
   },
  
   output: 'standalone',
+  staticPageGenerationTimeout: 180,
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
