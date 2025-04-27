@@ -42,6 +42,9 @@ const nextConfig = {
   productionBrowserSourceMaps: false, 
   swcMinify: true, 
   compress: true,
+  // Ensure Vercel treats this as a server/standalone build and not a static export
+  // This prevents "ENOENT .next/export-detail.json" errors during deployment
+  output: 'standalone',
   
   // Transpile swagger-ui-react
   transpilePackages: ['swagger-ui-react', 'swagger-ui-dist'],

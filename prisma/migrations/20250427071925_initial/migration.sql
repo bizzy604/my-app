@@ -52,6 +52,11 @@ CREATE TABLE "User" (
     "establishmentDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "stripeCustomerId" TEXT,
+    "subscriptionEndDate" TIMESTAMP(3),
+    "subscriptionId" TEXT,
+    "subscriptionStatus" TEXT,
+    "subscriptionTier" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -121,6 +126,8 @@ CREATE TABLE "Notification" (
     "isRead" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" INTEGER NOT NULL,
+    "bidId" TEXT,
+    "tenderId" TEXT,
 
     CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
 );
@@ -269,6 +276,27 @@ CREATE TABLE "EvaluationStage" (
     CONSTRAINT "EvaluationStage_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "AIAnalysis" (
+    "id" TEXT NOT NULL,
+    "bidId" TEXT NOT NULL,
+    "tenderId" TEXT NOT NULL,
+    "initialScreeningScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "complianceScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "riskAssessmentScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "comparativeScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "recommendationScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "initialScreeningReport" TEXT NOT NULL,
+    "complianceReport" TEXT NOT NULL,
+    "riskAssessmentReport" TEXT NOT NULL,
+    "comparativeReport" TEXT NOT NULL,
+    "recommendationReport" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdBy" INTEGER NOT NULL,
+
+    CONSTRAINT "AIAnalysis_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -320,6 +348,15 @@ CREATE INDEX "EvaluationStage_bidId_idx" ON "EvaluationStage"("bidId");
 -- CreateIndex
 CREATE INDEX "EvaluationStage_evaluatedBy_idx" ON "EvaluationStage"("evaluatedBy");
 
+-- CreateIndex
+CREATE INDEX "AIAnalysis_bidId_idx" ON "AIAnalysis"("bidId");
+
+-- CreateIndex
+CREATE INDEX "AIAnalysis_tenderId_idx" ON "AIAnalysis"("tenderId");
+
+-- CreateIndex
+CREATE INDEX "AIAnalysis_createdBy_idx" ON "AIAnalysis"("createdBy");
+
 -- AddForeignKey
 ALTER TABLE "Tender" ADD CONSTRAINT "Tender_awardedById_fkey" FOREIGN KEY ("awardedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -333,22 +370,22 @@ ALTER TABLE "Tender" ADD CONSTRAINT "Tender_issuerId_fkey" FOREIGN KEY ("issuerI
 ALTER TABLE "Tender" ADD CONSTRAINT "Tender_procurementOfficerId_fkey" FOREIGN KEY ("procurementOfficerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Bid" ADD CONSTRAINT "Bid_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Bid" ADD CONSTRAINT "Bid_bidderId_fkey" FOREIGN KEY ("bidderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Bid" ADD CONSTRAINT "Bid_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_bidId_fkey" FOREIGN KEY ("bidId") REFERENCES "Bid"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Document" ADD CONSTRAINT "Document_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -363,10 +400,10 @@ ALTER TABLE "Feedback" ADD CONSTRAINT "Feedback_userId_fkey" FOREIGN KEY ("userI
 ALTER TABLE "SupportTicket" ADD CONSTRAINT "SupportTicket_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Report" ADD CONSTRAINT "Report_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Report" ADD CONSTRAINT "Report_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "BidEvaluationLog" ADD CONSTRAINT "BidEvaluationLog_bidId_fkey" FOREIGN KEY ("bidId") REFERENCES "Bid"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -384,10 +421,10 @@ ALTER TABLE "TenderAwardLog" ADD CONSTRAINT "TenderAwardLog_bidId_fkey" FOREIGN 
 ALTER TABLE "TenderAwardLog" ADD CONSTRAINT "TenderAwardLog_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TenderHistory" ADD CONSTRAINT "TenderHistory_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TenderHistory" ADD CONSTRAINT "TenderHistory_changedBy_fkey" FOREIGN KEY ("changedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TenderHistory" ADD CONSTRAINT "TenderHistory_changedBy_fkey" FOREIGN KEY ("changedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TenderHistory" ADD CONSTRAINT "TenderHistory_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "BidEvaluationCriteria" ADD CONSTRAINT "BidEvaluationCriteria_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -409,3 +446,12 @@ ALTER TABLE "EvaluationStage" ADD CONSTRAINT "EvaluationStage_bidId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "EvaluationStage" ADD CONSTRAINT "EvaluationStage_evaluatedBy_fkey" FOREIGN KEY ("evaluatedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AIAnalysis" ADD CONSTRAINT "AIAnalysis_bidId_fkey" FOREIGN KEY ("bidId") REFERENCES "Bid"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AIAnalysis" ADD CONSTRAINT "AIAnalysis_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AIAnalysis" ADD CONSTRAINT "AIAnalysis_tenderId_fkey" FOREIGN KEY ("tenderId") REFERENCES "Tender"("id") ON DELETE CASCADE ON UPDATE CASCADE;
