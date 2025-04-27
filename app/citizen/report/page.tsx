@@ -144,28 +144,28 @@ export default function CitizenReportPage() {
 
   return (
     <CitizenLayout>
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex items-center mb-6">
-            <Shield className="h-8 w-8 text-[#4B0082] mr-3" />
-            <h1 className="text-2xl font-bold text-[#4B0082]">
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-2xl">
+        <div className="bg-background border rounded-lg shadow-sm p-4 sm:p-6">
+          <div className="flex items-center mb-4 sm:mb-6">
+            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary mr-3" />
+            <h1 className="text-xl sm:text-2xl font-bold text-primary">
               Report Tender Irregularity
             </h1>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded relative mb-4" role="alert">
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded relative mb-4" role="alert">
               <span className="block sm:inline">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded relative mb-4" role="alert">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded relative mb-4" role="alert">
               <span className="block sm:inline">{success}</span>
             </div>
           )}
 
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-muted-foreground mb-6">
             Your confidential report helps maintain transparency and integrity 
             in the public procurement process. All information will be treated 
             with strict confidentiality.
@@ -184,9 +184,9 @@ export default function CitizenReportPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {isLoading ? (
-                    <div className="p-2 text-center text-gray-500">Loading tenders...</div>
+                    <div className="p-2 text-center text-muted-foreground">Loading tenders...</div>
                   ) : tenders.length === 0 ? (
-                    <div className="p-2 text-center text-gray-500">No tenders available</div>
+                    <div className="p-2 text-center text-muted-foreground">No tenders available</div>
                   ) : (
                     tenders.map(tender => (
                       <SelectItem key={tender.id} value={tender.id}>
@@ -251,7 +251,7 @@ export default function CitizenReportPage() {
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="reporterName">Your Name (Optional)</Label>
                 <Input 

@@ -86,22 +86,22 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'ACCEPTED':
-        return <ThumbsUp className="h-5 w-5 text-green-500" />
+        return <ThumbsUp className="h-5 w-5 text-green-500 dark:text-green-400" />
       case 'REJECTED':
-        return <ThumbsDown className="h-5 w-5 text-red-500" />
+        return <ThumbsDown className="h-5 w-5 text-destructive" />
       default:
-        return <Clock className="h-5 w-5 text-yellow-500" />
+        return <Clock className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
     }
   }
 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'ACCEPTED':
-        return <Badge className="bg-green-500">Accepted</Badge>
+        return <Badge variant="success">Accepted</Badge>
       case 'REJECTED':
-        return <Badge className="bg-red-500">Rejected</Badge>
+        return <Badge variant="destructive">Rejected</Badge>
       default:
-        return <Badge className="bg-yellow-500">Pending Review</Badge>
+        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">Pending Review</Badge>
     }
   }
 
@@ -109,7 +109,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
     return (
       <VendorLayout>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4B0082]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </VendorLayout>
     )
@@ -121,7 +121,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
         <div className="container mx-auto px-4 py-8">
           <Card>
             <CardContent className="p-6 text-center">
-              <p className="text-lg text-gray-500">Bid not found</p>
+              <p className="text-lg text-muted-foreground">Bid not found</p>
               <Link href="/vendor/tenders-history">
                 <Button className="mt-4">
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -138,7 +138,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
   return (
     <VendorLayout>
       {/* Responsive Header */}
-      <header className="sticky top-0 z-10 border-b bg-white px-4 sm:px-6 lg:px-8 py-4">
+      <header className="sticky top-0 z-10 border-b bg-background px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" asChild className="shrink-0">
@@ -147,16 +147,16 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
               </Link>
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-[#4B0082] line-clamp-1">
+              <h1 className="text-xl sm:text-2xl font-semibold text-primary line-clamp-1">
                 Tender Bid Details
               </h1>
-              <p className="text-sm text-gray-600">Review submitted tender application</p>
+              <p className="text-sm text-muted-foreground">Review submitted tender application</p>
             </div>
           </div>
           <div className="flex items-center gap-3 ml-12 sm:ml-0">
             <div className="text-right hidden sm:block">
-              <p className="font-medium text-gray-900">{session?.user?.name}</p>
-              <p className="text-sm text-gray-600">Vendor</p>
+              <p className="font-medium text-foreground">{session?.user?.name}</p>
+              <p className="text-sm text-muted-foreground">Vendor</p>
             </div>
             <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0">
               <Image
@@ -165,7 +165,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                 fill
                 className="rounded-full object-cover"
               />
-              <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white bg-green-400" />
+              <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-background bg-green-400" />
             </div>
           </div>
         </div>
@@ -198,24 +198,24 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
             <CardContent>
               <div className="grid gap-6">
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-500">Description</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
                   <p className="text-sm sm:text-base">{bid.tender.description}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Tender Budget</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Tender Budget</h3>
                     <p className="text-base sm:text-lg font-medium">
                       {formatCurrency(bid.tender.budget)}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Closing Date</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Closing Date</h3>
                     <p className="text-sm sm:text-base">
                       {formatDate(bid.tender.closingDate)}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Tender Status</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Tender Status</h3>
                     <p className="flex items-center gap-2 text-sm sm:text-base">
                       {getStatusIcon(bid.tender.status)}
                       <span>{bid.tender.status}</span>
@@ -235,17 +235,17 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
               <div className="grid gap-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Your Bid Amount</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Your Bid Amount</h3>
                     <p className="text-base sm:text-lg font-medium">
                       {formatCurrency(bid.amount)}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Completion Time</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Completion Time</h3>
                     <p className="text-sm sm:text-base">{bid.completionTime}</p>
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-500">Submission Date</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Submission Date</h3>
                     <p className="text-sm sm:text-base">{formatDate(bid.submissionDate)}</p>
                   </div>
                 </div>
@@ -253,13 +253,13 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                 <Separator className="my-2 sm:my-4" />
 
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-500">Technical Proposal</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">Technical Proposal</h3>
                   <p className="text-sm sm:text-base whitespace-pre-wrap">{bid.technicalProposal}</p>
                 </div>
 
                 {bid.vendorExperience && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-gray-500">Relevant Experience</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">Relevant Experience</h3>
                     <p className="text-sm sm:text-base whitespace-pre-wrap">{bid.vendorExperience}</p>
                   </div>
                 )}
@@ -281,10 +281,10 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                       className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 gap-4"
                     >
                       <div className="flex items-start sm:items-center gap-3">
-                        <FileText className="h-5 w-5 text-gray-500 shrink-0 mt-1 sm:mt-0" />
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-1 sm:mt-0" />
                         <div>
                           <p className="font-medium text-sm sm:text-base">{doc.fileName}</p>
-                          <p className="text-xs sm:text-sm text-gray-500">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {(doc.fileSize / 1024).toFixed(2)} KB • {formatDate(doc.uploadDate)}
                           </p>
                         </div>
@@ -302,7 +302,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No documents uploaded</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No documents uploaded</p>
               )}
             </CardContent>
           </Card>

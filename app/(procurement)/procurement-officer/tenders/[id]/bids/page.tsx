@@ -18,12 +18,16 @@ interface BidsPageProps {
 
 export default function TenderBidsPage({ params }: BidsPageProps) {
   const router = useRouter()
-  const { data: bids, isLoading, error } = useHydrationSafeClient(() => getTenderBids(params.id))
+  const { data: bidsResult, isLoading } = useHydrationSafeClient(() => getTenderBids(params.id))
+  
+  // Handle the error case by checking if bidsResult is empty or null
+  const bids = bidsResult || []
+  const hasError = !bidsResult && !isLoading
 
   const getBidStatusBadge = (status: BidStatus) => {
     switch (status) {
       case BidStatus.SHORTLISTED:
-        return <Badge variant="default">Shortlisted</Badge>
+        return <Badge>Shortlisted</Badge>
       case BidStatus.FINAL_EVALUATION:
         return <Badge variant="secondary">Final Evaluation</Badge>
       case BidStatus.TECHNICAL_EVALUATION:
@@ -31,9 +35,9 @@ export default function TenderBidsPage({ params }: BidsPageProps) {
       case BidStatus.UNDER_REVIEW:
         return <Badge variant="outline">Under Review</Badge>
       case BidStatus.COMPARATIVE_ANALYSIS:
-        return <Badge variant="warning">Under Comparison</Badge>
+        return <Badge>Under Comparison</Badge>
       case BidStatus.ACCEPTED:
-        return <Badge variant="success">Accepted</Badge>
+        return <Badge variant="default">Accepted</Badge>
       case BidStatus.REJECTED:
         return <Badge variant="destructive">Rejected</Badge>
       default:
@@ -48,8 +52,8 @@ export default function TenderBidsPage({ params }: BidsPageProps) {
           <div className="flex items-center justify-center min-h-[200px]">
             <LoadingSpinner className="h-8 w-8" />
           </div>
-        ) : error ? (
-          <div className="text-center py-12 text-gray-500">
+        ) : hasError ? (
+          <div className="text-center py-12 text-muted-foreground">
             <p>Error loading bids. Please try again.</p>
             <Button 
               variant="outline" 
@@ -64,14 +68,14 @@ export default function TenderBidsPage({ params }: BidsPageProps) {
             {bids.map((bid) => (
               <Card key={bid.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <h3 className="font-semibold">{bid.bidder.company}</h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         Submitted by {bid.bidder.name} on {formatDate(bid.submissionDate)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 mt-2 md:mt-0">
                       {getBidStatusBadge(bid.status)}
                       <Button
                         onClick={() => router.push(`/procurement-officer/tenders/${params.id}/bids/${bid.id}`)}
@@ -81,18 +85,22 @@ export default function TenderBidsPage({ params }: BidsPageProps) {
                     </div>
                   </div>
                   
-                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Bid Amount:</span>
-                      <span className="font-medium ml-2">{formatCurrency(bid.amount)}</span>
+                      <span className="text-muted-foreground">Bid Amount:</span>
+                      <span className="font-medium ml-2 text-foreground">{formatCurrency(bid.amount)}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Documents:</span>
-                      <span className="font-medium ml-2">{bid.documents.length}</span>
+                      <span className="text-muted-foreground">Documents:</span>
+                      <span className="font-medium ml-2 text-foreground">{bid.documents.length}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Current Stage:</span>
-                      <span className="font-medium ml-2">{bid.evaluationStage || 'Initial Review'}</span>
+                      <span className="text-muted-foreground">Current Stage:</span>
+                      <span className="font-medium ml-2 text-foreground">
+                        {bid.evaluationLogs && bid.evaluationLogs.length > 0 
+                          ? bid.evaluationLogs[bid.evaluationLogs.length - 1].stage 
+                          : 'Initial Review'}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -100,7 +108,7 @@ export default function TenderBidsPage({ params }: BidsPageProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             <p className="text-lg font-medium">No bids found</p>
             <p className="mt-2">There are no bids submitted for this tender yet.</p>
           </div>

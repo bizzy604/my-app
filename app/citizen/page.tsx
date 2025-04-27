@@ -28,11 +28,11 @@ export default function CitizenDashboardPage() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'NEW_TENDER':
-        return <FileText className="h-5 w-5 text-[#4B0082]" />
+        return <FileText className="h-5 w-5 text-primary" />
       case 'AWARDED':
-        return <Award className="h-5 w-5 text-[#4B0082]" />
+        return <Award className="h-5 w-5 text-primary" />
       case 'REPORT':
-        return <AlertTriangle className="h-5 w-5 text-[#4B0082]" />
+        return <AlertTriangle className="h-5 w-5 text-primary" />
       default:
         return null
     }
@@ -53,13 +53,13 @@ export default function CitizenDashboardPage() {
 
   return (
     <CitizenLayout>
-      <header className="border-b bg-white px-8 py-4">
-        <h1 className="text-2xl font-semibold text-[#4B0082]">Citizen Dashboard</h1>
-        <p className="text-sm text-gray-600">Welcome to your InnoBid Citizen Portal</p>
+      <header className="border-b bg-card px-4 sm:px-8 py-4">
+        <h1 className="text-2xl font-semibold text-primary">Citizen Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Welcome to your InnoBid Citizen Portal</p>
       </header>
 
-      <main className="p-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <main className="p-4 sm:p-8">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Tenders</CardTitle>
@@ -76,7 +76,7 @@ export default function CitizenDashboardPage() {
               <p className="text-xs text-muted-foreground">Open for bidding</p>
               <Button 
                 asChild 
-                className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]"
+                className="mt-4 w-full bg-primary hover:bg-primary/90"
                 disabled={statsLoading}
               >
                 <Link href="/citizen/tenders">View Tenders</Link>
@@ -92,7 +92,7 @@ export default function CitizenDashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats?.recentlyAwarded}</div>
               <p className="text-xs text-muted-foreground">In the last 30 days</p>
-              <Button asChild className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]">
+              <Button asChild className="mt-4 w-full bg-primary hover:bg-primary/90">
                 <Link href="/citizen/awarded-tenders">View Awarded</Link>
               </Button>
             </CardContent>
@@ -106,7 +106,7 @@ export default function CitizenDashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats?.reportedIrregularities}</div>
               <p className="text-xs text-muted-foreground">Submitted reports</p>
-              <Button asChild className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]">
+              <Button asChild className="mt-4 w-full bg-primary hover:bg-primary/90">
                 <Link href="/citizen/report">Report Irregularity</Link>
               </Button>
             </CardContent>
@@ -121,7 +121,7 @@ export default function CitizenDashboardPage() {
               <div className="text-2xl font-bold">View Stats</div>
               <p className="text-xs text-muted-foreground">Analyze tender data</p>
               <Button 
-                className="mt-4 w-full bg-[#4B0082] hover:bg-[#3B0062]"
+                className="mt-4 w-full bg-primary hover:bg-primary/90"
                 onClick={() => router.push('/citizen/statistics')}
               >
                 View Statistics
@@ -130,8 +130,8 @@ export default function CitizenDashboardPage() {
           </Card>
         </div>
 
-        <div className="mt-8">
-          <h2 className="mb-4 text-xl font-semibold text-[#4B0082]">Recent Activity</h2>
+        <div className="mt-6 sm:mt-8">
+          <h2 className="mb-4 text-xl font-semibold text-primary">Recent Activity</h2>
           <Card>
             <CardContent className="p-0">
               {activitiesLoading ? (
@@ -139,26 +139,26 @@ export default function CitizenDashboardPage() {
                   <LoadingSpinner className="h-6 w-6" />
                 </div>
               ) : activities && activities.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
+                <ul className="divide-y divide-border">
                   {activities.map((activity, index) => (
                     <li 
                       key={index} 
-                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                      className="flex items-center justify-between px-4 py-3 hover:bg-accent"
                       onClick={() => router.push(`/citizen/tenders/${activity.tenderId}`)}
                       style={{ cursor: 'pointer' }}
                     >
                       <div className="flex items-center">
                         {getActivityIcon(activity.type)}
-                        <span className="ml-3">{getActivityText(activity)}</span>
+                        <span className="ml-3 text-sm sm:text-base">{getActivityText(activity)}</span>
                       </div>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                       </span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="p-6 text-center text-gray-500">
+                <div className="p-6 text-center text-muted-foreground">
                   No recent activity
                 </div>
               )}

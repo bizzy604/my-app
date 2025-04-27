@@ -14,6 +14,19 @@ import { createTender } from "@/app/actions/tender-actions"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { TenderCategory, TenderSector } from "@prisma/client"
 
+interface CreateTender {
+  title: string
+  description: string
+  sector: TenderSector
+  location: string
+  budget: number
+  closingDate: string
+  category: TenderCategory
+  requirements: string[]
+  issuerId: number
+  status: string
+}
+
 export default function CreateTenderPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -36,14 +49,14 @@ export default function CreateTenderPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const tenderData = {
+      const tenderData: CreateTender = {
         title: formData.get('title') as string,
         description: formData.get('description') as string,
         sector: formData.get('sector') as TenderSector,
         location: formData.get('location') as string,
         budget: Number(formData.get('budget')),
         closingDate: formData.get('closingDate') as string,
-        category: formData.get('category') as string,
+        category: formData.get('category') as TenderCategory,
         requirements: (formData.get('requirements') as string)
           .split('\n')
           .filter(req => req.trim()),
@@ -70,7 +83,13 @@ export default function CreateTenderPage() {
   }
 
   if (status === 'loading') {
-    return <div>Loading...</div>
+    return (
+      <DashboardLayout>
+        <div className="p-4 md:p-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -86,8 +105,8 @@ export default function CreateTenderPage() {
             <span className="hidden md:inline">Back</span>
           </Button>
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Create New Tender</h1>
-            <p className="text-sm md:text-base text-gray-600">Fill in the details to create a new tender</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Create New Tender</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Fill in the details to create a new tender</p>
           </div>
         </div>
 
@@ -110,7 +129,7 @@ export default function CreateTenderPage() {
                 id="sector"
                 name="sector"
                 required
-                className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select a sector</option>
                 {Object.values(TenderSector).map((sector) => (
@@ -152,7 +171,7 @@ export default function CreateTenderPage() {
                 id="category"
                 name="category"
                 required
-                className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select a category</option>
                 {Object.values(TenderCategory).map((category) => (
@@ -222,7 +241,7 @@ export default function CreateTenderPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#4B0082] hover:bg-purple-700 text-white text-sm md:text-base"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm md:text-base"
             >
               {isSubmitting ? 'Creating...' : 'Create Tender'}
             </Button>

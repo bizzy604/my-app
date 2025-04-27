@@ -112,20 +112,20 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
   const isAI = currentSubscription === 'ai';
 
   return (
-    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-5xl mx-auto">
       {/* Standard Plan */}
-      <Card className={`${isStandard && isActive ? 'border-blue-500 border-2' : ''}`}>
+      <Card className={`${isStandard && isActive ? 'border-blue-500 dark:border-blue-400 border-2' : ''}`}>
         <CardHeader>
-          <CardTitle className="flex justify-between items-center">
+          <CardTitle className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span>Innobid Standard</span>
             {isStandard && isActive && (
-              <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">Current Plan</span>
+              <span className="text-xs sm:text-sm bg-blue-500/10 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full">Current Plan</span>
             )}
           </CardTitle>
           <CardDescription>
             <span className="block mt-2">
-              <span className="text-3xl font-bold">$99</span>
-              <span className="text-sm text-gray-500">/month</span>
+              <span className="text-2xl sm:text-3xl font-bold">$99</span>
+              <span className="text-sm text-muted-foreground">/month</span>
             </span>
             <span className="mt-2 block">Essential procurement features for your business</span>
           </CardDescription>
@@ -133,27 +133,27 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
         <CardContent>
           <ul className="space-y-3">
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Automated Procurement</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Vendor Management</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Bids Analysis</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Secure Bidding</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Tendering Insights</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
               <span>Realtime Updates</span>
             </li>
           </ul>
@@ -190,63 +190,54 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
       </Card>
 
       {/* AI Plan */}
-      <Card className={`${isAI && isActive ? 'border-purple-500 border-2' : ''} bg-gradient-to-br from-slate-50 to-slate-100`}>
+      <Card className={`${isAI && isActive ? 'border-primary border-2' : ''} bg-primary/5 dark:bg-primary/10`}>
         <CardHeader>
-          <CardTitle className="flex justify-between items-center">
+          <CardTitle className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span>Innobid AI</span>
             {isAI && isActive && (
-              <span className="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full">Current Plan</span>
+              <span className="text-xs sm:text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">Current Plan</span>
             )}
           </CardTitle>
           <CardDescription>
             <span className="block mt-2">
-              <span className="text-3xl font-bold">$199</span>
-              <span className="text-sm text-gray-500">/month</span>
+              <span className="text-2xl sm:text-3xl font-bold">$199</span>
+              <span className="text-sm text-muted-foreground">/month</span>
             </span>
-            <span className="mt-2">Advanced AI-powered procurement solutions</span>
+            <span className="mt-2 block">Advanced AI features for intelligent procurement</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-3">
-            <li className="flex items-start font-semibold">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>All Standard Plan Features</span>
+            <li className="flex items-start">
+              <Check className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 shrink-0" />
+              <span>Everything in Standard plan</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>AI Bids Analysis</span>
+              <ArrowUpRight className="h-5 w-5 text-primary mr-2 shrink-0" />
+              <span className="font-medium">AI-Powered Bid Analysis</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>Advanced Insights & Recommendations</span>
+              <ArrowUpRight className="h-5 w-5 text-primary mr-2 shrink-0" />
+              <span className="font-medium">Bid Anomaly Detection</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>Intelligent Vendor Matching</span>
+              <ArrowUpRight className="h-5 w-5 text-primary mr-2 shrink-0" />
+              <span className="font-medium">Corruption Risk Predictions</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>Procurement Risk Assessment</span>
+              <ArrowUpRight className="h-5 w-5 text-primary mr-2 shrink-0" />
+              <span className="font-medium">Advanced Analytics Dashboard</span>
             </li>
             <li className="flex items-start">
-              <Check className="h-5 w-5 text-purple-500 mr-2 shrink-0" />
-              <span>Priority Support</span>
+              <ArrowUpRight className="h-5 w-5 text-primary mr-2 shrink-0" />
+              <span className="font-medium">AI-Assisted Decision Making</span>
             </li>
           </ul>
-          
-          {isActive && isStandard && (
-            <div className="mt-4 p-3 bg-purple-50 rounded-md border border-purple-100">
-              <p className="text-sm text-purple-700 flex items-center">
-                <ArrowUpRight className="h-4 w-4 mr-1" />
-                <span>Upgrade now and only pay the difference ($100/month)</span>
-              </p>
-            </div>
-          )}
         </CardContent>
         <CardFooter>
           {!isActive ? (
             <Button 
-              className="w-full" 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
               onClick={() => handleSubscribe(INNOBID_AI_PRICE_ID, 'ai')}
               disabled={loadingStates.ai}
             >
@@ -254,11 +245,11 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
             </Button>
           ) : isStandard ? (
             <Button 
-              className="w-full" 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={() => handleUpdateSubscription('ai')}
               disabled={loadingStates.upgrade}
             >
-              {loadingStates.upgrade ? 'Processing...' : 'Upgrade to AI Plan'}
+              {loadingStates.upgrade ? 'Processing...' : 'Upgrade to AI'}
             </Button>
           ) : (
             <Button 

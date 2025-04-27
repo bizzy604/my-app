@@ -40,7 +40,9 @@ export async function GET(req: Request) {
       );
     }
 
-    // Get fresh user data from the database
+    console.log('Token ID from session:', token.id, 'Type:', typeof token.id);
+
+    // Get fresh user data from the database - ensure ID is a number
     const user = await prisma.user.findUnique({
       where: { id: Number(token.id) },
       select: {
@@ -53,6 +55,7 @@ export async function GET(req: Request) {
     });
 
     if (!user) {
+      console.error('User not found for ID:', token.id);
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }

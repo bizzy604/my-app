@@ -98,14 +98,13 @@ export default function ResourceCenterPage() {
 
   return (
     <VendorLayout>
-      <div className="p-4 md:p-8 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="sticky top-0 z-10 border-b bg-background px-4 sm:px-8 py-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Resource Center</h1>
-            <p className="text-sm md:text-base text-gray-600">Access guides, tutorials, and helpful resources</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-primary">Resource Center</h1>
+            <p className="text-sm text-muted-foreground">Guides and documentation for vendors</p>
           </div>
-
-          <div className="relative w-full md:w-[300px]">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="search"
@@ -116,8 +115,10 @@ export default function ResourceCenterPage() {
             />
           </div>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main className="p-4 sm:p-8">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredResources.map((resource) => {
             const Icon = getIcon(resource.type)
             
@@ -154,8 +155,7 @@ export default function ResourceCenterPage() {
             )
           })}
         </div>
-      </div>
+      </main>
     </VendorLayout>
   )
 }
-

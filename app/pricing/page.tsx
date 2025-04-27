@@ -25,8 +25,8 @@ export default async function PricingPage() {
     
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Choose Your Innobid Plan</h1>
-      <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold text-center mb-8 text-primary">Choose Your Innobid Plan</h1>
+      <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
         Select the best subscription plan for your procurement needs. Upgrade anytime to access more features.
       </p>
       

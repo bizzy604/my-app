@@ -25,7 +25,7 @@ import {
 } from 'recharts'
 import { LoadingSpinner } from "@/components/loading-spinner"
 
-const COLORS = ['#4B0082', '#6B238E', '#9B4B9F', '#BB6BB3', '#DB8BC7']
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--primary) / 0.8)', 'hsl(var(--primary) / 0.6)', 'hsl(var(--primary) / 0.4)', 'hsl(var(--primary) / 0.2)']
 
 export default function StatisticsPage() {
   const [timeRange, setTimeRange] = useState('6months')
@@ -53,11 +53,11 @@ export default function StatisticsPage() {
 
   return (
     <CitizenLayout>
-      <div className="p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-[#4B0082]">Procurement Statistics</h1>
+      <div className="p-4 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-primary">Procurement Statistics</h1>
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
@@ -68,7 +68,7 @@ export default function StatisticsPage() {
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Sector Distribution */}
           <Card>
             <CardHeader>
@@ -91,7 +91,7 @@ export default function StatisticsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -107,11 +107,11 @@ export default function StatisticsPage() {
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#4B0082" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--foreground))" />
+                    <YAxis stroke="hsl(var(--foreground))" />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }} />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

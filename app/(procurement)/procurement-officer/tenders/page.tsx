@@ -103,8 +103,8 @@ export default function TendersPage() {
         {statusMessage && (
           <div className={`p-4 rounded-md ${
             statusMessage.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' 
+              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
           }`}>
             {statusMessage.message}
           </div>
@@ -113,12 +113,12 @@ export default function TendersPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Active Tenders</h1>
-            <p className="text-sm md:text-base text-gray-600">Manage and monitor ongoing tenders</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Active Tenders</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage and monitor ongoing tenders</p>
           </div>
           <Button
             onClick={() => router.push('/procurement-officer/tenders/create')}
-            className="bg-[#4B0082] hover:bg-purple-700 text-white w-full md:w-auto"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground w-full md:w-auto"
           >
             <Plus className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Create New Tender</span>
@@ -129,7 +129,7 @@ export default function TendersPage() {
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative col-span-2">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="search"
               placeholder="Search tenders..."
@@ -141,7 +141,7 @@ export default function TendersPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 rounded-md border border-gray-300 text-sm md:text-base w-full"
+            className="px-3 py-2 rounded-md border border-input bg-background text-foreground text-sm md:text-base w-full"
           >
             <option value="all">All Status</option>
             <option value="open">Open</option>
@@ -157,7 +157,7 @@ export default function TendersPage() {
             Array.from({ length: 6 }).map((_, i) => (
               <div 
                 key={i} 
-                className="h-[200px] bg-gray-100 rounded-lg animate-pulse"
+                className="h-[200px] bg-muted rounded-lg animate-pulse"
               />
             ))
           ) : tenders && tenders.length > 0 ? (
@@ -177,7 +177,7 @@ export default function TendersPage() {
               </div>
             ))
           ) : (
-            <div className="col-span-full text-center py-12 text-gray-500">
+            <div className="col-span-full text-center py-12 text-muted-foreground">
               No tenders found
             </div>
           )}
@@ -209,7 +209,7 @@ export default function TendersPage() {
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>

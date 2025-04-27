@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { getTenderById, updateTender } from "@/app/actions/tender-actions"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { TenderSector } from "@prisma/client"
+import { TenderSector, TenderCategory } from "@prisma/client"
 
 export default function EditTenderPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -23,27 +23,24 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
 
   const { data: tender, isLoading } = useHydrationSafeClient(() => getTenderById(params.id))
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsSubmitting(true)
 
+    const formData = new FormData(e.currentTarget)
+    
+    // Get the closing date from the form and convert it to a Date object
+    const closingDateStr = formData.get('closingDate') as string;
+    
     try {
-      const formData = new FormData(e.currentTarget)
-      const closingDate = formData.get('closingDate')
-      
-      // Ensure closingDate has seconds and timezone
-      const formattedDate = closingDate 
-        ? new Date(closingDate.toString()).toISOString()
-        : undefined
-
       const data = {
         title: formData.get('title') as string,
         description: formData.get('description') as string,
         sector: formData.get('sector') as TenderSector,
         location: formData.get('location') as string,
         budget: Number(formData.get('budget')),
-        closingDate: formattedDate,
-        category: formData.get('category') as string,
+        closingDate: closingDateStr ? new Date(closingDateStr) : undefined,
+        category: formData.get('category') as TenderCategory,
         requirements: (formData.get('requirements') as string)
           .split('\n')
           .filter(req => req.trim())
@@ -73,7 +70,7 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
     return (
       <DashboardLayout>
         <div className="p-4 md:p-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4B0082]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     )
@@ -83,7 +80,7 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
     return (
       <DashboardLayout>
         <div className="p-4 md:p-8 text-center">
-          <p className="text-red-500">Tender not found</p>
+          <p className="text-destructive">Tender not found</p>
         </div>
       </DashboardLayout>
     )
@@ -102,8 +99,8 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
             <span className="hidden md:inline">Back</span>
           </Button>
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Edit Tender</h1>
-            <p className="text-sm md:text-base text-gray-600">Update tender details</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Edit Tender</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Update tender details</p>
           </div>
         </div>
 
@@ -126,7 +123,8 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
                 id="sector"
                 name="sector"
                 required
-                className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md bg-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+                defaultValue={tender.sector}
               >
                 <option value="">Select a sector</option>
                 {Object.values(TenderSector).map((sector) => (
@@ -180,7 +178,9 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
                 name="closingDate"
                 type="datetime-local"
                 required
-                defaultValue={tender.closingDate}
+                defaultValue={tender.closingDate instanceof Date 
+                  ? tender.closingDate.toISOString().slice(0, 16) 
+                  : tender.closingDate}
                 className="text-sm md:text-base"
               />
             </div>
@@ -232,7 +232,7 @@ export default function EditTenderPage({ params }: { params: { id: string } }) {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#4B0082] hover:bg-purple-700 text-white text-sm md:text-base"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm md:text-base"
             >
               {isSubmitting ? 'Updating...' : 'Update Tender'}
             </Button>

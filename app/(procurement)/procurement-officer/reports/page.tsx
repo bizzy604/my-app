@@ -113,27 +113,27 @@ export default function ProcurementReportsPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-[#4B0082] flex items-center gap-3">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h1 className="text-2xl font-bold text-primary flex items-center gap-3">
             <AlertTriangle className="h-7 w-7" /> Irregularity Reports
           </h1>
           
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+            <div className="relative w-full sm:w-auto">
               <Input 
                 placeholder="Search reports..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
+                className="pr-10 w-full"
               />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             </div>
             
             <select 
               value={filter} 
               onChange={(e) => setFilter(e.target.value as ReportStatus | 'ALL')}
               aria-label="Filter reports by status"
-              className="border rounded px-2 py-2"
+              className="border border-input rounded px-2 py-2 bg-background text-foreground w-full sm:w-auto"
             >
               <option value="ALL">All Reports</option>
               <option value={ReportStatus.PENDING}>Pending</option>
@@ -145,9 +145,9 @@ export default function ProcurementReportsPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8">Loading reports...</div>
+          <div className="text-center py-8 text-muted-foreground">Loading reports...</div>
         ) : filteredReports.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             No reports found
           </div>
         ) : (
@@ -155,22 +155,22 @@ export default function ProcurementReportsPage() {
             {filteredReports.map(report => (
               <div 
                 key={report.id} 
-                className="bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-card shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => setSelectedReport(report)}
               >
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                   <div>
-                    <h2 className="text-lg font-semibold text-[#4B0082] flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-primary flex items-center gap-2">
                       <FileText className="h-5 w-5" /> {report.tenderTitle}
                     </h2>
-                    <p className="text-sm text-gray-600 mt-1">{report.type}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{report.type}</p>
                   </div>
                   {getStatusBadge(report.status)}
                 </div>
-                <p className="text-sm text-gray-700 mt-3 line-clamp-2">
+                <p className="text-sm text-foreground/80 mt-3 line-clamp-2">
                   {report.description}
                 </p>
-                <div className="mt-4 text-xs text-gray-500">
+                <div className="mt-4 text-xs text-muted-foreground">
                   Reported on: {new Date(report.createdAt).toLocaleDateString()}
                 </div>
               </div>
@@ -184,7 +184,7 @@ export default function ProcurementReportsPage() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <FileText className="h-6 w-6 text-[#4B0082]" />
+                  <FileText className="h-6 w-6 text-primary" />
                   Report Details
                 </DialogTitle>
                 <DialogDescription>
@@ -226,7 +226,7 @@ export default function ProcurementReportsPage() {
                   <p>{new Date(selectedReport.createdAt).toLocaleString()}</p>
                 </div>
 
-                <div className="flex gap-4 mt-6">
+                <div className="flex flex-wrap gap-4 mt-6">
                   {selectedReport.status !== ReportStatus.INVESTIGATING && (
                     <Button 
                       variant="secondary" 

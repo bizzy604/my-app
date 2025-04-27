@@ -53,14 +53,14 @@ export default function TendersPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Available Tenders</h1>
-            <p className="text-sm md:text-base text-gray-600">Browse and bid on open tender opportunities</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Available Tenders</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Browse and bid on open tender opportunities</p>
           </div>
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search tenders..."
@@ -87,10 +87,10 @@ export default function TendersPage() {
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardContent className="p-6">
-                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
+                  <div className="h-6 bg-muted rounded w-3/4 mb-4" />
                   <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                    <div className="h-4 bg-gray-200 rounded w-5/6" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                    <div className="h-4 bg-muted rounded w-5/6" />
                   </div>
                 </CardContent>
               </Card>
@@ -101,31 +101,31 @@ export default function TendersPage() {
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-semibold text-lg text-[#4B0082] mb-2">
+                      <h3 className="font-semibold text-lg text-primary mb-2">
                         {tender.title}
                       </h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {tender.description}
                       </p>
                     </div>
 
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />
                         <span>{tender.location}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         <span>Closes: {formatDate(tender.closingDate)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <DollarSign className="h-4 w-4" />
                         <span>Budget: {formatCurrency(tender.budget)}</span>
                       </div>
                     </div>
 
                     <div className="pt-4">
-                      <Button className="w-full" asChild>
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
                         <Link href={`/vendor/tenders/${tender.id}`}>
                           View Details
                         </Link>
@@ -136,7 +136,7 @@ export default function TendersPage() {
               </Card>
             ))
           ) : (
-            <div className="col-span-full text-center py-12 text-gray-500">
+            <div className="col-span-full text-center py-12 text-muted-foreground">
               No tenders found
             </div>
           )}
@@ -144,10 +144,10 @@ export default function TendersPage() {
 
         {/* Mobile Filter Panel */}
         {filterOpen && (
-          <div className="fixed inset-0 z-50 bg-black/50 md:hidden">
-            <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl p-6">
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden">
+            <div className="fixed bottom-0 left-0 right-0 bg-background rounded-t-xl p-6 border-t border-border">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Filters</h3>
+                <h3 className="font-semibold text-foreground">Filters</h3>
                 <Button 
                   variant="ghost" 
                   size="sm"

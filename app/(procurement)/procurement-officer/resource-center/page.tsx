@@ -101,12 +101,12 @@ export default function ResourceCenterPage() {
       <div className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Resource Center</h1>
-            <p className="text-sm md:text-base text-gray-600">Access guides, tutorials, and helpful resources</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Resource Center</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Access guides, tutorials, and helpful resources</p>
           </div>
 
           <div className="relative w-full md:w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search resources..."
@@ -125,12 +125,12 @@ export default function ResourceCenterPage() {
               <Card key={resource.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Icon className="h-5 w-5 text-[#4B0082]" />
+                    <Icon className="h-5 w-5 text-primary" />
                     {resource.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 mb-4">{resource.description}</p>
+                  <p className="text-muted-foreground mb-4">{resource.description}</p>
                   <Button
                     variant={resource.downloadable ? "default" : "outline"}
                     className="w-full"
@@ -158,4 +158,3 @@ export default function ResourceCenterPage() {
     </DashboardLayout>
   )
 }
-

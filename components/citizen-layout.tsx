@@ -7,6 +7,7 @@ import { FileText, Award, AlertTriangle, LogOut, LayoutDashboard, Menu } from 'l
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
+import { ThemeToggle } from "./theme-toggle"
 
 interface NavItem {
   title: string
@@ -35,9 +36,9 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-white">
+    <div className="flex flex-col md:flex-row min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="md:hidden sticky top-0 z-30 bg-white border-b p-4 flex items-center justify-between">
+      <div className="md:hidden sticky top-0 z-30 bg-card border-b p-4 flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
@@ -49,31 +50,35 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
           <Image
             src="/Innobid Logo.jpg"
             alt="InnoBid Logo"
-            width={100}
-            height={40}
-            className="h-8 w-auto"
+            width={160}
+            height={50}
+            priority
+            className="h-8 w-auto object-contain"
           />
         </Link>
-        <div className="w-8" /> {/* Spacer for alignment */}
+        <ThemeToggle />
       </div>
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white transform transition-transform duration-200 ease-in-out
+        fixed inset-y-0 left-0 z-40 w-64 bg-card transform transition-transform duration-200 ease-in-out
         md:relative md:translate-x-0 border-r
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex h-full flex-col p-4 md:p-6">
           {/* Logo - Hidden on mobile */}
-          <Link href="/citizen" className="hidden md:block mb-8">
-            <Image
-              src="/Innobid Logo.jpg"
-              alt="InnoBid Logo"
-              width={120}
-              height={40}
-              className="h-auto w-auto"
-            />
-          </Link>
+          <div className="hidden md:flex items-center justify-between mb-8">
+            <Link href="/citizen" className="flex items-center justify-center">
+              <Image
+                src="/Innobid Logo.jpg"
+                alt="InnoBid Logo"
+                width={160}
+                height={50}
+                className="h-10 w-auto object-contain"
+              />
+            </Link>
+            <ThemeToggle />
+          </div>
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto">
@@ -86,12 +91,12 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     isActive 
-                      ? "bg-[#4B0082] text-white" 
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-primary text-primary-foreground" 
+                      : "text-foreground hover:bg-accent"
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-gray-400")} />
+                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
                   {item.title}
                 </Link>
               )
@@ -101,17 +106,17 @@ export function CitizenLayout({ children }: { children: React.ReactNode }) {
           {/* Sign Out Button */}
           <Button
             variant="ghost"
-            className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-accent"
             onClick={handleSignOut}
           >
-            <LogOut className="h-4 w-4 text-gray-400" />
+            <LogOut className="h-4 w-4 text-muted-foreground" />
             Sign Out
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 p-4 md:p-6 mt-14 md:mt-0">
+      <div className="flex-1 min-w-0 md:p-0 mt-14 md:mt-0">
         <Alert
           message="You have been successfully signed out."
           isVisible={showAlert}

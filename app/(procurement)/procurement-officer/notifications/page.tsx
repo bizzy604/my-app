@@ -109,8 +109,8 @@ export default function NotificationsPage() {
       <div className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Notifications</h1>
-            <p className="text-sm md:text-base text-gray-600">Stay updated with your latest activities</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Notifications</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Stay updated with your latest activities</p>
           </div>
 
           <Select value={filter} onValueChange={setFilter}>
@@ -130,7 +130,7 @@ export default function NotificationsPage() {
         {isLoading ? (
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+              <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
         ) : filteredNotifications.length > 0 ? (
@@ -139,26 +139,26 @@ export default function NotificationsPage() {
               <Card
                 key={notification.id}
                 className={`p-4 transition-colors ${
-                  notification.isRead ? 'bg-white' : 'bg-purple-50'
+                  notification.isRead ? 'bg-card' : 'bg-primary/5 dark:bg-primary/10'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`p-2 rounded-full ${
-                    notification.isRead ? 'bg-gray-100' : 'bg-purple-100'
+                    notification.isRead ? 'bg-muted' : 'bg-primary/10 dark:bg-primary/20'
                   }`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <Badge variant={notification.isRead ? 'outline' : 'default'}>
                         {notification.type.replace('_', ' ')}
                       </Badge>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(notification.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">{notification.message}</p>
+                    <p className="text-sm text-foreground/80">{notification.message}</p>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export default function NotificationsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(notification.id)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -187,7 +187,7 @@ export default function NotificationsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             No notifications found
           </div>
         )}

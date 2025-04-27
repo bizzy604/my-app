@@ -105,8 +105,8 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Dashboard Overview</h1>
-            <p className="text-sm md:text-base text-gray-600">Monitor procurement processes and insights</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Dashboard Overview</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Monitor procurement processes and insights</p>
           </div>
 
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -127,17 +127,17 @@ export default function DashboardPage() {
           {/* Open Tenders */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Open Tenders
               </CardTitle>
-              <FileCheck className="h-4 w-4 text-gray-500" />
+              <FileCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.openTenders}
                 </div>
-                <Badge variant="outline" className="bg-green-50">
+                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">
                   Active
                 </Badge>
               </div>
@@ -147,17 +147,17 @@ export default function DashboardPage() {
           {/* Ongoing Evaluations */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Ongoing Evaluations
               </CardTitle>
-              <Clock className="h-4 w-4 text-gray-500" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.ongoingEvaluations}
                 </div>
-                <Badge variant="outline" className="bg-blue-50">
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-400">
                   In Progress
                 </Badge>
               </div>
@@ -167,17 +167,17 @@ export default function DashboardPage() {
           {/* Contracts Awarded */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Contracts Awarded
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-gray-500" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.contractsAwarded}
                 </div>
-                <Badge variant="outline" className="bg-purple-50">
+                <Badge variant="outline" className="bg-primary/10 text-primary">
                   Completed
                 </Badge>
               </div>
@@ -187,17 +187,17 @@ export default function DashboardPage() {
           {/* Pending Approvals */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Pending Approvals
               </CardTitle>
-              <Clock className="h-4 w-4 text-gray-500" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.pendingApprovals}
                 </div>
-                <Badge variant="outline" className="bg-yellow-50">
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
                   Awaiting
                 </Badge>
               </div>
@@ -207,17 +207,17 @@ export default function DashboardPage() {
           {/* Flagged Anomalies */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Flagged Anomalies
               </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-gray-500" />
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.flaggedAnomalies}
                 </div>
-                <Badge variant="outline" className="bg-red-50">
+                <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400">
                   Alert
                 </Badge>
               </div>
@@ -227,17 +227,17 @@ export default function DashboardPage() {
           {/* Vendor Queries */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Vendor Queries
               </CardTitle>
-              <MessageSquare className="h-4 w-4 text-gray-500" />
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.vendorQueries}
                 </div>
-                <Badge variant="outline" className="bg-orange-50">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-700 dark:text-orange-400">
                   Pending
                 </Badge>
               </div>
@@ -256,25 +256,25 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+                    <div key={i} className="h-12 bg-muted rounded animate-pulse" />
                   ))
                 ) : dashboardStats.recentActivities.length > 0 ? (
                   dashboardStats.recentActivities.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">{activity.type}</Badge>
-                        <p className="text-sm">{activity.description}</p>
+                        <p className="text-sm line-clamp-1">{activity.description}</p>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground ml-2 shrink-0">
                         {new Date(activity.date).toLocaleDateString()}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500">No recent activities</p>
+                  <p className="text-center text-muted-foreground">No recent activities</p>
                 )}
               </div>
             </CardContent>
@@ -287,8 +287,8 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {/* Add Chart.js or any other charting library implementation here */}
-              <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500">Anomaly Detection Chart</p>
+              <div className="h-[300px] flex items-center justify-center bg-muted/50 rounded-lg">
+                <p className="text-muted-foreground">Anomaly Detection Chart</p>
               </div>
             </CardContent>
           </Card>

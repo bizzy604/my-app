@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface TopNavProps {
   onMenuClick: () => void
@@ -19,7 +20,7 @@ export function TopNav({ onMenuClick, logo }: TopNavProps) {
   const { data: session } = useSession()
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-gray-200 bg-white">
+    <header className="sticky top-0 z-40 h-16 border-b border-border bg-card">
       <div className="flex items-center justify-between h-full px-4 md:px-6">
         <div className="flex items-center gap-4">
           <Button 
@@ -33,24 +34,28 @@ export function TopNav({ onMenuClick, logo }: TopNavProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          {logo || <h1 className="text-lg md:text-xl font-bold text-[#4B0082]">Innobid</h1>}
+          {logo || <h1 className="text-lg md:text-xl font-bold text-primary">Innobid</h1>}
         </div>
 
-        {session?.user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          
+          {session?.user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </header>
   )

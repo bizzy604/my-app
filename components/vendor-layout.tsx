@@ -71,7 +71,7 @@ export function VendorLayout({ children }: VendorLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile menu overlay */}
       {sidebarOpen && (
         <div 
@@ -83,13 +83,14 @@ export function VendorLayout({ children }: VendorLayoutProps) {
       <TopNav 
         onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
         logo={
-          <Link href="/procurement-officer">
+          <Link href="/vendor">
             <Image
               src="/Innobid Logo.jpg"
               alt="InnoBid Logo"
-              width={50}
+              width={160}
               height={50}
-              className="h-auto w-auto"
+              priority
+              className="h-10 w-auto object-contain"
             />
           </Link>
         }
@@ -98,18 +99,18 @@ export function VendorLayout({ children }: VendorLayoutProps) {
       <div className="flex">
         {/* Side Navigation */}
         <div className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-200 ease-in-out md:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="flex flex-col h-full pt-16">
             <nav className="flex-1 px-4 space-y-2 py-4">
-              <Link href="/procurement-officer">
+              <Link href="/vendor" className="flex items-center justify-center mb-4">
               <Image
                 src="/Innobid Logo.jpg"
                 alt="InnoBid Logo"
-                width={120}
-                height={40}
-                className="h-auto w-auto"
+                width={160}
+                height={50}
+                className="h-10 w-auto object-contain"
               />
             </Link>
               {navItems.map((item) => {
@@ -121,8 +122,8 @@ export function VendorLayout({ children }: VendorLayoutProps) {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                       isActive 
-                        ? "bg-purple-50 text-[#4B0082]" 
-                        : "text-gray-600 hover:bg-gray-100"
+                        ? "bg-primary/10 text-primary" 
+                        : "text-muted-foreground hover:bg-accent"
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -136,10 +137,10 @@ export function VendorLayout({ children }: VendorLayoutProps) {
             <div className="p-4">
               <Button
               variant="ghost"
-              className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="mt-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-accent"
               onClick={handleSignOut}
             >
-              <LogOut className="h-4 w-4 text-gray-400" />
+              <LogOut className="h-4 w-4 text-muted-foreground" />
                 Sign Out
               </Button>
             </div>

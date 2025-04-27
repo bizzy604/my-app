@@ -48,6 +48,11 @@ interface TenderDetailsContentProps {
   }>
 }
 
+// Type guard for the bid's submissionDate property
+function isDateString(value: any): value is string {
+  return typeof value === 'string' && !isNaN(Date.parse(value));
+}
+
 export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsContentProps) {
   const router = useRouter()
   const { data: session } = useSession()
@@ -87,8 +92,8 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
           <span className="hidden md:inline">Back</span>
         </Button>
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">{tender.title}</h1>
-          <p className="text-sm md:text-base text-gray-600">Tender Details</p>
+          <h1 className="text-xl md:text-3xl font-bold text-primary">{tender.title}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Tender Details</p>
         </div>
       </div>
 
@@ -115,7 +120,7 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
         {hasShortlistedBids ? (
           <Button
             onClick={() => router.push(`/procurement-officer/tenders/${tender.id}/award`)}
-            className="bg-green-600 text-white hover:bg-green-700 text-sm md:text-base"
+            className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800 text-sm md:text-base"
           >
             <Users className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Proceed to Award</span>
@@ -123,7 +128,7 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
         ) : hasOngoingEvaluation ? (
           <Button
             onClick={() => router.push(`/procurement-officer/tenders/${tender.id}/evaluate`)}
-            className="bg-[#4B0082] text-white hover:bg-purple-700 text-sm md:text-base"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm md:text-base"
           >
             <Users className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Continue Evaluation</span>
@@ -131,7 +136,7 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
         ) : (
           <Button
             onClick={handleViewBids}
-            className="bg-[#4B0082] text-blue hover:bg-purple-700 text-sm md:text-base"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm md:text-base"
           >
             <Users className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">View & Evaluate Bids</span>
@@ -151,18 +156,18 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
           <CardContent className="space-y-4">
             <div>
               <h3 className="font-medium">Description</h3>
-              <p className="text-gray-600">{tender.description}</p>
+              <p className="text-muted-foreground">{tender.description}</p>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-500" />
+              <MapPin className="h-4 w-4 text-muted-foreground" />
               <span>{tender.location}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-500" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>Closing: {new Date(tender.closingDate).toLocaleDateString()}</span>
             </div>
             <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-gray-500" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
               <span>Budget: {tender.budget.toLocaleString()}</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -182,13 +187,13 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
           <CardContent className="space-y-4">
             <div>
               <h3 className="font-medium">Requirements</h3>
-              <p className="text-gray-600">{tender.requirements}</p>
+              <p className="text-muted-foreground">{tender.requirements}</p>
             </div>
             <div>
               <h3 className="font-medium mb-2">Documents</h3>
               <DocumentManager 
                 tenderId={tender.id}
-                userId={session?.user?.id || ''}
+                userId={session?.user?.id ? String(session.user.id) : ''}
                 documents={tender.documents || []}
                 readOnly
               />
@@ -208,7 +213,7 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
               </div>
               <Button
                 onClick={handleViewBids}
-                className="bg-[#4B0082] text-white hover:bg-purple-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 View & Evaluate Bids
               </Button>
@@ -223,8 +228,10 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
                 >
                   <div>
                     <h3 className="font-medium">{bid.bidder.company}</h3>
-                    <p className="text-sm text-gray-500">
-                      Submitted: {new Date(bid.submissionDate).toLocaleDateString()}
+                    <p className="text-sm text-muted-foreground">
+                      Submitted: {isDateString(bid.submissionDate) 
+                        ? new Date(bid.submissionDate).toLocaleDateString()
+                        : 'Date unavailable'}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
@@ -251,7 +258,31 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
       {hasShortlistedBids && (
         <ShortlistedBidsPanel 
           tenderId={tender.id}
-          bids={shortlistedBids}
+          bids={shortlistedBids.map(bid => {
+            // Create a basic object with the required properties
+            const transformedBid: any = {
+              ...bid,
+              technicalScore: 0,
+              financialScore: 0,
+              experienceScore: 0
+            };
+            
+            // Extract scores from evaluation stages if available
+            if (bid.evaluationStages && bid.evaluationStages.length > 0) {
+              // Look for specific stage types
+              bid.evaluationStages.forEach(stage => {
+                if (stage.stage.toLowerCase().includes('technical')) {
+                  transformedBid.technicalScore = stage.score;
+                } else if (stage.stage.toLowerCase().includes('financial')) {
+                  transformedBid.financialScore = stage.score;
+                } else if (stage.stage.toLowerCase().includes('experience')) {
+                  transformedBid.experienceScore = stage.score;
+                }
+              });
+            }
+            
+            return transformedBid;
+          })}
         />
       )}
     </div>

@@ -61,8 +61,8 @@ export default function SupportPage() {
     <DashboardLayout>
       <div className="p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Help & Support</h1>
-          <p className="text-sm md:text-base text-gray-600">Get assistance and access resources</p>
+          <h1 className="text-xl md:text-3xl font-bold text-primary">Help & Support</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Get assistance and access resources</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -78,31 +78,31 @@ export default function SupportPage() {
               <a 
                 href="/docs/user-guide.pdf" 
                 target="_blank"
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-gray-500" />
+                  <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">User Guide</p>
-                    <p className="text-sm text-gray-500">Download the complete user manual</p>
+                    <p className="text-sm text-muted-foreground">Download the complete user manual</p>
                   </div>
                 </div>
-                <ExternalLink className="h-4 w-4 text-gray-400" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </a>
 
               <a 
                 href="/docs/faq.pdf" 
                 target="_blank"
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <MessageCircle className="h-5 w-5 text-gray-500" />
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">FAQs</p>
-                    <p className="text-sm text-gray-500">Frequently asked questions</p>
+                    <p className="text-sm text-muted-foreground">Frequently asked questions</p>
                   </div>
                 </div>
-                <ExternalLink className="h-4 w-4 text-gray-400" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </a>
             </CardContent>
           </Card>
@@ -143,7 +143,7 @@ export default function SupportPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#4B0082] hover:bg-purple-700 text-white"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Send className="h-4 w-4 md:mr-2" />
                   <span className="hidden md:inline">Submit Ticket</span>

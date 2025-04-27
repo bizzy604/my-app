@@ -87,25 +87,25 @@ export default function AwardTenderPage({ params }: { params: { id: string } }) 
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Award Tender</h1>
+        <h1 className="text-2xl font-bold mb-4 text-primary">Award Tender</h1>
         
         {bids.length === 0 ? (
-          <p className="text-gray-500">No pending bids available for this tender.</p>
+          <p className="text-muted-foreground">No pending bids available for this tender.</p>
         ) : (
           <div className="space-y-4">
             {bids.map((bid) => (
               <Card 
                 key={bid.id} 
-                className={`cursor-pointer ${selectedBid === bid.id ? 'border-primary' : ''}`}
+                className={`cursor-pointer transition-all ${selectedBid === bid.id ? 'border-primary ring-2 ring-primary ring-opacity-50' : ''}`}
                 onClick={() => setSelectedBid(bid.id)}
               >
                 <CardHeader>
-                  <CardTitle>{bid.vendor.name} - {bid.vendor.company}</CardTitle>
+                  <CardTitle className="text-lg md:text-xl">{bid.vendor.name} - {bid.vendor.company}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex justify-between">
-                    <p>Bid Amount: {formatCurrency(bid.amount)}</p>
-                    <p>Submitted: {formatDate(bid.submittedAt)}</p>
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                    <p className="text-primary font-medium">Bid Amount: {formatCurrency(bid.amount)}</p>
+                    <p className="text-muted-foreground">Submitted: {formatDate(bid.submittedAt)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -114,7 +114,7 @@ export default function AwardTenderPage({ params }: { params: { id: string } }) 
             <Button 
               onClick={handleAwardTender} 
               disabled={!selectedBid || isSubmitting}
-              className="w-full"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {isSubmitting ? 'Awarding...' : 'Award Selected Bid'}
             </Button>

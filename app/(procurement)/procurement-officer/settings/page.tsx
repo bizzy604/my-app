@@ -120,8 +120,8 @@ export default function SettingsPage() {
     <DashboardLayout>
       <div className="p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Settings</h1>
-          <p className="text-sm md:text-base text-gray-600">Manage your account settings and preferences</p>
+          <h1 className="text-xl md:text-3xl font-bold text-primary">Settings</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your account settings and preferences</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -138,7 +138,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="name"
                       name="name"
@@ -151,7 +151,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       name="email"
@@ -165,7 +165,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="phone"
                       name="phone"
@@ -179,7 +179,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="company">Company</Label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="company"
                       name="company"
@@ -192,7 +192,7 @@ export default function SettingsPage() {
                 <Button
                   type="submit"
                   disabled={isUpdating}
-                  className="w-full bg-[#4B0082] hover:bg-purple-700 text-white"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {isUpdating ? 'Updating...' : 'Update Profile'}
                 </Button>
@@ -212,7 +212,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive email updates</p>
+                  <p className="text-sm text-muted-foreground">Receive email updates</p>
                 </div>
                 <Switch
                   checked={notificationSettings.emailNotifications}
@@ -225,7 +225,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Bid Updates</Label>
-                  <p className="text-sm text-gray-500">Get notified about bid status changes</p>
+                  <p className="text-sm text-muted-foreground">Get notified about bid status changes</p>
                 </div>
                 <Switch
                   checked={notificationSettings.bidUpdates}
@@ -238,7 +238,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Tender Deadlines</Label>
-                  <p className="text-sm text-gray-500">Reminders about upcoming deadlines</p>
+                  <p className="text-sm text-muted-foreground">Reminders about upcoming deadlines</p>
                 </div>
                 <Switch
                   checked={notificationSettings.tenderDeadlines}
@@ -251,7 +251,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>System Announcements</Label>
-                  <p className="text-sm text-gray-500">Important system updates and news</p>
+                  <p className="text-sm text-muted-foreground">Important system updates and news</p>
                 </div>
                 <Switch
                   checked={notificationSettings.systemAnnouncements}

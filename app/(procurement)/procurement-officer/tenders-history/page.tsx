@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Input } from "@/components/ui/input"
@@ -31,11 +31,28 @@ export default function TendersHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
-  const { data: tenders, isLoading } = useHydrationSafeClient<TenderHistory[]>(() => 
+  const { data: tendersData, isLoading } = useHydrationSafeClient(() => 
     getTenderHistory()
   )
 
-  const filteredTenders = (tenders || []).filter((tender: TenderHistory) => {
+  const tenders: TenderHistory[] = useMemo(() => {
+    if (!tendersData) return []
+    
+    return tendersData.map((tender: any) => ({
+      id: tender.id,
+      title: tender.title,
+      reference: tender.reference,
+      status: tender.status,
+      budget: tender.budget,
+      closingDate: tender.closingDate?.toISOString() || '',
+      lastUpdate: tender.history?.[0]?.changeDate?.toISOString() || '',
+      lastUpdateBy: tender.history?.[0]?.changedByUser?.name || '',
+      awardedTo: tender.bids?.find((b: { status: string; bidder?: { name: string } }) => b.status === 'ACCEPTED')?.bidder?.name || '',
+      bidsCount: tender.bids?.length || 0
+    }))
+  }, [tendersData])
+
+  const filteredTenders = tenders.filter((tender: TenderHistory) => {
     const matchesSearch = 
       (tender?.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (tender?.reference?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -48,7 +65,7 @@ export default function TendersHistoryPage() {
       <div className="space-y-6 p-6">
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search tenders..."
               value={searchTerm}
@@ -59,7 +76,7 @@ export default function TendersHistoryPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
           >
             <option value="all">All Status</option>
             <option value="OPEN">Open</option>
@@ -73,7 +90,7 @@ export default function TendersHistoryPage() {
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <CardContent className="h-48" />
+                <CardContent className="h-48 bg-muted/50" />
               </Card>
             ))
           ) : filteredTenders.map((tender) => (
@@ -87,7 +104,7 @@ export default function TendersHistoryPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">{tender.title}</h3>
-                      <p className="text-sm text-gray-500">Ref: {tender.reference}</p>
+                      <p className="text-sm text-muted-foreground">Ref: {tender.reference}</p>
                     </div>
                     <Badge variant={getStatusVariant(tender.status)}>
                       {tender.status}
@@ -96,20 +113,20 @@ export default function TendersHistoryPage() {
 
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>Closed: {formatDate(tender.closingDate)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span>Budget: {formatCurrency(tender.budget)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
+                      <Users className="h-4 w-4 text-muted-foreground" />
                       <span>Bids: {tender.bidsCount}</span>
                     </div>
                     {tender.status === 'AWARDED' && (
                       <div className="flex items-center gap-2">
-                        <FileCheck className="h-4 w-4 text-green-500" />
+                        <FileCheck className="h-4 w-4 text-green-500 dark:text-green-400" />
                         <span>Awarded to: {tender.awardedTo}</span>
                       </div>
                     )}
@@ -131,7 +148,7 @@ function getStatusVariant(status: string) {
     case 'CLOSED':
       return 'secondary'
     case 'AWARDED':
-      return 'success'
+      return 'outline'
     case 'CANCELLED':
       return 'destructive'
     default:

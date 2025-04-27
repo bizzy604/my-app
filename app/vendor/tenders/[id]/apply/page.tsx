@@ -126,7 +126,7 @@ export default function ApplyTenderPage({ params }: { params: { id: string } }) 
             <ArrowLeft className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Back</span>
           </Button>
-          <h1 className="text-2xl font-bold text-[#4B0082]">Submit Bid</h1>
+          <h1 className="text-2xl font-bold text-primary">Submit Bid</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -209,10 +209,10 @@ export default function ApplyTenderPage({ params }: { params: { id: string } }) 
                       {uploads.map((upload, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded"
                         >
                           <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-gray-500" />
+                            <FileText className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{upload.fileName}</span>
                           </div>
                           <Button
@@ -232,10 +232,10 @@ export default function ApplyTenderPage({ params }: { params: { id: string } }) 
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Button
               type="submit"
-              className="bg-[#4B0082] hover:bg-[#3B0062]"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Bid'}

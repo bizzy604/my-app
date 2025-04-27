@@ -97,10 +97,10 @@ export default function SignupPage() {
     <AuthLayout isSignUp>
       <div className="w-full space-y-6">
         <div className="text-center">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-[#4B0082]">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-primary">
             Create Your Account
           </h1>
-          <p className="mt-2 text-sm md:text-base text-gray-600">Join Innobid today</p>
+          <p className="mt-2 text-sm md:text-base text-muted-foreground">Join Innobid today</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,7 +113,7 @@ export default function SignupPage() {
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="Your Full Name"
-              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -126,7 +126,7 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="Email Address"
-              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -139,7 +139,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Password"
-              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -152,7 +152,7 @@ export default function SignupPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               placeholder="Confirm Password"
-              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -162,7 +162,7 @@ export default function SignupPage() {
               id="role"
               value={role}
               onChange={(e) => setRole(e.target.value as 'VENDOR' | 'PROCUREMENT' | 'CITIZEN')}
-              className="w-full px-3 py-2 text-sm md:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background"
             >
               <option value="VENDOR">Vendor</option>
               <option value="PROCUREMENT">Procurement</option>
@@ -173,14 +173,14 @@ export default function SignupPage() {
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-[#4B0082] text-white py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 text-sm md:text-base"
+            className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 text-sm md:text-base"
           >
             {isLoading ? 'Registering...' : 'Create Account'}
           </Button>
 
-          <p className="text-center text-xs md:text-sm text-gray-600">
+          <p className="text-center text-xs md:text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="text-[#4B0082] hover:underline">
+            <Link href="/login" className="text-primary hover:underline">
               Login
             </Link>
           </p>

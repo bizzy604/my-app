@@ -57,7 +57,7 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
     return (
       <CitizenLayout>
         <div className="flex flex-col items-center justify-center min-h-screen">
-          <h2 className="text-xl font-bold text-red-500">Tender Not Found</h2>
+          <h2 className="text-xl font-bold text-destructive">Tender Not Found</h2>
           <Button onClick={() => router.back()} className="mt-4">
             Go Back
           </Button>
@@ -68,31 +68,31 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
 
   return (
     <CitizenLayout>
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4 sm:p-6">
         <Button
           variant="ghost"
           onClick={() => router.back()}
-          className="mb-6"
+          className="mb-4 sm:mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
           {/* Main Content */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-2xl font-bold text-[#4B0082]">
+                    <CardTitle className="text-xl sm:text-2xl font-bold text-primary">
                       {tender.title}
                     </CardTitle>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Reference: {tender.id.slice(-6).toUpperCase()}
                     </p>
                   </div>
-                  <Badge variant={tender.status === 'OPEN' ? 'success' : 'secondary'}>
+                  <Badge variant={tender.status === 'OPEN' ? 'default' : 'secondary'}>
                     {tender.status}
                   </Badge>
                 </div>
@@ -106,40 +106,40 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
                   </TabsList>
 
                   <TabsContent value="details" className="space-y-4">
-                    <div className="prose max-w-none">
+                    <div className="prose max-w-none dark:prose-invert">
                       <h3 className="text-lg font-semibold">Description</h3>
-                      <p className="text-gray-600">{tender.description}</p>
+                      <p className="text-muted-foreground">{tender.description}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-gray-500" />
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Department</p>
-                          <p className="text-sm text-gray-600">{tender.department?.name}</p>
+                          <p className="text-sm text-muted-foreground">{tender.department?.name}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-gray-500" />
+                        <MapPin className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Location</p>
-                          <p className="text-sm text-gray-600">{tender.location}</p>
+                          <p className="text-sm text-muted-foreground">{tender.location}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-gray-500" />
+                        <DollarSign className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Budget</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             {formatCurrency(tender.budget)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-gray-500" />
+                        <Clock className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Duration</p>
-                          <p className="text-sm text-gray-600">{tender.duration}</p>
+                          <p className="text-sm text-muted-foreground">{tender.duration}</p>
                         </div>
                       </div>
                     </div>
@@ -148,7 +148,7 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
                   <TabsContent value="requirements">
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">Technical Requirements</h3>
-                      <ul className="list-disc list-inside space-y-2 text-gray-600">
+                      <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                         {tender.requirements?.map((req: string, index: number) => (
                           <li key={index}>{req}</li>
                         ))}
@@ -164,11 +164,11 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
                           {tender.documents.map((doc: any, index: number) => (
                             <div
                               key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                              className="flex items-center justify-between p-3 bg-muted rounded-lg"
                             >
                               <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-gray-500" />
-                                <span className="text-sm text-gray-600">{doc.title}</span>
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">{doc.title}</span>
                               </div>
                               <Button variant="ghost" size="sm">
                                 View
@@ -177,7 +177,7 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">No documents available</p>
+                        <p className="text-sm text-muted-foreground">No documents available</p>
                       )}
                     </div>
                   </TabsContent>
@@ -187,20 +187,20 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Key Dates</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Published</span>
+                  <span className="text-sm text-muted-foreground">Published</span>
                   <span className="text-sm font-medium">
                     {formatDate(tender.createdAt)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Closing Date</span>
+                  <span className="text-sm text-muted-foreground">Closing Date</span>
                   <span className="text-sm font-medium">
                     {formatDate(tender.closingDate)}
                   </span>
@@ -214,12 +214,12 @@ export default function TenderDetailsPage({ params }: { params: { id: string } }
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Bids</span>
+                  <span className="text-sm text-muted-foreground">Total Bids</span>
                   <span className="text-sm font-medium">{tender.bids?.length || 0}</span>
                 </div>
                 {tender.status === 'AWARDED' && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Awarded Amount</span>
+                    <span className="text-sm text-muted-foreground">Awarded Amount</span>
                     <span className="text-sm font-medium">
                       {formatCurrency(tender.awardedBid?.amount)}
                     </span>

@@ -124,11 +124,11 @@ export default function ProfilePage() {
       <div className="p-4 md:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Company Profile</h1>
-            <p className="text-sm md:text-base text-gray-600">Manage your company information</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Company Profile</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage your company information</p>
           </div>
           {!isEditing && (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button onClick={() => setIsEditing(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               Edit Profile
             </Button>
           )}
@@ -144,7 +144,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <Label htmlFor="name">Company Name</Label>
                     <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
                         value={formData.name}
@@ -158,7 +158,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="email"
                         type="email"
@@ -173,7 +173,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="phone"
                         value={formData.phone}
@@ -187,7 +187,7 @@ export default function ProfilePage() {
                   <div className="space-y-2">
                     <Label htmlFor="website">Website</Label>
                     <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="website"
                         value={formData.website}
@@ -254,7 +254,7 @@ export default function ProfilePage() {
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">Street Address</Label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="address"
                         value={formData.address}

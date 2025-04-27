@@ -152,11 +152,11 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
       <DashboardLayout>
         <div className="p-6">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-8 bg-muted rounded w-1/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="h-40 bg-gray-200 rounded"></div>
-              <div className="h-40 bg-gray-200 rounded"></div>
+              <div className="h-40 bg-muted rounded"></div>
+              <div className="h-40 bg-muted rounded"></div>
             </div>
           </div>
         </div>
@@ -169,8 +169,8 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
       <DashboardLayout>
         <div className="p-6">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900">Tender Not Found</h2>
-            <p className="mt-2 text-gray-600">The tender you're looking for doesn't exist or has been removed.</p>
+            <h2 className="text-xl font-semibold text-foreground">Tender Not Found</h2>
+            <p className="mt-2 text-muted-foreground">The tender you're looking for doesn't exist or has been removed.</p>
             <Button
               onClick={() => router.push('/procurement-officer/tenders-history')}
               className="mt-4"
@@ -197,8 +197,8 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
             <span className="hidden md:inline">Back</span>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-[#4B0082]">{tender.title}</h1>
-            <p className="text-sm text-gray-600">Reference: {tender.id.slice(0, 8).toUpperCase()}</p>
+            <h1 className="text-2xl font-bold text-primary">{tender.title}</h1>
+            <p className="text-sm text-muted-foreground">Reference: {tender.id.slice(0, 8).toUpperCase()}</p>
           </div>
           <Badge 
             variant={
@@ -229,29 +229,29 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
               <CardContent className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Description</p>
+                    <p className="text-sm font-medium text-muted-foreground">Description</p>
                     <p className="mt-1">{tender.description}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Category</p>
+                    <p className="text-sm font-medium text-muted-foreground">Category</p>
                     <p className="mt-1">{tender.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Sector</p>
+                    <p className="text-sm font-medium text-muted-foreground">Sector</p>
                     <p className="mt-1">{tender.sector}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Budget</p>
+                    <p className="text-sm font-medium text-muted-foreground">Budget</p>
                     <p className="mt-1">{formatCurrency(tender.budget)}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Publication Date</p>
+                    <p className="text-sm font-medium text-muted-foreground">Publication Date</p>
                     <p className="mt-1">{formatDate(tender.createdAt)}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Closing Date</p>
+                    <p className="text-sm font-medium text-muted-foreground">Closing Date</p>
                     <p className="mt-1">{formatDate(tender.closingDate)}</p>
                   </div>
                 </div>
@@ -267,9 +267,9 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
                 {tender.documents && tender.documents.length > 0 ? (
                   <div className="space-y-2">
                     {tender.documents.map((doc: Document) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div key={doc.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-gray-500" />
+                          <FileText className="h-4 w-4 text-muted-foreground" />
                           <span>{doc.fileName}</span>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
@@ -281,7 +281,7 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No documents available</p>
+                  <p className="text-muted-foreground">No documents available</p>
                 )}
               </CardContent>
             </Card>
@@ -306,7 +306,7 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
             ) : (
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-center text-gray-500">No bids available for this tender</p>
+                  <p className="text-center text-muted-foreground">No bids available for this tender</p>
                 </CardContent>
               </Card>
             )}
@@ -320,7 +320,7 @@ export default function TenderHistoryDetailPage({ params }: { params: { id: stri
             ) : (
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-center text-gray-500">No evaluation data available</p>
+                  <p className="text-center text-muted-foreground">No evaluation data available</p>
                 </CardContent>
               </Card>
             )}
@@ -372,7 +372,7 @@ function getStatusVariant(status: string) {
     case 'CLOSED':
       return 'secondary'
     case 'AWARDED':
-      return 'success'
+      return 'outline'
     case 'CANCELLED':
       return 'destructive'
     default:

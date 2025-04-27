@@ -219,12 +219,12 @@ export function BidDetailsClient({
                   />
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       This bid has already been evaluated. Current status: <Badge variant={getStatusBadgeVariant(bid.status)}>{bid.status}</Badge>
                     </p>
                     {bid.status === 'SHORTLISTED' && (
                       <div>
-                        <Button onClick={handleAwardClick} className="mt-4">
+                        <Button onClick={handleAwardClick} className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                           Proceed to Award
                         </Button>
                       </div>

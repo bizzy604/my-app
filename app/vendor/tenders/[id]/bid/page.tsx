@@ -28,13 +28,13 @@ import { useToast } from "@/hooks/use-toast"
 function BidSuccessPage() {
   return (
     <VendorLayout>
-      <main className="flex flex-1 items-center justify-center p-8">
+      <main className="flex flex-1 items-center justify-center p-4 sm:p-8">
         <div className="text-center">
-          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-100">
-            <Check className="h-12 w-12 text-green-600" />
+          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+            <Check className="h-12 w-12 text-green-600 dark:text-green-400" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Bid Submitted Successfully!</h2>
-          <p className="mt-2 text-gray-600">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Bid Submitted Successfully!</h2>
+          <p className="mt-2 text-muted-foreground">
             Your bid has been received and is under review by our procurement team.
           </p>
         </div>
@@ -98,7 +98,7 @@ function BidPageContent({ id }: { id: string }) {
   if (isSubmitting) {
     return (
       <VendorLayout>
-        <main className="flex flex-1 items-center justify-center p-8">
+        <main className="flex flex-1 items-center justify-center p-4 sm:p-8">
           <div className="text-center">
             <div className="relative mx-auto h-16 w-16 animate-spin">
               <svg
@@ -113,20 +113,21 @@ function BidPageContent({ id }: { id: string }) {
                   r="45"
                   stroke="currentColor"
                   strokeWidth="10"
-                  className="text-gray-200"
+                  className="text-muted"
                 />
                 <path
                   d="M50 5A45 45 0 0 1 95 50"
-                  stroke="#4B0082"
+                  stroke="currentColor"
                   strokeWidth="10"
                   strokeLinecap="round"
+                  className="text-primary"
                 />
               </svg>
             </div>
-            <p className="mt-4 text-lg font-medium text-gray-900">
+            <p className="mt-4 text-lg font-medium text-foreground">
               Your bid&apos;s proposed price is being assessed by our models,
             </p>
-            <p className="text-sm text-gray-600">please give us a moment</p>
+            <p className="text-sm text-muted-foreground">please give us a moment</p>
           </div>
         </main>
       </VendorLayout>
@@ -140,35 +141,35 @@ function BidPageContent({ id }: { id: string }) {
       fallback={
         <VendorLayout>
           <div className="flex items-center justify-center min-h-screen">
-            <p>Loading Tender Details...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </VendorLayout>
       }
     >
       {tenderData && (
         <VendorLayout>
-          <header className="flex items-center justify-between border-b bg-white px-8 py-4">
+          <header className="flex items-center justify-between border-b bg-background px-4 sm:px-8 py-4">
             <div>
-              <h1 className="text-2xl font-semibold text-[#4B0082]">Submit Bid</h1>
-              <p className="text-sm text-gray-600">Complete the form below to submit your bid</p>
+              <h1 className="text-xl sm:text-2xl font-semibold text-primary">Submit Bid</h1>
+              <p className="text-sm text-muted-foreground">Complete the form below to submit your bid</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="font-medium text-gray-900">{safeUser.name}</p>
-                <p className="text-sm text-gray-600">Vendor</p>
+                <p className="font-medium text-foreground">{safeUser.name}</p>
+                <p className="text-sm text-muted-foreground">Vendor</p>
               </div>
-              <div className="relative h-12 w-12">
+              <div className="relative h-10 w-10 sm:h-12 sm:w-12">
                 <Image
                   src="/placeholder.svg"
                   alt="Profile picture"
                   fill
                   className="rounded-full object-cover"
                 />
-                <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white bg-green-400" />
+                <span className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-background bg-green-400" />
               </div>
             </div>
           </header>
-          <main className="p-8">
+          <main className="p-4 sm:p-8">
             <div className="mx-auto max-w-3xl">
               <Card>
                 <CardHeader>
@@ -227,19 +228,19 @@ function BidPageContent({ id }: { id: string }) {
                         <Label htmlFor="documents">Supporting Documents</Label>
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
-                            <Label htmlFor="proposal" className="text-sm text-gray-600">Technical Proposal Document</Label>
+                            <Label htmlFor="proposal" className="text-sm text-muted-foreground">Technical Proposal Document</Label>
                             <Input id="proposal" type="file" accept=".pdf,.doc,.docx" required />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="financial" className="text-sm text-gray-600">Financial Proposal</Label>
+                            <Label htmlFor="financial" className="text-sm text-muted-foreground">Financial Proposal</Label>
                             <Input id="financial" type="file" accept=".pdf,.xls,.xlsx" required />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="registration" className="text-sm text-gray-600">Company Registration</Label>
+                            <Label htmlFor="registration" className="text-sm text-muted-foreground">Company Registration</Label>
                             <Input id="registration" type="file" accept=".pdf" required />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="tax" className="text-sm text-gray-600">Tax Clearance Certificate</Label>
+                            <Label htmlFor="tax" className="text-sm text-muted-foreground">Tax Clearance Certificate</Label>
                             <Input id="tax" type="file" accept=".pdf" required />
                           </div>
                         </div>
@@ -247,7 +248,7 @@ function BidPageContent({ id }: { id: string }) {
 
                       <div className="space-y-2">
                         <Label htmlFor="terms">Terms and Conditions</Label>
-                        <div className="rounded-lg border p-4 text-sm text-gray-600">
+                        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
                           <p>By submitting this bid, you confirm that:</p>
                           <ul className="ml-4 mt-2 list-disc space-y-1">
                             <li>All information provided is accurate and truthful</li>
@@ -259,15 +260,15 @@ function BidPageContent({ id }: { id: string }) {
                       </div>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                       <Button 
                         type="submit" 
-                        className="bg-[#4B0082] hover:bg-[#3B0062]"
+                        className="w-full sm:w-auto"
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? 'Submitting...' : 'Submit Bid'}
                       </Button>
-                      <Button type="button" variant="outline">
+                      <Button type="button" variant="outline" className="w-full sm:w-auto">
                         Save as Draft
                       </Button>
                     </div>
@@ -287,7 +288,13 @@ export default function BidPage({ params }: { params: { id: string } }) {
   const resolvedParams = React.use(paramsPromise)
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <VendorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </VendorLayout>
+    }>
       <BidPageContent id={resolvedParams.id} />
     </Suspense>
   )

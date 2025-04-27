@@ -2,20 +2,16 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { 
-  BarChart3, 
+import {  
   Clock, 
   Award,
   TrendingUp,
   DollarSign,
   Calendar,
-  CheckCircle,
-  ArrowUpRight,
-  ArrowDownRight
+  CheckCircle
 } from 'lucide-react'
 import { VendorLayout } from "@/components/vendor-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -56,8 +52,8 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-[#4B0082]">Vendor Dashboard</h1>
-            <p className="text-sm md:text-base text-gray-600">Monitor your bidding activities and performance</p>
+            <h1 className="text-xl md:text-3xl font-bold text-primary">Vendor Dashboard</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Monitor your bidding activities and performance</p>
           </div>
 
           <Select 
@@ -77,21 +73,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Active Bids */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Active Bids
               </CardTitle>
-              <Clock className="h-4 w-4 text-gray-500" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.activeBids}
                 </div>
-                <Badge variant="outline" className="bg-blue-50">
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-400">
                   Pending
                 </Badge>
               </div>
@@ -101,17 +97,17 @@ export default function DashboardPage() {
           {/* Won Tenders */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Won Tenders
               </CardTitle>
-              <Award className="h-4 w-4 text-gray-500" />
+              <Award className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.wonTenders}
                 </div>
-                <Badge variant="outline" className="bg-green-50">
+                <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400">
                   Awarded
                 </Badge>
               </div>
@@ -121,17 +117,17 @@ export default function DashboardPage() {
           {/* Success Rate */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Success Rate
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-gray-500" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : `${dashboardStats.successRate.toFixed(1)}%`}
                 </div>
-                <Badge variant="outline" className="bg-purple-50">
+                <Badge variant="outline" className="bg-primary/10 text-primary">
                   Performance
                 </Badge>
               </div>
@@ -141,17 +137,17 @@ export default function DashboardPage() {
           {/* Total Value */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Value Won
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-gray-500" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : `$${dashboardStats.totalValue.toLocaleString()}`}
                 </div>
-                <Badge variant="outline" className="bg-yellow-50">
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
                   Revenue
                 </Badge>
               </div>
@@ -161,17 +157,17 @@ export default function DashboardPage() {
           {/* Pending Evaluations */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Pending Evaluations
               </CardTitle>
-              <CheckCircle className="h-4 w-4 text-gray-500" />
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-bold">
                   {isLoading ? '-' : dashboardStats.pendingEvaluations}
                 </div>
-                <Badge variant="outline" className="bg-orange-50">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-700 dark:text-orange-400">
                   In Review
                 </Badge>
               </div>
@@ -190,25 +186,25 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+                    <div key={i} className="h-12 bg-muted rounded animate-pulse" />
                   ))
                 ) : dashboardStats.recentActivities.length > 0 ? (
                   dashboardStats.recentActivities.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">{activity.type}</Badge>
                         <p className="text-sm">{activity.description}</p>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(activity.date).toLocaleDateString()}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500">No recent activities</p>
+                  <p className="text-center text-muted-foreground">No recent activities</p>
                 )}
               </div>
             </CardContent>
@@ -223,25 +219,25 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+                    <div key={i} className="h-12 bg-muted rounded animate-pulse" />
                   ))
                 ) : dashboardStats.upcomingDeadlines.length > 0 ? (
                   dashboardStats.upcomingDeadlines.map((deadline) => (
                     <div
                       key={deadline.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
-                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
                         <p className="text-sm">{deadline.title}</p>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(deadline.closingDate).toLocaleDateString()}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-gray-500">No upcoming deadlines</p>
+                  <p className="text-center text-muted-foreground">No upcoming deadlines</p>
                 )}
               </div>
             </CardContent>
