@@ -13,16 +13,15 @@ export default function Home() {
     <main className="min-h-screen bg-background text-foreground">
       <header className="fixed w-full bg-background/80 backdrop-blur-md z-50 border-b">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <Image
-                src="/Innobid Logo.jpg"
+                src="/android.png"
                 alt="InnoBid Logo"
-                width={200}
-                height={100}
+                width={100}
+                height={80}
                 priority
-                className="h-8 w-auto max-h-full object-contain"
               />
             </Link>
 
@@ -351,11 +350,10 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <Image
-                src="/Innobid Logo.jpg"
+                src="/android.png"
                 alt="InnoBid Logo"
-                width={150}
-                height={75}
-                className="h-8 w-auto"
+                width={50}
+                height={50}
               />
               <p className="text-sm text-muted-foreground mt-2">
                 &copy; {new Date().getFullYear()} InnoBid. All rights reserved.

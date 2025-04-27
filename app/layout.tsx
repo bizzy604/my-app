@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "swagger-ui-react/swagger-ui.css";
 import { Poppins } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
 import { NextAuthProvider } from '@/components/next-auth-provider'
 import { Toaster } from "@/components/ui/toaster"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -36,7 +35,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={poppins.className}>
-      <body>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
             <QueryProvider>
               <NextAuthProvider>
