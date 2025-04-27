@@ -48,6 +48,7 @@ const nextConfig = {
   
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
+      // Simple optimization config without custom CSS loaders
       config.optimization.splitChunks = {
         chunks: 'all',
         maxInitialRequests: 25,
