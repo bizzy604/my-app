@@ -32,7 +32,7 @@ interface BidDetail {
   }
   bidder: {
     name: string
-    company: string
+    company: string | null
     email: string
   }
   documents: Array<{
@@ -97,7 +97,7 @@ export default function TenderBidDetailsPage({ params }: { params: { id: string 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'ACCEPTED':
-        return <Badge variant="success">Accepted</Badge>
+        return <Badge variant="default" className="bg-green-500/10 text-green-700 dark:text-green-400">Accepted</Badge>
       case 'REJECTED':
         return <Badge variant="destructive">Rejected</Badge>
       default:

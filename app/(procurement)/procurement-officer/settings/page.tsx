@@ -21,9 +21,11 @@ import { updateUserProfile, updateUserSettings } from "@/app/actions/user-action
 
 interface NotificationSettings {
   emailNotifications: boolean
+  smsNotifications: boolean
   bidUpdates: boolean
-  tenderDeadlines: boolean
-  systemAnnouncements: boolean
+  tenderAlerts: boolean
+  marketingEmails: boolean
+  twoFactorAuth: boolean
 }
 
 export default function SettingsPage() {
@@ -32,9 +34,11 @@ export default function SettingsPage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
+    smsNotifications: true,
     bidUpdates: true,
-    tenderDeadlines: true,
-    systemAnnouncements: true
+    tenderAlerts: true,
+    marketingEmails: true,
+    twoFactorAuth: true
   })
 
   const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -224,6 +228,19 @@ export default function SettingsPage() {
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
+                  <Label>SMS Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Receive SMS updates</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.smsNotifications}
+                  onCheckedChange={() => handleNotificationChange('smsNotifications')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
                   <Label>Bid Updates</Label>
                   <p className="text-sm text-muted-foreground">Get notified about bid status changes</p>
                 </div>
@@ -237,12 +254,12 @@ export default function SettingsPage() {
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Tender Deadlines</Label>
+                  <Label>Tender Alerts</Label>
                   <p className="text-sm text-muted-foreground">Reminders about upcoming deadlines</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.tenderDeadlines}
-                  onCheckedChange={() => handleNotificationChange('tenderDeadlines')}
+                  checked={notificationSettings.tenderAlerts}
+                  onCheckedChange={() => handleNotificationChange('tenderAlerts')}
                 />
               </div>
               
@@ -250,12 +267,25 @@ export default function SettingsPage() {
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>System Announcements</Label>
-                  <p className="text-sm text-muted-foreground">Important system updates and news</p>
+                  <Label>Marketing Emails</Label>
+                  <p className="text-sm text-muted-foreground">Receive marketing emails</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.systemAnnouncements}
-                  onCheckedChange={() => handleNotificationChange('systemAnnouncements')}
+                  checked={notificationSettings.marketingEmails}
+                  onCheckedChange={() => handleNotificationChange('marketingEmails')}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Two-Factor Authentication</Label>
+                  <p className="text-sm text-muted-foreground">Enable two-factor authentication</p>
+                </div>
+                <Switch
+                  checked={notificationSettings.twoFactorAuth}
+                  onCheckedChange={() => handleNotificationChange('twoFactorAuth')}
                 />
               </div>
             </CardContent>

@@ -59,6 +59,21 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // Configure URLs for different environments
+  // The URL for URLs sent in emails will use NEXTAUTH_URL from env
+  // but NextAuth will still work correctly on localhost during development
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        // In production use secure cookies, in development allow non-secure
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   callbacks: {
     async jwt({ token, user, trigger }) {
       // If this is a sign-in event
@@ -220,7 +235,7 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/login',
-    error: '/login'
+    error: '/login',
   }
 }
 

@@ -3,7 +3,14 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache'
 
-export type NotificationType = 'TENDER' | 'BID' | 'SUPPORT_TICKET' | 'SYSTEM'
+export enum NotificationType {
+  TENDER_AWARD = 'TENDER_AWARD',
+  BID_STATUS_UPDATE = 'BID_STATUS_UPDATE',
+  TENDER_STATUS_UPDATE = 'TENDER_STATUS_UPDATE',
+  SYSTEM_ALERT = 'SYSTEM_ALERT',
+  MESSAGE = 'MESSAGE',
+  REMINDER = 'REMINDER'
+}
 
 interface NotificationData {
   type: NotificationType
@@ -44,6 +51,7 @@ export async function getNotifications(userId?: string) {
     return notifications.map(notification => ({
       ...notification,
       createdAt: notification.createdAt.toISOString(),
+      type: notification.type as NotificationType
     }))
   } catch (error) {
     console.error('Error fetching notifications:', error)

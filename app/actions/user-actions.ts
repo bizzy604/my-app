@@ -25,7 +25,7 @@ interface ProfileData {
   country: string
   postalCode: string
   businessType: string
-  establishmentDate: string
+  establishmentDate: string | Date | null
   website: string
 }
 
@@ -34,7 +34,7 @@ export async function updateUserSettings(userId: string, settings: UserSettings)
     await prisma.user.update({
       where: { id: parseInt(userId) },
       data: {
-        settings: settings as any // Type cast needed due to Prisma schema
+        settings: settings
       }
     })
 
@@ -60,7 +60,7 @@ export async function updateUserProfile(userId: string, profileData: ProfileData
         country: profileData.country,
         postalCode: profileData.postalCode,
         businessType: profileData.businessType as any,
-        establishmentDate: new Date(profileData.establishmentDate),
+        establishmentDate: profileData.establishmentDate ? (profileData.establishmentDate instanceof Date ? profileData.establishmentDate : new Date(profileData.establishmentDate)) : null,
         website: profileData.website
       }
     })

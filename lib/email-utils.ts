@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { emailTemplates } from './email-templates'
+import { createAppUrl } from './app-url';
 
 // Ensure environment variables are loaded
 if (!process.env.MAILERSEND_API_KEY) {
@@ -81,8 +82,8 @@ export async function generatePasswordResetToken(email: string): Promise<string>
 
 // RESETTING PASSWORD TEMPLATE
 export async function sendPasswordResetEmail(email: string, token: string, recipientName?: string) {
-  // Change reset link to point to set-new-password page
-  const resetLink = `${process.env.NEXTAUTH_URL}/set-new-password?token=${token}`
+  // Change reset link to point to set-new-password page with proper URL for email links
+  const resetLink = createAppUrl(`/set-new-password?token=${token}`, true);
 
   const sentFrom = new Sender(
     "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
@@ -190,7 +191,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 // EMAIL VERIFICATION TEMPLATE
 export async function sendVerificationEmail(email: string, token: string, recipientName?: string) {
-  const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+  const verificationLink = createAppUrl(`/verify-email?token=${token}`, true);
 
   const sentFrom = new Sender(
     "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
@@ -294,7 +295,7 @@ export async function sendSupportNotificationEmail({
           <p>Your support ticket (ID: ${ticketId}) has been updated.</p>
           <p>Please log in to your account to view the details.</p>
           <div style="margin-top: 20px; text-align: center;">
-            <a href="${process.env.NEXTAUTH_URL}/support-tickets/${ticketId}" 
+            <a href="${createAppUrl(`/support-tickets/${ticketId}`, true)}" 
                style="background-color: #4B0082; color: white; padding: 10px 20px; 
                       text-decoration: none; border-radius: 5px;">
               View Ticket

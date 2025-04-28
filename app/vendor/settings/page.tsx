@@ -33,7 +33,7 @@ export default function VendorSettings() {
       setSettings(newSettings)
 
       if (session?.user?.id) {
-        await updateUserSettings(session.user.id, newSettings)
+        await updateUserSettings(session.user.id.toString(), newSettings)
         toast({
           title: "Settings Updated",
           description: "Your preferences have been saved successfully.",
