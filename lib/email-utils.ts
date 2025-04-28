@@ -1,23 +1,20 @@
 import 'dotenv/config';
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { emailTemplates } from './email-templates'
 import { createAppUrl } from './app-url';
+import nodemailer from 'nodemailer';
 
-// Ensure environment variables are loaded
-if (!process.env.MAILERSEND_API_KEY) {
-  throw new Error('MAILERSEND_API_KEY is not defined in the environment variables')
-}
-
-// Initialize MailerSend with your API key
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY,
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
-
-// Add a logging utility
 function logEmailEvent(type: 'sent' | 'failed', email: string, context?: any) {
   console.log(JSON.stringify({
     type: `email_${type}`,
@@ -79,84 +76,74 @@ export async function generatePasswordResetToken(email: string): Promise<string>
   return token
 }
 
-
-// RESETTING PASSWORD TEMPLATE
 export async function sendPasswordResetEmail(email: string, token: string, recipientName?: string) {
-  // Change reset link to point to set-new-password page with proper URL for email links
   const resetLink = createAppUrl(`/set-new-password?token=${token}`, true);
 
-  const sentFrom = new Sender(
-    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
-    "Innobid"
-  );
-
-  const recipients = [
-    new Recipient(email)
-  ];
-
-  const emailParams = new EmailParams()
-    .setFrom(sentFrom)
-    .setTo(recipients)
-    .setSubject("Password Reset Request")
-    .setHtml(`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Password Reset</h1>
-          
-          <p style="color: #333; line-height: 1.6;">Hello${recipientName ? `, ${recipientName}` : ''},</p>
-          
-          <p style="color: #333; line-height: 1.6;">
-            You have requested to reset your password for your Innobid account. 
-            Click the button below to set a new password:
-          </p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a 
-              href="${resetLink}" 
-              style="
-                display: inline-block; 
-                background-color: #4B0082; 
-                color: white; 
-                padding: 12px 24px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-              "
-            >
-              Set New Password
-            </a>
-          </div>
-          
-          <p style="color: #666; font-size: 0.9em; text-align: center;">
-            If the button doesn't work, copy and paste this link into your browser:<br>
-            ${resetLink}
-          </p>
-          
-          <p style="color: #666; font-size: 0.9em; margin-top: 20px; text-align: center;">
-            This link will expire in 1 hour. If you didn't request this reset, 
-            please ignore this email.
-          </p>
-          
-          <div style="border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; text-align: center;">
-            <p style="color: #999; font-size: 0.8em;">
-              ${new Date().getFullYear()} Innobid. All rights reserved.
-            </p>
+  try {
+    const info = await transporter.sendMail({
+      from: `"Innobid" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Password Reset Request",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Password Reset</h1>
+            <p>Hello${recipientName ? `, ${recipientName}` : ''},</p>
+            <p>You requested to reset your password. Click the button below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #4B0082; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Set New Password
+              </a>
+            </div>
+            <p>If the button doesn't work, paste this link: ${resetLink}</p>
           </div>
         </div>
-      </div>
-    `)
-    .setText(`Reset your Innobid account password: ${resetLink}`);
-
-  try {
-    const response = await mailerSend.email.send(emailParams);
-    logEmailEvent('sent', email, { type: 'password_reset', response });
+      `,
+      text: `Reset your Innobid account password: ${resetLink}`
+    });
+    logEmailEvent('sent', email, { type: 'password_reset', response: info });
     return true;
   } catch (error) {
-    // Log the full error for debugging
-    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2));
-    
+    console.error('Detailed SMTP Error:', error);
     logEmailEvent('failed', email, { 
       type: 'password_reset', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return false;
+  }
+}
+
+export async function sendVerificationEmail(email: string, token: string, recipientName?: string) {
+  const verificationLink = createAppUrl(`/verify-email?token=${token}`, true);
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Innobid" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Verify Your Innobid Account",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Verify Your Email</h1>
+            <p>Hello${recipientName ? `, ${recipientName}` : ''},</p>
+            <p>Thank you for registering. Click below to verify:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationLink}" style="background-color: #4B0082; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Verify Email
+              </a>
+            </div>
+            <p>If it fails, use: ${verificationLink}</p>
+          </div>
+        </div>
+      `,
+      text: `Verify your Innobid account: ${verificationLink}`
+    });
+    logEmailEvent('sent', email, { type: 'verification', response: info });
+    return true;
+  } catch (error) {
+    console.error('Detailed SMTP Error:', error);
+    logEmailEvent('failed', email, { 
+      type: 'verification', 
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
     return false;
@@ -173,7 +160,6 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   if (!user) return false
 
-  // Hash the new password (assuming you're using bcrypt)
   const hashedPassword = await bcrypt.hash(newPassword, 10)
 
   await prisma.user.update({
@@ -188,89 +174,6 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return true
 }
 
-
-// EMAIL VERIFICATION TEMPLATE
-export async function sendVerificationEmail(email: string, token: string, recipientName?: string) {
-  const verificationLink = createAppUrl(`/verify-email?token=${token}`, true);
-
-  const sentFrom = new Sender(
-    "noreply@trial-ynrw7gy7362g2k8e.mlsender.net", 
-    "Innobid"
-  );
-
-  const recipients = [
-    new Recipient(email)
-  ];
-
-  const emailParams = new EmailParams()
-    .setFrom(sentFrom)
-    .setTo(recipients)
-    .setSubject("Verify Your Innobid Account")
-    .setHtml(`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h1 style="color: #4B0082; text-align: center; margin-bottom: 20px;">Verify Your Email</h1>
-          
-          <p style="color: #333; line-height: 1.6;">Hello${recipientName ? `, ${recipientName}` : ''},</p>
-          
-          <p style="color: #333; line-height: 1.6;">
-            Thank you for registering with Innobid. To complete your registration and activate your account, 
-            please click the verification button below:
-          </p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a 
-              href="${verificationLink}" 
-              style="
-                display: inline-block; 
-                background-color: #4B0082; 
-                color: white; 
-                padding: 12px 24px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-              "
-            >
-              Verify Email
-            </a>
-          </div>
-          
-          <p style="color: #666; font-size: 0.9em; text-align: center;">
-            If the button doesn't work, copy and paste this link into your browser:<br>
-            ${verificationLink}
-          </p>
-          
-          <p style="color: #666; font-size: 0.9em; margin-top: 20px; text-align: center;">
-            This link will expire in 24 hours. If you didn't create an account, 
-            please ignore this email.
-          </p>
-          
-          <div style="border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; text-align: center;">
-            <p style="color: #999; font-size: 0.8em;">
-              ${new Date().getFullYear()} Innobid. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </div>
-    `)
-    .setText(`Verify your Innobid account: ${verificationLink}`);
-
-  try {
-    const response = await mailerSend.email.send(emailParams);
-    logEmailEvent('sent', email, { type: 'verification', response });
-    return true;
-  } catch (error) {
-    // Log the full error for debugging
-    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2));
-    
-    logEmailEvent('failed', email, { 
-      type: 'verification', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
-    return false;
-  }
-}
-
 interface EmailNotification {
   to: string
   subject: string
@@ -279,41 +182,35 @@ interface EmailNotification {
   status?: string
 }
 
-export async function sendSupportNotificationEmail({
-  to,
-  subject,
-  ticketId
-}: EmailNotification) {
+export async function sendSupportNotificationEmail({ to, subject, ticketId }: EmailNotification) {
   try {
-    const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Support'))
-      .setTo([new Recipient(to)])
-      .setSubject(subject || 'Support Ticket Update')
-      .setHtml(`
+    const info = await transporter.sendMail({
+      from: `"Innobid Support" <${process.env.SMTP_USER}>`,
+      to,
+      subject: subject || 'Support Ticket Update',
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2>Support Ticket Update</h2>
           <p>Your support ticket (ID: ${ticketId}) has been updated.</p>
           <p>Please log in to your account to view the details.</p>
           <div style="margin-top: 20px; text-align: center;">
-            <a href="${createAppUrl(`/support-tickets/${ticketId}`, true)}" 
-               style="background-color: #4B0082; color: white; padding: 10px 20px; 
-                      text-decoration: none; border-radius: 5px;">
+            <a href="${createAppUrl(`/support-tickets/${ticketId}`, true)}" style="background-color: #4B0082; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               View Ticket
             </a>
           </div>
         </div>
-      `)
-      .setText(`Your support ticket (ID: ${ticketId}) has been updated. 
-      Please log in to your account to view the details.`)
-
-    const response = await mailerSend.email.send(emailParams)
-
-    return true
+      `,
+      text: `Your support ticket (ID: ${ticketId}) has been updated. Please log in to your account to view the details.`
+    });
+    logEmailEvent('sent', to, { type: 'support', response: info });
+    return true;
   } catch (error) {
-    console.error('Failed to send support notification email:', error)
-    // Log detailed error for debugging
-    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
-    return false
+    console.error('Detailed SMTP Error:', error);
+    logEmailEvent('failed', to, { 
+      type: 'support', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return false;
   }
 }
 
@@ -329,15 +226,7 @@ interface EmailData {
   nextSteps?: string
 }
 
-export async function sendTenderAwardEmail({
-  to,
-  subject,
-  data
-}: {
-  to: string
-  subject: string
-  data: EmailData
-}) {
+export async function sendTenderAwardEmail({ to, subject, data }: { to: string; subject: string; data: EmailData }) {
   try {
     const emailContent = `
       Dear ${data.recipientName},
@@ -354,13 +243,13 @@ export async function sendTenderAwardEmail({
 
       Best regards,
       Procurement Team
-    `
+    `;
 
-    const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
-      .setTo([new Recipient(to)])
-      .setSubject(subject || 'Tender Award Notification')
-      .setHtml(`
+    const info = await transporter.sendMail({
+      from: `"Innobid Notifications" <${process.env.SMTP_USER}>`,
+      to,
+      subject: subject || 'Tender Award Notification',
+      html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Tender Award Notification</h2>
           <p>Dear ${data.recipientName},</p>
@@ -375,21 +264,17 @@ export async function sendTenderAwardEmail({
           <p>Please log in to the system to view more details and proceed with the necessary documentation.</p>
           <p>Best regards,<br>Procurement Team</p>
         </div>
-      `)
-      .setText(emailContent)
-
-    const response = await mailerSend.email.send(emailParams)
-
-    console.log('Email sent successfully:', response)
-    return true
+      `,
+      text: emailContent
+    });
+    logEmailEvent('sent', to, { type: 'award', response: info });
+    return true;
   } catch (error) {
-    console.error('Failed to send email:', error)
-    // Log detailed error for debugging
-    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
-    throw new Error('Failed to send email notification')
+    console.error('Detailed SMTP Error:', error);
+    logEmailEvent('failed', to, { type: 'award', error: error instanceof Error ? error.message : 'Unknown error' });
+    return false;
   }
 }
-
 
 export async function sendBidStatusEmail(
   to: string,
@@ -397,39 +282,19 @@ export async function sendBidStatusEmail(
   data: EmailData
 ) {
   try {
-    const template = emailTemplates[status](data)
-    
-    const emailParams = new EmailParams()
-      .setFrom(new Sender('noreply@trial-ynrw7gy7362g2k8e.mlsender.net', 'Innobid Notifications'))
-      .setTo([new Recipient(to)])
-      .setSubject(template.subject)
-      .setHtml(template.html)
-      .setText(template.subject)
-
-    const response = await mailerSend.email.send(emailParams)
-
-    console.log('Email sent successfully:', response)
-    
-    // Log email event for tracking
-    logEmailEvent('sent', to, { 
-      status, 
-      templateType: status, 
-      recipientName: data.recipientName 
-    })
-
-    return true
+    const template = emailTemplates[status](data);
+    const info = await transporter.sendMail({
+      from: `"Innobid Notifications" <${process.env.SMTP_USER}>`,
+      to,
+      subject: template.subject,
+      html: template.html,
+      text: template.subject
+    });
+    logEmailEvent('sent', to, { status, templateType: status, recipientName: data.recipientName, response: info });
+    return true;
   } catch (error) {
-    console.error('Failed to send email:', error)
-    
-    // Log detailed error for debugging
-    console.error('Detailed MailerSend Error:', JSON.stringify(error, null, 2))
-    
-    // Log email event for failed send
-    logEmailEvent('failed', to, { 
-      status, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-
-    return false
+    console.error('Detailed SMTP Error:', error);
+    logEmailEvent('failed', to, { status, error: error instanceof Error ? error.message : 'Unknown error' });
+    return false;
   }
 }
