@@ -128,16 +128,38 @@ export async function updateBid(
     if (data.documents && data.documents.length > 0) {
       for (const doc of data.documents) {
         if (doc.id) {
-          await prisma.document.update({
-            where: { id: doc.id },
-            data: {
-              fileName: doc.fileName,
-              fileSize: doc.fileSize,
-              fileType: doc.fileType,
-              url: doc.url,
-              bidId: bidId
+          try {
+            // Try to update the document, but catch any "not found" errors
+            await prisma.document.update({
+              where: { id: doc.id },
+              data: {
+                fileName: doc.fileName,
+                fileSize: doc.fileSize,
+                fileType: doc.fileType,
+                url: doc.url,
+                bidId: bidId
+              }
+            });
+          } catch (error: any) {
+            // If the document wasn't found (P2025 error), create it instead
+            if (error?.code === 'P2025') {
+              await prisma.document.create({
+                data: {
+                  fileName: doc.fileName,
+                  fileSize: doc.fileSize,
+                  fileType: doc.fileType,
+                  url: doc.url,
+                  bidId: bidId,
+                  userId: doc.userId || 0,
+                  tenderId: doc.tenderId || null,
+                  uploadDate: new Date()
+                }
+              });
+            } else {
+              // Rethrow any other errors
+              throw error;
             }
-          })
+          }
         } else {
           await prisma.document.create({
             data: {

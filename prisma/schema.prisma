@@ -36,6 +36,8 @@ model User {
   subscriptionId               String?
   subscriptionStatus           String?
   subscriptionTier             String?
+  
+  // Application Relations
   aiAnalyses                   AIAnalysis[]
   bids                         Bid[]
   evaluatedBids                BidEvaluationLog[]     @relation("EvaluatedBy")

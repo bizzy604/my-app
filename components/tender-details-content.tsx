@@ -194,8 +194,6 @@ export function TenderDetailsContent({ tender, shortlistedBids }: TenderDetailsC
               <DocumentManager 
                 tenderId={tender.id}
                 userId={session?.user?.id ? String(session.user.id) : ''}
-                documents={tender.documents || []}
-                readOnly
               />
             </div>
           </CardContent>

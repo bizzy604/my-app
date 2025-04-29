@@ -6,10 +6,11 @@ import { CitizenLayout } from "@/components/citizen-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, MapPin, Calendar, Building2 } from 'lucide-react'
-import { getTenders } from "@/app/actions/tender-actions"
-import { TenderStatus } from '@prisma/client'
+import { getPaginatedTenders } from "@/app/actions/paginated-tender-actions"
+import { TenderStatus, BidStatus } from '@prisma/client'
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Pagination } from "@/components/ui/pagination"
 
 type Tender = {
   id: string;
@@ -72,21 +73,54 @@ export default function CitizenTendersPage() {
   const [tenders, setTenders] = useState<Tender[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageSize] = useState(10)
 
   useEffect(() => {
     setLoading(true)
-    getTenders({ status: TenderStatus.OPEN }).then((fetchedTenders) => {
-      const transformedTenders: Tender[] = fetchedTenders.map(tender => ({
-        ...tender,
-        closingDate: new Date(tender.closingDate),
-        awardedTo: null,
-        amount: null,
-        awardDate: null
-      }))
+    getPaginatedTenders({ 
+      status: TenderStatus.OPEN,
+      page: currentPage,
+      pageSize
+    }).then((result) => {
+      const transformedTenders = result.tenders.map(tender => {
+        return {
+          id: tender.id,
+          title: tender.title,
+          sector: tender.sector,
+          location: tender.location,
+          description: tender.description,
+          closingDate: new Date(tender.closingDate),
+          status: tender.status,
+          awardedTo: null,
+          amount: null,
+          awardDate: null,
+          issuer: {
+            id: tender.issuer.id,
+            name: tender.issuer.name,
+            company: tender.issuer.company
+          },
+          bids: tender.bids.map(bid => ({
+            id: bid.id,
+            status: bid.status,
+            amount: bid.amount,
+            submissionDate: new Date(bid.submissionDate),
+            evaluationScore: (bid as any).evaluationScore || null
+          }))
+        };
+      }) as Tender[];
+      
       setTenders(transformedTenders)
+      setTotalPages(result.pagination.totalPages)
       setLoading(false)
     })
-  }, [])
+  }, [currentPage, pageSize])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <CitizenLayout>
@@ -145,6 +179,17 @@ export default function CitizenTendersPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && (
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages || 1}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </main>

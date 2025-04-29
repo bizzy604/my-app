@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { getNotifications, markAsRead, deleteNotification, NotificationType } from "@/app/actions/notification-actions"
+import { getNotifications, markAsRead, deleteNotification } from "@/app/actions/notification-actions"
+import { NotificationType } from "@/types/notification-types"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
 import { useSession } from "next-auth/react"
 
@@ -33,7 +34,9 @@ interface Notification {
   message: string
   createdAt: string
   isRead: boolean
-  userId: string
+  userId: number
+  bidId: string | null
+  tenderId: string | null
   link?: string
 }
 
@@ -93,11 +96,13 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'TENDER':
+      case NotificationType.TENDER_STATUS_UPDATE:
+      case NotificationType.TENDER_AWARD:
         return <FileText className="h-5 w-5" />
-      case 'BID':
+      case NotificationType.BID_STATUS_UPDATE:
         return <CheckCircle2 className="h-5 w-5" />
-      case 'SUPPORT_TICKET':
+      case NotificationType.SYSTEM_ALERT:
+      case NotificationType.MESSAGE:
         return <MessageSquare className="h-5 w-5" />
       default:
         return <Bell className="h-5 w-5" />

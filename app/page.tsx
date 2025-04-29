@@ -258,7 +258,7 @@ export default function Home() {
       </section>
 
       {/* Other Services */}
-      <section id="services" className="py-16 md:py-20">
+      <section id="services" className="py-16 md:py-20 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8">Other Services</h2>
@@ -296,7 +296,7 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-16 md:py-20 bg-muted/50">
+      <section id="contact" className="bg-gradient-to-b from-primary/5 to-background pt-24 md:pt-32">
         <div className="container mx-auto px-4">
           <div className="max-w-xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-8">Contact Us</h2>
@@ -353,7 +353,7 @@ export default function Home() {
                 src="/android.png"
                 alt="InnoBid Logo"
                 width={50}
-                height={50}
+                height={30}
               />
               <p className="text-sm text-muted-foreground mt-2">
                 &copy; {new Date().getFullYear()} InnoBid. All rights reserved.

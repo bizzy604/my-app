@@ -1,8 +1,8 @@
-// Import required dependencies for NextAuth v4
+// Import required dependencies for NextAuth v5
 import { NextAuthOptions, getServerSession as getNextAuthServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { CustomPrismaAdapter } from "./auth-adapter"; // Import our custom adapter
 import { prisma } from '@/lib/prisma'
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
@@ -52,13 +52,14 @@ declare module "next-auth/jwt" {
   }
 }
 
-// Define auth configuration for NextAuth v4
+// Define auth configuration for NextAuth v5
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: PrismaAdapter(prisma),
+  // Use our custom adapter that's compatible with NextAuth v5
+  adapter: CustomPrismaAdapter(prisma) as any,
   session: {
-    strategy: "jwt",
-    maxAge: 1* 24 * 60 * 60, // 1 day
+    strategy: "jwt", // Use JWT instead of database sessions
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Configure URLs for different environments
   // The URL for URLs sent in emails will use NEXTAUTH_URL from env

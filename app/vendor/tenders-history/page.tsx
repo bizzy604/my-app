@@ -7,8 +7,9 @@ import { VendorLayout } from "@/components/vendor-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle, XCircle } from 'lucide-react'
-import { getBidHistory } from "@/app/actions/tender-actions"
+import { getPaginatedBidHistory } from "@/app/actions/paginated-bid-actions"
 import { formatDate, formatCurrency } from "@/lib/utils"
+import { Pagination } from "@/components/ui/pagination"
 
 interface BidHistory {
   id: string
@@ -32,14 +33,18 @@ export default function TendersHistoryPage() {
   const { data: session } = useSession()
   const [bids, setBids] = useState<BidHistory[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageSize] = useState(10)
 
   useEffect(() => {
     const fetchBids = async () => {
       if (session?.user?.id) {
         try {
           const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id
-          const history = await getBidHistory(userId)
-          setBids(history)
+          const result = await getPaginatedBidHistory(userId, currentPage, pageSize)
+          setBids(result.bids)
+          setTotalPages(result.pagination.totalPages)
         } catch (error) {
           console.error('Error fetching bid history:', error)
         } finally {
@@ -49,7 +54,12 @@ export default function TendersHistoryPage() {
     }
 
     fetchBids()
-  }, [session])
+  }, [session, currentPage, pageSize])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -123,6 +133,17 @@ export default function TendersHistoryPage() {
             </Card>
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
     </VendorLayout>
   )

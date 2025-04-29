@@ -38,7 +38,9 @@ export default function ApplyTenderPage({ params }: { params: { id: string } }) 
     if (e.target.files && e.target.files.length > 0) {
       const newUploads: FileUpload[] = []
       
-      for (const file of e.target.files) {
+      // Convert FileList to array for iteration
+      const filesArray = Array.from(e.target.files);
+      for (const file of filesArray) {
         // Validate file size (e.g., 10MB limit)
         if (file.size > 10 * 1024 * 1024) {
           toast({

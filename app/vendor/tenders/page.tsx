@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getTenders } from "@/app/actions/tender-actions"
+import { getPaginatedTenders } from "@/app/actions/paginated-tender-actions"
 import { useToast } from "@/hooks/use-toast"
 import { TenderStatus } from '@prisma/client'
 import { Search, Filter, MapPin, Calendar, DollarSign } from 'lucide-react'
 import { formatCurrency, formatDate } from "@/lib/utils"
 import Link from "next/link"
+import { Pagination } from "@/components/ui/pagination"
 
 export default function TendersPage() {
   const { data: session } = useSession()
@@ -22,12 +23,22 @@ export default function TendersPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageSize] = useState(10)
 
   useEffect(() => {
     const fetchTenders = async () => {
       try {
-        const data = await getTenders({ status: TenderStatus.OPEN })
-        setTenders(data)
+        setLoading(true)
+        const data = await getPaginatedTenders({ 
+          status: TenderStatus.OPEN,
+          page: currentPage,
+          pageSize
+        })
+        
+        setTenders(data.tenders)
+        setTotalPages(data.pagination.totalPages)
       } catch (error: any) {
         toast({
           title: "Error",
@@ -40,7 +51,12 @@ export default function TendersPage() {
     }
 
     fetchTenders()
-  }, [toast])
+  }, [toast, currentPage, pageSize])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const filteredTenders = tenders.filter(tender => 
     tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,6 +157,17 @@ export default function TendersPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && (
+          <div className="mt-6 flex justify-center">
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages || 1}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
 
         {/* Mobile Filter Panel */}
         {filterOpen && (

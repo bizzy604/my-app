@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, Calendar, DollarSign, Users, FileCheck } from 'lucide-react'
-import { getTenderHistory } from "@/app/actions/tender-actions"
+import { getPaginatedTenderHistory } from "@/app/actions/paginated-tender-history-actions"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { TenderStatus } from '@prisma/client'
+import { Pagination } from "@/components/ui/pagination"
 
 interface TenderHistory {
   id: string
@@ -30,18 +31,20 @@ export default function TendersHistoryPage() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10)
 
-  const { data: tendersData, isLoading } = useHydrationSafeClient(() => 
-    getTenderHistory()
-  )
+  const { data: tendersData = { tenders: [], pagination: { totalPages: 1, currentPage: 1 } }, isLoading } = useHydrationSafeClient(() => 
+    getPaginatedTenderHistory(currentPage, pageSize)
+  , [currentPage, pageSize])
 
   const tenders: TenderHistory[] = useMemo(() => {
-    if (!tendersData) return []
+    if (!tendersData?.tenders) return []
     
-    return tendersData.map((tender: any) => ({
+    return tendersData.tenders.map((tender: any) => ({
       id: tender.id,
       title: tender.title,
-      reference: tender.reference,
+      reference: tender.id.substring(0, 8).toUpperCase(),
       status: tender.status,
       budget: tender.budget,
       closingDate: tender.closingDate?.toISOString() || '',
@@ -59,6 +62,11 @@ export default function TendersHistoryPage() {
     const matchesStatus = filterStatus === 'all' || tender?.status === filterStatus
     return matchesSearch && matchesStatus
   })
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <DashboardLayout>
@@ -135,7 +143,24 @@ export default function TendersHistoryPage() {
               </CardContent>
             </Card>
           ))}
+
+          {filteredTenders.length === 0 && !isLoading && (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              No tenders found matching your criteria
+            </div>
+          )}
         </div>
+
+        {/* Pagination */}
+        {!isLoading && tendersData?.pagination && tendersData.pagination.totalPages > 1 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={tendersData.pagination.totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
@@ -154,4 +179,4 @@ function getStatusVariant(status: string) {
     default:
       return 'default'
   }
-} 
+}

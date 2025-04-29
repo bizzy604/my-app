@@ -21,6 +21,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // Check for callbackUrl in URL and clear it if present
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('callbackUrl')) {
+      // Remove the callbackUrl param to prevent redirect loops
+      url.searchParams.delete('callbackUrl');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, []);
+
   // Check if user is already logged in and redirect
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.role) {
@@ -103,13 +113,12 @@ export default function LoginPage() {
               const redirectPath = getUserRedirectPath(userData.role.toLowerCase());
               console.log(`Redirecting to: ${redirectPath}`);
               
-              // Create full URL using current domain (works in both dev and prod)
-              const currentOrigin = window.location.origin; // Gets localhost:3000 or innobid.net
-              const fullRedirectUrl = `${currentOrigin}${redirectPath}`;
-              console.log(`Full redirect URL: ${fullRedirectUrl}`);
+              // MUCH SIMPLER APPROACH: Replace the entire URL to force a complete page reload
+              // This completely bypasses NextAuth's client-side redirection
+              window.location.replace(window.location.origin + redirectPath);
               
-              // Use full page navigation for reliable redirection
-              window.location.href = fullRedirectUrl;
+              // Set a small delay to ensure no further code executes
+              await new Promise(resolve => setTimeout(resolve, 100));
               return;
             }
           }
@@ -118,8 +127,8 @@ export default function LoginPage() {
         }
         
         // Fallback to default path
-        console.log('Using fallback redirect to procurement dashboard');
-        window.location.href = '/';
+        console.log('Using fallback redirect to home');
+        window.location.replace('/');
       }
 
       setIsLoading(false)

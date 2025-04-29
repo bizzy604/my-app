@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CitizenLayout } from "@/components/citizen-layout"
-import { getTenders } from "@/app/actions/tender-actions"
-import { TenderStatus } from '@prisma/client'
+import { getPaginatedTenders } from "@/app/actions/paginated-tender-actions"
+import { TenderStatus, BidStatus } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Award, Building2, DollarSign, Calendar } from 'lucide-react'
 import { LoadingSpinner } from "@/components/loading-spinner"
+import { Pagination } from "@/components/ui/pagination"
 
 type Tender = {
   id: string;
@@ -39,24 +40,64 @@ export default function CitizenAwardedTendersPage() {
   const [awardedTenders, setAwardedTenders] = useState<Tender[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageSize] = useState(10)
 
   useEffect(() => {
     setLoading(true)
-    getTenders({ status: TenderStatus.AWARDED }).then((tenders) => {
-      const transformedTenders: Tender[] = tenders.map(tender => ({
-        ...tender,
-        closingDate: new Date(tender.closingDate),
-        awardDate: tender.bids && tender.bids.length > 0 
-          ? new Date(tender.bids[tender.bids.length - 1].submissionDate) 
-          : null,
-        amount: tender.bids && tender.bids.length > 0 
-          ? tender.bids[tender.bids.length - 1].amount 
-          : null
-      }))
+    getPaginatedTenders({ 
+      status: TenderStatus.AWARDED,
+      page: currentPage,
+      pageSize
+    }).then((result) => {
+      // Use safer property access with type assertions
+      const transformedTenders = result.tenders.map(tender => {
+        // Find the awarded bid if exists
+        const awardedBid = tender.bids.find(bid => bid.status === BidStatus.ACCEPTED);
+        
+        // Use type assertion for properties not directly accessible
+        const tenderAny = tender as any;
+        
+        return {
+          id: tender.id,
+          title: tender.title,
+          sector: tender.sector,
+          location: tender.location,
+          description: tender.description,
+          closingDate: new Date(tender.closingDate),
+          status: tender.status,
+          awardedTo: tenderAny.awardedTo || null,
+          amount: awardedBid?.amount || null,
+          awardDate: tenderAny.awardDate ? new Date(tenderAny.awardDate) : null,
+          issuer: {
+            id: tender.issuer.id,
+            name: tender.issuer.name,
+            company: tender.issuer.company
+          },
+          bids: tender.bids.map(bid => ({
+            id: bid.id,
+            status: bid.status,
+            amount: bid.amount,
+            submissionDate: new Date(bid.submissionDate),
+            evaluationScore: (bid as any).evaluationScore || null
+          }))
+        };
+      }) as Tender[];
+      
       setAwardedTenders(transformedTenders)
+      setTotalPages(result.pagination.totalPages)
+      setLoading(false)
+    }).catch(err => {
+      console.error('Error fetching tenders:', err)
       setLoading(false)
     })
-  }, [])
+  }, [currentPage, pageSize])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <CitizenLayout>
@@ -117,6 +158,17 @@ export default function CitizenAwardedTendersPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && (
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages || 1}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </main>

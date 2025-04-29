@@ -2,6 +2,7 @@
 
 import { SWRConfig } from 'swr'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ToastProvider } from '@/components/ui/use-toast'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -11,14 +12,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <SWRConfig 
-        value={{
-          revalidateOnFocus: false,
-          fetcher: (url: string) => fetch(url).then(res => res.json())
-        }}
-      >
-        {children}
-      </SWRConfig>
+      <ToastProvider>
+        <SWRConfig 
+          value={{
+            revalidateOnFocus: false,
+            fetcher: (url: string) => fetch(url).then(res => res.json())
+          }}
+        >
+          {children}
+        </SWRConfig>
+      </ToastProvider>
     </ThemeProvider>
   )
 }

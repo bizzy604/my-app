@@ -216,7 +216,7 @@ function TenderDetailsContent({ id }: { id: string }) {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => router.push(`/vendor/my-bids`)}
+                      onClick={() => router.push(`/vendor/tenders-history`)}
                       className="w-full md:w-auto"
                     >
                       View All My Bids

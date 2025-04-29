@@ -12,6 +12,7 @@ interface UserSettings {
   tenderAlerts: boolean
   marketingEmails: boolean
   twoFactorAuth: boolean
+  [key: string]: boolean | string | number | null
 }
 
 interface ProfileData {
@@ -34,7 +35,7 @@ export async function updateUserSettings(userId: string, settings: UserSettings)
     await prisma.user.update({
       where: { id: parseInt(userId) },
       data: {
-        settings: settings
+        settings: settings as any
       }
     })
 
@@ -116,7 +117,7 @@ export async function requestPasswordReset(email: string) {
     }
 
     // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex')
+    const resetToken = require('crypto').randomBytes(32).toString('hex')
     const hashedToken = await bcrypt.hash(resetToken, 10)
 
     // Save token to database

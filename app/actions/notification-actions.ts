@@ -2,15 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache'
-
-export enum NotificationType {
-  TENDER_AWARD = 'TENDER_AWARD',
-  BID_STATUS_UPDATE = 'BID_STATUS_UPDATE',
-  TENDER_STATUS_UPDATE = 'TENDER_STATUS_UPDATE',
-  SYSTEM_ALERT = 'SYSTEM_ALERT',
-  MESSAGE = 'MESSAGE',
-  REMINDER = 'REMINDER'
-}
+import { NotificationType } from '@/types/notification-types';
 
 interface NotificationData {
   type: NotificationType

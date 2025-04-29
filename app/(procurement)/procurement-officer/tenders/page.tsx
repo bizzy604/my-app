@@ -6,8 +6,10 @@ import { Plus, Search, Filter } from 'lucide-react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getTenders, deleteTender } from "@/app/actions/tender-actions"
+import { deleteTender } from "@/app/actions/tender-actions"
+import { getPaginatedTenders } from "@/app/actions/paginated-tender-actions"
 import { useHydrationSafeClient } from "@/components/hydration-safe-client-component"
+import { Pagination } from "@/components/ui/pagination"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,11 +43,16 @@ export default function TendersPage() {
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [statusMessage, setStatusMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10)
 
-  const { data: tendersData = [], isLoading } = useHydrationSafeClient(() => getTenders(), [refreshKey])
+  const { data: tendersData = { tenders: [], pagination: { totalPages: 1, currentPage: 1 } }, isLoading } = useHydrationSafeClient(
+    () => getPaginatedTenders({ page: currentPage, pageSize }),
+    [refreshKey, currentPage, pageSize]
+  )
 
   // Simplify the tender data to match the TenderCard component's expectations
-  const tenders: SimplifiedTender[] = Array.isArray(tendersData) ? tendersData.map(tender => ({
+  const tenders: SimplifiedTender[] = Array.isArray(tendersData?.tenders) ? tendersData.tenders.map(tender => ({
     id: tender.id,
     title: tender.title,
     description: tender.description,
@@ -57,11 +64,19 @@ export default function TendersPage() {
     closingDate: tender.closingDate.toString()
   })) : [];
 
+  // Debug logging - remove in production
+  console.log('Pagination info:', {
+    currentPage,
+    totalPages: tendersData?.pagination?.totalPages,
+    hasMultiplePages: tendersData?.pagination?.totalPages > 1,
+    tenderCount: tenders.length
+  });
+
   const handleEdit = (tenderId: string) => {
     router.push(`/procurement-officer/tenders/${tenderId}/edit`)
   }
 
-  const handleDelete = async (tenderId: string) => {
+  const handleDelete = (tenderId: string) => {
     setTenderToDelete(tenderId)
     setIsAlertOpen(true)
   }
@@ -95,6 +110,11 @@ export default function TendersPage() {
       }, 3000)
     }
   }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <DashboardLayout>
@@ -183,6 +203,17 @@ export default function TendersPage() {
           )}
         </div>
 
+        {/* Pagination */}
+        {!isLoading && (
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={tendersData?.pagination?.totalPages || 1}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+
         {/* Mobile Filter Button */}
         <Button
           variant="outline"
@@ -194,18 +225,16 @@ export default function TendersPage() {
         </Button>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the tender
-              and all associated bids and documents.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
           </AlertDialogHeader>
+          <AlertDialogDescription>
+            Are you sure you want to delete this tender? This action cannot be undone.
+          </AlertDialogDescription>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setIsAlertOpen(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={isDeleting}
