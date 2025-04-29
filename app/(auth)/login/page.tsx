@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { signIn, signOut, useSession, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
@@ -55,14 +55,13 @@ export default function LoginPage() {
     const password = formData.get('password') as string
 
     try {
-      // Attempt to sign out first to clear previous session
-      await signOut({ redirect: false })
-
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false  // We'll handle redirection manually
-      })
+        redirect: false
+      });
+
+      console.log('SignIn results:', result);
 
       if (result?.error) {
         // Check for email verification error
@@ -85,10 +84,44 @@ export default function LoginPage() {
         })
         setIsLoading(false)
         return
+      } else if (result?.ok) {
+        console.log('Login successful, determining role...');
+        
+        try {
+          // Get role directly from backend
+          const roleResponse = await fetch('/api/auth/redirect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          
+          if (roleResponse.ok) {
+            const userData = await roleResponse.json();
+            console.log('User data for redirect:', userData);
+            
+            if (userData.role) {
+              const redirectPath = getUserRedirectPath(userData.role.toLowerCase());
+              console.log(`Redirecting to: ${redirectPath}`);
+              
+              // Create full URL using current domain (works in both dev and prod)
+              const currentOrigin = window.location.origin; // Gets localhost:3000 or innobid.net
+              const fullRedirectUrl = `${currentOrigin}${redirectPath}`;
+              console.log(`Full redirect URL: ${fullRedirectUrl}`);
+              
+              // Use full page navigation for reliable redirection
+              window.location.href = fullRedirectUrl;
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching redirect path:', error);
+        }
+        
+        // Fallback to default path
+        console.log('Using fallback redirect to procurement dashboard');
+        window.location.href = '/';
       }
 
-      // After successful sign-in, useSession will update automatically
-      // and the useEffect above will handle the redirection
       setIsLoading(false)
     } catch (error) {
       console.error('Login error:', error)

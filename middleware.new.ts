@@ -7,14 +7,7 @@ const publicPaths = [
   '/login',
   '/signup',
   '/reset-password',
-  '/api/auth',                 
-  '/api/auth/callback',        // Add this
-  '/api/auth/signin',          // Add this
-  '/api/auth/signout',         // Add this
-  '/api/auth/session',         // Add this
-  '/api/auth/csrf',            // Add this
-  '/api/auth/providers',       // Add this
-  '/api/auth/callback/credentials', // Add this
+  '/api/auth',                 // all NextAuth endpoints
   '/pricing',
   '/subscription/success',
   '/api/create-checkout-session',
