@@ -9,14 +9,18 @@
  * In development: Uses NEXT_PUBLIC_APP_URL for email links, NEXTAUTH_URL for auth
  */
 export function getAppBaseUrl(forEmailLink = false): string {
-  // For email verification links and similar, even in development,
-  // we want to use the production URL so users can click them
-  if (process.env.NODE_ENV !== 'production' && forEmailLink) {
-    return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  // For production, always use NEXTAUTH_URL from environment
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXTAUTH_URL || '';
   }
   
-  // For other operations, use the standard NextAuth URL
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  // For development environment
+  if (forEmailLink && process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  // Default fallback for local development
+  return 'http://localhost:3000';
 }
 
 /**

@@ -69,12 +69,29 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "none", // Changed from "lax" to "none" to work across domains
         path: "/",
-        // In production use secure cookies, in development allow non-secure
-        secure: process.env.NODE_ENV === "production",
+        secure: true, // Always use secure cookies in production
       },
     },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "none", // Allow cross-domain
+        path: "/",
+        secure: true,
+      }
+    },
+    csrfToken: {
+      name: 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      }
+    }
   },
   callbacks: {
     async jwt({ token, user, trigger }) {
