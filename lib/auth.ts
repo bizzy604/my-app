@@ -1,8 +1,6 @@
 // Import required dependencies for NextAuth v5
 import { NextAuthOptions, getServerSession as getNextAuthServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
-import { CustomPrismaAdapter } from "./auth-adapter"; // Import our custom adapter
 import { prisma } from '@/lib/prisma'
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
@@ -74,10 +72,8 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NEXTAUTH_DEBUG === "true",
-  // Use our custom adapter that's compatible with NextAuth v5
-  adapter: CustomPrismaAdapter(prisma) as any,
   session: {
-    strategy: "jwt", // Use JWT instead of database sessions
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
@@ -87,12 +83,13 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: "next-auth.session-token", // Don't use __Secure- prefix since we're behind nginx
+      name: "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: false, // Set to false since we're using HTTP behind nginx
+        secure: process.env.NODE_ENV === 'production', // Enable secure in production
+        domain: process.env.NODE_ENV === 'production' ? '.innobid.net' : undefined // Add domain in production
       }
     }
   },
@@ -120,20 +117,11 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.userUpdatedAt = user.updatedAt?.getTime() || Date.now();
-        token.subscriptionLastChecked = Date.now();
         
-        // Initialize subscription values
-        token.hasActiveSubscription = false;
-        token.subscriptionTier = null;
-
         // Add subscription status to token for procurement officers
         if (user.role === 'PROCUREMENT') {
-          const subscriptionData = await getUserSubscriptionData(Number(user.id));
-          if (subscriptionData) {
-            token.hasActiveSubscription = subscriptionData.subscriptionStatus === 'active';
-            token.subscriptionTier = subscriptionData.subscriptionTier;
-            token.userUpdatedAt = subscriptionData.updatedAt?.getTime() || token.userUpdatedAt;
-          }
+          token.hasActiveSubscription = user.subscriptionStatus === 'active';
+          token.subscriptionTier = user.subscriptionTier;
         }
 
         console.log('JWT Token Created:', {
@@ -141,9 +129,6 @@ export const authOptions: NextAuthOptions = {
           role: token.role,
           hasActiveSubscription: token.hasActiveSubscription
         });
-      } else if (trigger === 'update') {
-        // Handle token updates
-        console.log('JWT Update triggered');
       }
 
       return token;
