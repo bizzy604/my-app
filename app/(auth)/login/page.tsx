@@ -86,7 +86,14 @@ export default function LoginPage() {
     try {
       // Get user role first for redirection
       let redirectPath = '/'
-      const response = await fetch(`/api/auth/redirect?email=${encodeURIComponent(email)}`);
+      const response = await fetch('/api/auth/redirect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+
       if (response.ok) {
         const userData = await response.json();
         console.log('Retrieved user role for redirection:', userData.role);
@@ -95,24 +102,27 @@ export default function LoginPage() {
           redirectPath = getUserRedirectPath(userData.role.toLowerCase());
           console.log(`Will redirect to: ${redirectPath} after successful login`);
         }
+      } else {
+        console.error('Failed to get user role:', await response.text());
+        setError("Failed to get user role");
+        setIsLoading(false);
+        return;
       }
       
       console.log('Calling NextAuth v5 signIn...');
-      const result = await signIn('credentials', {
+      await signIn('credentials', {
         email,
         password,
-        redirect: true,
         callbackUrl: redirectPath
       });
       
-      // Note: The code below won't execute because redirect: true will handle the navigation
-      console.log('Sign-in result:', result);
+      // The code below won't execute due to the redirect
+      setIsLoading(false);
       
     } catch (error) {
       console.error('Unhandled login error:', error)
       setError("An unexpected error occurred")
       setIsLoading(false)
-      console.log('------- LOGIN PROCESS FAILED WITH EXCEPTION -------');
     }
   }
 

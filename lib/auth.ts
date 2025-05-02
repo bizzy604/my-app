@@ -88,8 +88,8 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === 'production', // Enable secure in production
-        domain: process.env.NODE_ENV === 'production' ? '.innobid.net' : undefined // Add domain in production
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.NODE_ENV === 'production' ? 'innobid.net' : undefined
       }
     }
   },
@@ -116,8 +116,6 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.email = user.email;
         token.name = user.name;
-        token.userUpdatedAt = user.updatedAt?.getTime() || Date.now();
-        
         // Add subscription status to token for procurement officers
         if (user.role === 'PROCUREMENT') {
           token.hasActiveSubscription = user.subscriptionStatus === 'active';
@@ -158,6 +156,18 @@ export const authOptions: NextAuthOptions = {
         });
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('Redirect callback:', { url, baseUrl });
+      // If url starts with baseUrl, use it, otherwise use baseUrl
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // For relative URLs, prefix with baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      return baseUrl;
     }
   },
   providers: [
