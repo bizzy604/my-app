@@ -18,6 +18,8 @@ export default function LoginPage() {
   const { data: session, status } = useSession() as { data: Session | null; status: string }
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   // Check for callbackUrl in URL and clear it if present
   useEffect(() => {
@@ -75,29 +77,18 @@ export default function LoginPage() {
     }
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError("")
+    setIsLoading(true)
     console.log('------- LOGIN PROCESS STARTED -------');
-    
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    console.log(`Attempting login for email: ${email}`);
 
     try {
-      console.log('Pre-fetching role for role-based redirect...');
-      // First get the user role to determine the correct redirect path
-      const roleResponse = await fetch('/api/auth/redirect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      
-      let redirectPath = '/';
-      if (roleResponse.ok) {
-        const userData = await roleResponse.json();
+      // Get user role first for redirection
+      let redirectPath = '/'
+      const response = await fetch(`/api/auth/redirect?email=${encodeURIComponent(email)}`);
+      if (response.ok) {
+        const userData = await response.json();
         console.log('Retrieved user role for redirection:', userData.role);
         
         if (userData.role) {
@@ -106,56 +97,16 @@ export default function LoginPage() {
         }
       }
       
-      // NextAuth v5 signIn with redirect:false
-      console.log('Calling NextAuth v5 signIn with credentials...');
+      console.log('Calling NextAuth v5 signIn...');
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: true,
         callbackUrl: redirectPath
       });
       
+      // Note: The code below won't execute because redirect: true will handle the navigation
       console.log('Sign-in result:', result);
-      
-      // Handle error cases
-      if (result?.error) {
-        console.log(`Login error received: ${result.error}`);
-        // Check for email verification error
-        if (result.error.includes('Please verify your email')) {
-          console.log('Email verification error detected, redirecting to verification page');
-          toast({
-            title: 'Email Not Verified',
-            description: 'Please verify your email before logging in. Check your inbox or resend verification.',
-            variant: 'destructive'
-          })
-          router.push('/resend-verification')
-          return
-        }
-
-        console.log('Invalid credentials error');
-        setError("Invalid email or password")
-        toast({
-          title: "Login Failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive",
-          duration: 5000,
-        })
-        setIsLoading(false)
-        return
-      }
-      
-      // On successful login
-      if (result?.ok) {
-        console.log('Login successful, initiating redirect...');
-        
-        // Use signIn again but this time with redirect
-        await signIn('credentials', {
-          email,
-          password,
-          callbackUrl: redirectPath,
-          redirect: true
-        });
-      }
       
     } catch (error) {
       console.error('Unhandled login error:', error)
@@ -190,7 +141,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input
@@ -200,6 +151,8 @@ export default function LoginPage() {
               autoComplete="email"
               required
               placeholder="john.doe@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -221,6 +174,8 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 text-sm md:text-base border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
