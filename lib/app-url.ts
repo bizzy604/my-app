@@ -4,14 +4,20 @@
  */
 
 /**
- * Get the base URL for the application based on environment
- * In production: Uses NEXTAUTH_URL (https://innobid.net)
- * In development: Uses NEXT_PUBLIC_APP_URL for email links, NEXTAUTH_URL for auth
+ * Get the base URL for the application based on environment and context
+ * - For auth redirects: Uses localhost:3000 in production (behind nginx)
+ * - For email links and public URLs: Uses PUBLIC_URL in production
+ * - For development: Uses NEXT_PUBLIC_APP_URL for email links, NEXTAUTH_URL for auth
  */
 export function getAppBaseUrl(forEmailLink = false): string {
-  // For production, always use NEXTAUTH_URL from environment
+  // For production environment
   if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXTAUTH_URL || '';
+    // For email links and public URLs, use PUBLIC_URL
+    if (forEmailLink) {
+      return process.env.PUBLIC_URL || 'https://innobid.net';
+    }
+    // For auth redirects, use localhost when behind nginx
+    return 'http://localhost:3000';
   }
   
   // For development environment
@@ -20,11 +26,13 @@ export function getAppBaseUrl(forEmailLink = false): string {
   }
   
   // Default fallback for local development
-  return 'http://localhost:3000';
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
 }
 
 /**
  * Create a full URL with the correct base
+ * @param path - The path to append to the base URL
+ * @param forEmailLink - If true, uses public URL for email links
  */
 export function createAppUrl(path: string, forEmailLink = false): string {
   const baseUrl = getAppBaseUrl(forEmailLink);

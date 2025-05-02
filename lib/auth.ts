@@ -88,8 +88,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === 'production',
-        domain: process.env.NODE_ENV === 'production' ? 'innobid.net' : undefined
+        secure: false // Set to false since we're using HTTP locally
       }
     }
   },
@@ -159,15 +158,32 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       console.log('Redirect callback:', { url, baseUrl });
-      // If url starts with baseUrl, use it, otherwise use baseUrl
-      if (url.startsWith(baseUrl)) {
+      
+      // Use localhost for auth redirects
+      const localUrl = 'http://localhost:3000';
+      // Use public URL for other features
+      const publicUrl = process.env.PUBLIC_URL || 'https://innobid.net';
+      
+      // Special case: if the URL contains verification or reset tokens,
+      // use the public URL
+      if (url.includes('/verify-email') || url.includes('/reset-password')) {
+        if (url.startsWith('/')) {
+          return `${publicUrl}${url}`;
+        }
         return url;
       }
-      // For relative URLs, prefix with baseUrl
+      
+      // For auth redirects (login, dashboard, etc), use local URL
       if (url.startsWith('/')) {
-        return `${baseUrl}${url}`;
+        return `${localUrl}${url}`;
       }
-      return baseUrl;
+      
+      // If it's trying to redirect to production, replace with local
+      if (url.includes('innobid.net')) {
+        return url.replace(/https?:\/\/[^\/]+/, localUrl);
+      }
+      
+      return url.startsWith(localUrl) ? url : localUrl;
     }
   },
   providers: [

@@ -110,14 +110,28 @@ export default function LoginPage() {
       }
       
       console.log('Calling NextAuth v5 signIn...');
-      await signIn('credentials', {
+      const result = await signIn('credentials', {
         email,
         password,
-        callbackUrl: redirectPath
+        redirect: false,
+        callbackUrl: `http://localhost:3000${redirectPath}`
       });
       
-      // The code below won't execute due to the redirect
-      setIsLoading(false);
+      console.log('Sign-in result:', result);
+
+      if (result?.error) {
+        setError(result.error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.ok) {
+        // Use router.push for client-side navigation
+        router.push(redirectPath);
+      } else {
+        setError("An unexpected error occurred");
+        setIsLoading(false);
+      }
       
     } catch (error) {
       console.error('Unhandled login error:', error)

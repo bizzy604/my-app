@@ -30,5 +30,5 @@ export function getStripeClient(): Stripe {
 }
 
 // Use the actual price IDs
-export const INNOBID_STANDARD_PRICE_ID = process.env.STANDARD_PRICE_ID || 'price_1RGfVyFfxdujiyuqt9MDfcpB';
-export const INNOBID_AI_PRICE_ID = process.env.AI_PRICE_ID || 'price_1RGfXRFfxdujiyuqF53RNTXK';
+export const INNOBID_STANDARD_PRICE_ID = process.env.STANDARD_PRICE_ID;
+export const INNOBID_AI_PRICE_ID = process.env.AI_PRICE_ID;

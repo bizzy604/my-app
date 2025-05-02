@@ -123,7 +123,7 @@ export async function POST(req: Request) {
           status: 'active'
         },
         // Redirect to success page
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/subscription/success`
+        url: `${process.env.PUBLIC_URL}/subscription/success`
       });
     } catch (stripeError) {
       console.error('Stripe API error:', stripeError);
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
             status: 'active'
           },
           // Redirect to success page
-          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/subscription/success`
+          url: `${process.env.PUBLIC_URL}/subscription/success`
         });
       }
       
