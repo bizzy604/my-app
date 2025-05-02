@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
 import { signOut, useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
-import { SideNav } from "@/components/side-nav"
 import { TopNav } from "@/components/top-nav"
 import SubscriptionStatus from "@/components/subscription-status"
 

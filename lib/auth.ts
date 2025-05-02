@@ -7,6 +7,24 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
 
+// Helper function to fetch subscription data
+async function getUserSubscriptionData(userId: number) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        subscriptionStatus: true,
+        subscriptionTier: true,
+        updatedAt: true
+      }
+    });
+    return user;
+  } catch (error) {
+    console.error(`Error fetching subscription data for user ${userId}:`, error);
+    return null;
+  }
+}
+
 // Extend default session types
 declare module "next-auth" {
   interface Session {
@@ -55,139 +73,106 @@ declare module "next-auth/jwt" {
 // Define auth configuration for NextAuth v5
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NEXTAUTH_DEBUG === "true",
   // Use our custom adapter that's compatible with NextAuth v5
   adapter: CustomPrismaAdapter(prisma) as any,
   session: {
     strategy: "jwt", // Use JWT instead of database sessions
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  // Configure URLs for different environments
-  // The URL for URLs sent in emails will use NEXTAUTH_URL from env
-  // but NextAuth will still work correctly on localhost during development
+  pages: {
+    signIn: '/login',
+    signOut: '/login',
+    error: '/login'
+  },
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: "next-auth.session-token", // Don't use __Secure- prefix since we're behind nginx
       options: {
         httpOnly: true,
-        sameSite: "none", // Changed from "lax" to "none" to work across domains
+        sameSite: "lax",
         path: "/",
-        secure: true, // Always use secure cookies in production
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        httpOnly: true,
-        sameSite: "none", // Allow cross-domain
-        path: "/",
-        secure: true,
-      }
-    },
-    csrfToken: {
-      name: 'next-auth.csrf-token',
-      options: {
-        httpOnly: true,
-        sameSite: "none",
-        path: "/",
-        secure: true,
+        secure: false, // Set to false since we're using HTTP behind nginx
       }
     }
   },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      console.log('SignIn callback:', { 
+        hasUser: !!user,
+        userId: user?.id,
+        accountType: account?.type
+      });
+      return true;
+    },
     async jwt({ token, user, trigger }) {
-      // If this is a sign-in event
+      console.log('JWT Callback - Input:', { 
+        hasUser: !!user, 
+        userId: user?.id || token?.id,
+        userRole: user?.role || token?.role,
+        trigger,
+        tokenId: token?.id
+      });
+
       if (user) {
-        token.id = Number(user.id)
-        token.role = user.role
+        token.id = Number(user.id);
+        token.role = user.role;
+        token.email = user.email;
+        token.name = user.name;
         token.userUpdatedAt = user.updatedAt?.getTime() || Date.now();
-        
-        // Add timestamp of when we last checked subscription
         token.subscriptionLastChecked = Date.now();
         
-        // Add subscription status to token
+        // Initialize subscription values
+        token.hasActiveSubscription = false;
+        token.subscriptionTier = null;
+
+        // Add subscription status to token for procurement officers
         if (user.role === 'PROCUREMENT') {
-          try {
-            const userWithSubscription = await prisma.user.findUnique({
-              where: { id: Number(user.id) },
-              select: { 
-                subscriptionStatus: true,
-                subscriptionTier: true
-              }
-            });
-            
-            // Add subscription data to token
-            token.hasActiveSubscription = userWithSubscription?.subscriptionStatus === 'active';
-            token.subscriptionTier = userWithSubscription?.subscriptionTier;
-            
-            console.log('JWT updated with subscription data:', {
-              userId: user.id,
-              hasActiveSubscription: token.hasActiveSubscription,
-              subscriptionTier: token.subscriptionTier
-            });
-          } catch (error) {
-            console.error('Error fetching subscription data for token:', error);
-            token.hasActiveSubscription = false;
+          const subscriptionData = await getUserSubscriptionData(Number(user.id));
+          if (subscriptionData) {
+            token.hasActiveSubscription = subscriptionData.subscriptionStatus === 'active';
+            token.subscriptionTier = subscriptionData.subscriptionTier;
+            token.userUpdatedAt = subscriptionData.updatedAt?.getTime() || token.userUpdatedAt;
           }
         }
+
+        console.log('JWT Token Created:', {
+          id: token.id,
+          role: token.role,
+          hasActiveSubscription: token.hasActiveSubscription
+        });
+      } else if (trigger === 'update') {
+        // Handle token updates
+        console.log('JWT Update triggered');
       }
-      
-      // Always refresh subscription status for procurement officers on any token update
-      if (token.role === 'PROCUREMENT' && token.id) {
-        try {
-          // Check if the user record has been updated since we last loaded the token
-          // This ensures we always have fresh subscription data after Stripe webhooks
-          const dbUser = await prisma.user.findUnique({
-            where: { id: Number(token.id) },
-            select: { 
-              updatedAt: true,
-              subscriptionStatus: true,
-              subscriptionTier: true
-            }
-          });
-          
-          if (dbUser) {
-            const dbUserUpdatedAt = dbUser.updatedAt?.getTime() || 0;
-            const tokenUserUpdatedAt = token.userUpdatedAt || 0;
-            
-            // If the database user record was updated after our token was generated
-            // or we haven't checked subscription in 5 minutes, refresh the token data
-            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-            const needsRefresh = dbUserUpdatedAt > tokenUserUpdatedAt || 
-              !token.subscriptionLastChecked || 
-              token.subscriptionLastChecked < fiveMinutesAgo;
-              
-            if (needsRefresh) {
-              // Update token with fresh subscription data
-              token.hasActiveSubscription = dbUser.subscriptionStatus === 'active';
-              token.subscriptionTier = dbUser.subscriptionTier;
-              token.subscriptionLastChecked = Date.now();
-              token.userUpdatedAt = dbUserUpdatedAt;
-              
-              console.log('JWT automatically refreshed with subscription data:', {
-                userId: token.id,
-                hasActiveSubscription: token.hasActiveSubscription,
-                subscriptionTier: token.subscriptionTier,
-                refreshReason: dbUserUpdatedAt > tokenUserUpdatedAt ? 'User updated' : 'Time elapsed'
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error refreshing subscription data for token:', error);
-        }
-      }
-      
-      return token
+
+      return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = Number(token.id)
-        session.user.role = token.role as Role
-        
-        // Add subscription status to session
-        session.user.hasActiveSubscription = token.hasActiveSubscription;
-        session.user.subscriptionTier = token.subscriptionTier;
+      console.log('Session Callback - Input:', { 
+        hasToken: !!token, 
+        tokenId: token?.id,
+        tokenRole: token?.role 
+      });
+
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: Number(token.id),
+          role: token.role as Role,
+          hasActiveSubscription: token.hasActiveSubscription || false,
+          subscriptionTier: token.subscriptionTier || null,
+          email: token.email || '',
+          name: token.name || null
+        };
+
+        console.log('Session Created:', {
+          id: session.user.id,
+          role: session.user.role,
+          hasActiveSubscription: session.user.hasActiveSubscription
+        });
       }
-      return session
+      return session;
     }
   },
   providers: [
@@ -199,7 +184,8 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          console.log('Missing credentials');
+          return null;
         }
 
         const user = await prisma.user.findUnique({
@@ -215,48 +201,35 @@ export const authOptions: NextAuthOptions = {
             subscriptionTier: true,
             updatedAt: true
           }
-        })
+        });
 
         if (!user) {
-          return null
+          console.log('User not found:', credentials.email);
+          return null;
         }
 
-        // Check if email is verified
         if (!user.emailVerified) {
-          throw new Error("Please verify your email before logging in")
+          console.log('Email not verified:', credentials.email);
+          throw new Error('Email not verified');
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
+        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+        if (!isValidPassword) {
+          console.log('Invalid password for user:', credentials.email);
+          return null;
         }
 
-        // Return a user object that matches the NextAuth User type
-        return {
+        console.log('User authorized:', {
           id: user.id,
           email: user.email,
-          name: user.name,
-          role: user.role,
-          subscriptionStatus: user.subscriptionStatus,
-          subscriptionTier: user.subscriptionTier,
-          updatedAt: user.updatedAt
-        }
+          role: user.role
+        });
+
+        return user;
       }
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-  ],
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  }
-}
+    })
+  ]
+};
 
 // Create a helper function to get session on server
 export async function getServerAuthSession() {

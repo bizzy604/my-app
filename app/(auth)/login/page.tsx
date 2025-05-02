@@ -87,10 +87,8 @@ export default function LoginPage() {
     console.log(`Attempting login for email: ${email}`);
 
     try {
-      console.log('Calling signIn with credentials...');
-      
+      console.log('Pre-fetching role for role-based redirect...');
       // First get the user role to determine the correct redirect path
-      console.log('Pre-fetching role for redirect path...');
       const roleResponse = await fetch('/api/auth/redirect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,16 +106,18 @@ export default function LoginPage() {
         }
       }
       
-      // Basic login via NextAuth (without relying on its redirect)
-      console.log(`Using signIn with NO redirect`);
+      // NextAuth v5 signIn with redirect:false
+      console.log('Calling NextAuth v5 signIn with credentials...');
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false
+        redirect: false,
+        callbackUrl: redirectPath
       });
       
       console.log('Sign-in result:', result);
       
+      // Handle error cases
       if (result?.error) {
         console.log(`Login error received: ${result.error}`);
         // Check for email verification error
@@ -144,22 +144,18 @@ export default function LoginPage() {
         return
       }
       
+      // On successful login
       if (result?.ok) {
-        console.log('Login successful, performing direct navigation');
+        console.log('Login successful, initiating redirect...');
         
-        // Direct navigation approach with full URL
-        const baseUrl = window.location.origin;
-        const fullRedirectUrl = `${baseUrl}${redirectPath}`;
-        console.log(`Redirecting to: ${fullRedirectUrl}`);
-        
-        // Force full page reload to reset state
-        window.location.href = fullRedirectUrl;
-        return;
+        // Use signIn again but this time with redirect
+        await signIn('credentials', {
+          email,
+          password,
+          callbackUrl: redirectPath,
+          redirect: true
+        });
       }
-      
-      // Should never reach here
-      console.log('Unexpected login state, using fallback');
-      window.location.href = redirectPath;
       
     } catch (error) {
       console.error('Unhandled login error:', error)

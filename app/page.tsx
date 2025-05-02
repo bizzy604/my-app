@@ -137,7 +137,7 @@ export default function Home() {
               <h1 className="text-3xl md:text-5xl font-bold text-primary leading-tight">
                 Transform Your Procurement Process with Automation and AI
               </h1>
-              <p className="text-base md:text-lg text-muted-foreground mb-6">
+              <p className="text-base md:text-lg text-muted-foreground mb-6" style={{ color: '#23B6C7' }}>
                 Welcome to the Innobid e-Procurement Portal, where efficiency meets transparency. 
                 We're transforming how Governments, Not-for-profit Organizations and Businesses procure goods and services
                 through a secure, efficient and transparent e-procurement platform.
@@ -174,58 +174,86 @@ export default function Home() {
       {/* Why us Section */}
       <section id="why-us" className="py-16 md:py-20 bg-muted/50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 md:mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 md:mb-16" style={{ color: '#23B6C7' }}>
             Why Choose Innobid?
           </h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <ShieldCheck className="h-6 w-6 text-primary" />
+                <ShieldCheck className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Fair & Competitive</h3>
-              <p className="text-muted-foreground">Innobid increases competitiveness among businesses by leveling the playing field.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Fair & Competitive
+              </h3>
+              <p className="text-muted-foreground">
+                Innobid increases competitiveness among businesses by leveling the playing field.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <Clock className="h-6 w-6 text-primary" />
+                <Clock className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Automated Procurement</h3>
-              <p className="text-muted-foreground">Innobid automates the procurement process to reduce risk and cost of bids screening.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Automated Procurement
+              </h3>
+              <p className="text-muted-foreground">
+                Innobid automates the procurement process to reduce risk and cost of bids screening.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <Users className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Accountability & Transprency</h3>
-              <p className="text-muted-foreground">The Innobid portal incorporates citizens in monitoring the procurement process to foster a culture of accountability, transparency and trust.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Accountability & Transprency
+              </h3>
+              <p className="text-muted-foreground">
+                The Innobid portal incorporates citizens in monitoring the procurement process to foster a culture of accountability, transparency and trust.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <Users className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Bid Anomaly Detection</h3>
-              <p className="text-muted-foreground">The Innobid system leverages AI and Machine Learning to detect and flag anomalies in the bids submitted to predict and combat corruption before it happens.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Bid Anomaly Detection
+              </h3>
+              <p className="text-muted-foreground">
+                The Innobid system leverages AI and Machine Learning to detect and flag anomalies in the bids submitted to predict and combat corruption before it happens.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <ShieldCheck className="h-6 w-6 text-primary" />
+                <ShieldCheck className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Secure Bidding</h3>
-              <p className="text-muted-foreground">End-to-end encrypted bidding process ensuring maximum security.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Secure Bidding
+              </h3>
+              <p className="text-muted-foreground">
+                End-to-end encrypted bidding process ensuring maximum security.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <Clock className="h-6 w-6 text-primary" />
+                <Clock className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Real-time Updates</h3>
-              <p className="text-muted-foreground">Get instant notifications on bid status and tender updates.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Real-time Updates
+              </h3>
+              <p className="text-muted-foreground">
+                Get instant notifications on bid status and tender updates.
+              </p>
             </div>
             <div className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition">
               <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-                <Users className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-primary" style={{ color: '#23B6C7' }}/>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Vendor Management</h3>
-              <p className="text-muted-foreground">Efficient vendor registration and management system.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">
+                Vendor Management
+              </h3>
+              <p className="text-muted-foreground">
+                Efficient vendor registration and management system.
+              </p>
             </div>
           </div>
         </div>
@@ -235,19 +263,25 @@ export default function Home() {
       <section id="about" className="py-16 md:py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8">About InnoBid</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8" style={{ color: '#23B6C7' }}>
+              About InnoBid
+            </h2>
             <p className="text-muted-foreground mb-8">
               Innobid is a tech startup that provides tech-for-good solutions including an e-procurement solution that automates the procurement process to reduce risk and cost of bids screening, leverages AI and Machine Learning to detect and flag anomalies in the bids submitted in order to predict and combat corruption before it happens, incorporates citizens in monitoring the procurement process to foster a culture of accountability, transparency and trust and increases fairness and competitiveness among businesses by leveling the playing field for businesses of all sizes.
             </p>
             <div className="grid sm:grid-cols-2 gap-6 md:gap-8 mt-12">
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Our Mission</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Our Mission
+                </h3>
                 <p className="text-muted-foreground">
                   To include disfranchised groups into the national and global commerce and finance systems through innovative technology.
                 </p>
               </div>
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Our Vision</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Our Vision
+                </h3>
                 <p className="text-muted-foreground">
                   To become the leading tech-for-good organization fostering fair and efficient business practices and empowerment of disfranchised groups.
                 </p>
@@ -261,31 +295,41 @@ export default function Home() {
       <section id="services" className="py-16 md:py-20 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8">Other Services</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8" style={{ color: '#23B6C7' }}>
+              Other Services
+            </h2>
             <p className="text-muted-foreground mb-8">
               When we are not busy building tech solutions, we are doing the following
             </p>
             <div className="grid sm:grid-cols-2 gap-6 md:gap-8 mt-12">
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Procurement Advisory</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Procurement Advisory
+                </h3>
                 <p className="text-muted-foreground">
                   We help you establish your procurement digitalization strategy.
                 </p>
               </div>
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Procurement Insights</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Procurement Insights
+                </h3>
                 <p className="text-muted-foreground">
                   We provide you with rich insights and best practices on procurement.
                 </p>
               </div>
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Anti-corruption Advocacy</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Anti-corruption Advocacy
+                </h3>
                 <p className="text-muted-foreground">
                   We work with global development partners to promote anti-corruption campaigns and initiatives.
                 </p>
               </div>
               <div className="p-6 bg-card rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Multistakeholder collaborations</h3>
+                <h3 className="text-xl font-semibold mb-4 text-primary">
+                  Multistakeholder collaborations
+                </h3>
                 <p className="text-muted-foreground">
                   We connect global procurement and anti-corruption players with relevant stakeholders.
                 </p>
@@ -299,10 +343,12 @@ export default function Home() {
       <section id="contact" className="bg-gradient-to-b from-primary/5 to-background pt-24 md:pt-32">
         <div className="container mx-auto px-4">
           <div className="max-w-xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-8">Contact Us</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-8" style={{ color: '#23B6C7' }}>
+              Contact Us
+            </h2>
             <form className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2 text-primary">
                   Name
                 </label>
                 <input
@@ -312,7 +358,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2 text-primary">
                   Email
                 </label>
                 <input
@@ -322,7 +368,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2 text-primary">
                   Message
                 </label>
                 <textarea

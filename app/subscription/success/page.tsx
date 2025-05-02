@@ -50,9 +50,8 @@ export default function SubscriptionSuccessPage() {
         // This approach is more reliable than the subscribed query parameter
         setMessage('Refreshing your session...');
         
-        // Use the refresh-session endpoint to immediately update the JWT token
-        // with fresh subscription data from the database
-        window.location.href = '/api/refresh-session?redirect=/procurement-officer';
+        // Use the payment-success endpoint to handle environment detection and redirection
+        window.location.href = '/api/payment-success?redirect=/procurement-officer';
         
       } catch (error) {
         console.error('Error processing subscription:', error);
