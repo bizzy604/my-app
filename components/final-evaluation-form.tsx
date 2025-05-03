@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { evaluateBid } from "@/app/actions/tender-actions"
 import { BidStatus } from '@prisma/client'
+import { getServerAuthSession } from '@/lib/auth'
 
 interface FinalEvaluationFormProps {
   bid: any
@@ -19,6 +20,7 @@ interface FinalEvaluationFormProps {
 export function FinalEvaluationForm({ bid, onComplete }: FinalEvaluationFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [userId, setUserId] = useState<number | null>(null)
   const [scores, setScores] = useState({
     technical: bid.technicalScore || 0,
     financial: bid.financialScore || 0,
@@ -40,16 +42,37 @@ export function FinalEvaluationForm({ bid, onComplete }: FinalEvaluationFormProp
     )
   }
 
+  useEffect(() => {
+    // Get the current user ID when component mounts
+    const getUserId = async () => {
+      try {
+        const session = await getServerAuthSession()
+        if (session?.user?.id) {
+          setUserId(session.user.id)
+        }
+      } catch (error) {
+        console.error("Error getting user session:", error)
+      }
+    }
+    
+    getUserId()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
+      if (!userId) {
+        throw new Error("User ID not available")
+      }
+      
       await evaluateBid(bid.id, {
         stage: 'FINAL',
         score: calculateWeightedScore(),
         comments,
-        status: BidStatus.FINAL_EVALUATION
+        status: BidStatus.FINAL_EVALUATION,
+        evaluatedBy: userId
       })
 
       toast({

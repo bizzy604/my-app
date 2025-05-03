@@ -11,7 +11,7 @@ import { CheckCircle, Clock, AlertCircle } from 'lucide-react'
 interface EvaluationStagesProps {
   bid: {
     id: string
-    status: string
+    status: BidStatus
     evaluationLogs?: Array<{
       stage: string
       totalScore: number
@@ -35,21 +35,30 @@ export function BidEvaluationStages({ bid, onEvaluationComplete, currentUserId }
   const getStageStatus = (stageName: string) => {
     const log = bid.evaluationLogs?.find(l => l.stage === stageName)
     if (log) return 'completed'
-    if (bid.status === 'SHORTLISTED' && stageName === 'FINAL_EVALUATION') return 'current'
-    if (bid.status === 'PENDING' && stageName === 'FIRST_EVALUATION') return 'current'
+    if (bid.status === BidStatus.SHORTLISTED && stageName === 'FINAL_EVALUATION') return 'current'
+    if (bid.status === BidStatus.PENDING && stageName === 'FIRST_EVALUATION') return 'current'
     return 'pending'
+  }
+
+  const determineNextStatus = (stage: string, score: number) => {
+    if (stage === 'FIRST_EVALUATION' && score >= 50) return BidStatus.SHORTLISTED
+    if (stage === 'FINAL_EVALUATION' && score >= 50) return BidStatus.ACCEPTED
+    return BidStatus.REJECTED
   }
 
   const handleEvaluate = async (stage: string) => {
     try {
       setIsSubmitting(true)
-      await evaluateBid({
-        bidId: bid.id,
-        stage,
-        score: parseFloat(score),
-        comments,
-        evaluatedBy: currentUserId
-      })
+      await evaluateBid(
+        bid.id,
+        {
+          stage,
+          score: parseFloat(score),
+          comments,
+          evaluatedBy: currentUserId,
+          status: determineNextStatus(stage, parseFloat(score))
+        }
+      )
       
       toast({
         title: "Evaluation Submitted",

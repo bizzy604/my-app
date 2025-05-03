@@ -69,7 +69,12 @@ export function BidSummary({ bids }: BidSummaryProps) {
                 </div>
                 <div className="text-right">
                   <p className="font-medium">{formatCurrency(bid.amount)}</p>
-                  <Badge variant={getBidStatusVariant(bid.status)}>{bid.status}</Badge>
+                  <Badge 
+                    variant={getBidStatusVariant(bid.status)}
+                    className={bid.status === 'ACCEPTED' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+                  >
+                    {bid.status}
+                  </Badge>
                 </div>
               </div>
             ))}
@@ -80,10 +85,10 @@ export function BidSummary({ bids }: BidSummaryProps) {
   )
 }
 
-function getBidStatusVariant(status: string): "default" | "success" | "destructive" {
+function getBidStatusVariant(status: string): "default" | "destructive" | "secondary" | "outline" {
   switch (status) {
     case 'ACCEPTED':
-      return 'success'
+      return 'secondary'
     case 'REJECTED':
       return 'destructive'
     default:

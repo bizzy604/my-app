@@ -5,8 +5,6 @@ import { uploadToS3 } from '@/lib/s3-upload'
 import { parseMultipartFormData } from '@/lib/multipart-parser'
 import { prisma } from '@/lib/prisma'
 
-export const bodyParser = false
-
 export async function POST(request: Request) {
   try {
     // Check authentication

@@ -28,7 +28,6 @@ model User {
   postalCode                   String?
   website                      String?
   establishmentDate            DateTime?
-  settings                     Json?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
   stripeCustomerId             String?
@@ -36,8 +35,7 @@ model User {
   subscriptionId               String?
   subscriptionStatus           String?
   subscriptionTier             String?
-  
-  // Application Relations
+  settings                     Json?
   aiAnalyses                   AIAnalysis[]
   bids                         Bid[]
   evaluatedBids                BidEvaluationLog[]     @relation("EvaluatedBy")

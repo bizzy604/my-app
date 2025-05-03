@@ -16,7 +16,7 @@ export function FeedbackForm({ tenderId, userId }: { tenderId: string, userId: s
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      await submitFeedback(tenderId, userId, rating, comment)
+      await submitFeedback({ tenderId, userId: Number(userId), rating, comment })
       setRating(0)
       setComment('')
       // You might want to show a success message here
@@ -68,4 +68,3 @@ export function FeedbackForm({ tenderId, userId }: { tenderId: string, userId: s
     </form>
   )
 }
-

@@ -29,7 +29,7 @@ const nextConfig = {
   reactStrictMode: false,
   
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
     tsconfigPath: './tsconfig.json'
   },
   

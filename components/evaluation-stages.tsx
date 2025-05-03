@@ -74,12 +74,19 @@ export function EvaluationStages({ bid, onEvaluationComplete }: EvaluationStages
         experienceScore: Number(formData.get('experienceScore')),
         comments: formData.get('comments')?.toString()
       }
+      // Calculate average score across criteria
+      const averageScore = (scores.technicalScore + scores.financialScore + scores.experienceScore) / 3
 
-      await evaluateBid({
-        bidId: bid.id,
-        tenderId: bid.tenderId,
-        ...scores
-      })
+      await evaluateBid(
+        bid.id,
+        {
+          stage: 'FINAL',
+          score: averageScore,
+          comments: scores.comments,
+          status: BidStatus.UNDER_REVIEW,
+          evaluatedBy: session?.user?.id as number
+        }
+      )
 
       toast({
         title: "Evaluation submitted",
@@ -240,13 +247,16 @@ export function EvaluationStages({ bid, onEvaluationComplete }: EvaluationStages
       // Calculate total score for the stage
       const averageScore = stageScores.reduce((a, b) => a + b, 0) / stageScores.length
 
-      await evaluateBid(bid.id, {
-        stage: stageId,
-        score: averageScore,
-        comments,
-        status: 'UNDER_REVIEW',
-        evaluatedBy: parseInt(session.user.id)
-      })
+      await evaluateBid(
+        bid.id,
+        {
+          stage: stageId,
+          score: averageScore,
+          comments,
+          status: BidStatus.UNDER_REVIEW,
+          evaluatedBy: session.user.id
+        }
+      )
       
       toast({
         title: "Evaluation saved",

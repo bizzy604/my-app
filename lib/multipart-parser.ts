@@ -14,13 +14,14 @@ export async function parseMultipartFormData(
     const files = new Map<string, File>()
 
     // Process the formData and populate fields and files maps
-    for (const [key, value] of formData.entries()) {
+    // Convert entries to array first to avoid ES2015+ iterator requirements
+    Array.from(formData.entries()).forEach(([key, value]) => {
       if (value instanceof File) {
         files.set(key, value)
       } else {
         fields.set(key, String(value))
       }
-    }
+    })
 
     return { fields, files }
   } catch (error) {

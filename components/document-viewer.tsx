@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { Card } from "@/components/ui/card"
 import { FileIcon, ExternalLinkIcon } from 'lucide-react'
@@ -84,6 +83,7 @@ export function DocumentViewer({ documents }: DocumentViewerProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:text-blue-700 flex items-center"
+                    title={`Open ${selectedDoc.fileName} in new window`}
                   >
                     <FileIcon className="h-8 w-8 mr-2" />
                     Open {selectedDoc.fileName}

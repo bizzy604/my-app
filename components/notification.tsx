@@ -5,14 +5,15 @@ import { Bell } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { getNotificationsByUser, markNotificationAsRead } from "@/app/actions/notification-action"
+import { Notification } from '@prisma/client'
 
 export function Notifications({ userId }: { userId: string }) {
-  const [notifications, setNotifications] = useState([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      const fetchedNotifications = await getNotificationsByUser(userId)
+      const fetchedNotifications = await getNotificationsByUser(Number(userId))
       setNotifications(fetchedNotifications)
     }
     fetchNotifications()

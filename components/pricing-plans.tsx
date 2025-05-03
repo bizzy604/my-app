@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, ArrowUpRight } from 'lucide-react';
-import { INNOBID_STANDARD_PRICE_ID, INNOBID_AI_PRICE_ID } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
+import { INNOBID_STANDARD_PRICE_ID, INNOBID_AI_PRICE_ID } from '@/lib/stripe';
 
 type PricingPlansProps = {
   currentSubscription?: string | null;
@@ -21,7 +21,16 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
   });
   const { toast } = useToast();
 
-  const handleSubscribe = async (priceId: string, plan: 'standard' | 'ai') => {
+  const handleSubscribe = async (priceId: string | undefined, plan: 'standard' | 'ai') => {
+    if (!priceId) {
+      toast({
+        title: 'Configuration Error',
+        description: 'Subscription price ID is not configured',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setLoadingStates(prev => ({ ...prev, [plan]: true }));
     try {
       const response = await fetch('/api/create-checkout-session', {

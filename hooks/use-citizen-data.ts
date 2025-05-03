@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { getTenders } from "@/app/actions/tender-actions"
+import { getPaginatedTenders } from "@/app/actions/paginated-tender-actions"
 import { getReports } from "@/app/actions/report-actions"
-import { TenderStatus } from '@prisma/client'
+import { TenderStatus, TenderSector, TenderCategory } from '@prisma/client'
 
 interface UseDataOptions {
   pageSize?: number
   filters?: {
     status?: TenderStatus
-    sector?: string
+    sector?: TenderSector
     dateRange?: [Date, Date]
   }
 }
@@ -25,17 +26,18 @@ export function useCitizenData(options: UseDataOptions = {}) {
     error: tendersError
   } = useInfiniteQuery({
     queryKey: ['tenders', filters],
-    queryFn: async ({ pageParam = 0 }) => {
-      const response = await getTenders({
+    queryFn: async ({ pageParam }) => {
+      const response = await getPaginatedTenders({
         status: filters?.status,
-        skip: pageParam * pageSize,
-        take: pageSize,
-        ...filters
+        sector: filters?.sector,
+        page: pageParam,
+        pageSize
       })
-      return response
+      return response.tenders
     },
+    initialPageParam: 1,
     getNextPageParam: (lastPage, pages) => {
-      return lastPage.length === pageSize ? pages.length : undefined
+      return lastPage.length === pageSize ? pages.length + 1 : undefined
     }
   })
 
@@ -88,4 +90,4 @@ function calculateMonthlyTrends(tenders: any[]) {
     acc[month] = (acc[month] || 0) + 1
     return acc
   }, {})
-} 
+}

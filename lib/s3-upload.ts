@@ -2,11 +2,11 @@
 
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from './prisma'
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ObjectCannedACL } from "@aws-sdk/client-s3";
 
 // Initialize S3 client
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: process.env.AWS_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
@@ -65,7 +65,7 @@ export async function uploadToS3(
       Key: uniqueFileName,
       Body: fileBuffer,
       ContentType: file.type || 'application/octet-stream',
-      ACL: 'public-read' // This is critical for permanent URLs to work
+      ACL: 'public-read' as ObjectCannedACL // Type assertion to match the expected enum type
     };
     
     await s3Client.send(new PutObjectCommand(uploadParams));

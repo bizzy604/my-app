@@ -19,7 +19,7 @@ export function getStripeClient(): Stripe {
 
     // Initialize Stripe with the API key
     stripeInstance = new Stripe(apiKey, {
-      apiVersion: '2023-10-16',
+      apiVersion: '2025-03-31.basil',
       // Add custom fetch implementation for testing if needed, or rely on global polyfill
       // httpClient: Stripe.createFetchHttpClient(), // Example if needed
     });

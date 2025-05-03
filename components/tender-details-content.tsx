@@ -26,7 +26,7 @@ interface TenderDetailsContentProps {
     bids?: Array<Bid & {
       bidder: {
         name: string
-        company: string
+        company: string | null
       }
     }>
     documents?: Document[]
@@ -38,7 +38,7 @@ interface TenderDetailsContentProps {
     score: number
     bidder: {
       name: string
-      company: string
+      company: string | null
     }
     evaluationStages: Array<{
       stage: string

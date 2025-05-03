@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { getTenderBids } from "@/app/actions/tender-actions"
+import { getShortlistedBids } from "@/app/actions/tender-actions"
 import { formatCurrency } from "@/lib/utils"
 
 interface ComparativeAnalysisProps {
@@ -19,9 +19,8 @@ export function ComparativeAnalysis({ tenderId, currentBidId }: ComparativeAnaly
   useEffect(() => {
     const fetchShortlistedBids = async () => {
       try {
-        const bids = await getTenderBids(tenderId, {
-          status: 'SHORTLISTED'
-        })
+        // Using getShortlistedBids instead of getTenderBids with filter
+        const bids = await getShortlistedBids(tenderId)
         setShortlistedBids(bids)
       } catch (error) {
         console.error('Error fetching shortlisted bids:', error)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, getServerSession } from './auth'
+import { getServerAuthSession } from './auth'
 import { Role } from '@prisma/client'
 
 export async function withAuth(
@@ -7,7 +7,7 @@ export async function withAuth(
   allowedRoles?: Role[]
 ) {
   return async (req: NextRequest, context: any) => {
-    const session = await getServerSession()
+    const session = await getServerAuthSession()
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

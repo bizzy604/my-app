@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma';
-import { User } from '@prisma/client'
+import { User, BusinessType } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
 export type ProfileUpdateData = {
@@ -35,6 +35,15 @@ export async function updateUserProfile(userId: string, data: ProfileUpdateData)
   // Convert string ID to number since our schema uses integer
   const id = parseInt(userId)
 
+  // Process businessType if present to convert from string to enum
+  const businessTypeValue = data.businessType ? 
+    (Object.values(BusinessType).includes(data.businessType as BusinessType) ? 
+      data.businessType as BusinessType : undefined) : 
+    undefined;
+  
+  // Convert establishment date string to Date object if present
+  const establishmentDate = data.establishmentDate ? new Date(data.establishmentDate) : undefined;
+
   try {
     const user = await prisma.user.update({
       where: { id },
@@ -43,7 +52,7 @@ export async function updateUserProfile(userId: string, data: ProfileUpdateData)
         company: data.company,
         phone: data.phone,
         // Only include optional fields if they are provided
-        ...(data.businessType && { businessType: data.businessType }),
+        ...(businessTypeValue && { businessType: businessTypeValue }),
         ...(data.registrationNumber && { registrationNumber: data.registrationNumber }),
         ...(data.address && { address: data.address }),
         ...(data.city && { city: data.city }),
@@ -51,17 +60,15 @@ export async function updateUserProfile(userId: string, data: ProfileUpdateData)
         ...(data.postalCode && { postalCode: data.postalCode }),
         ...(data.website && { website: data.website }),
         ...(data.employeeCount && { employeeCount: data.employeeCount }),
-        ...(data.establishmentDate && { establishmentDate: new Date(data.establishmentDate) }),
+        ...(establishmentDate && { establishmentDate }),
       },
     })
 
-    // Revalidate both profile pages since the user might be either type
-    revalidatePath('/vendor/profile')
-    revalidatePath('/procurement-officer/profile')
-    
+    revalidatePath('/account')
+    revalidatePath('/dashboard')
     return user
   } catch (error) {
-    console.error('Error updating profile:', error)
+    console.error('Error updating user profile:', error)
     throw new Error('Failed to update profile')
   }
 }
@@ -72,6 +79,7 @@ export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedA
     data: {
       ...data,
       password: hashedPassword,
+      settings: data.settings || undefined,
     },
   })
   return user

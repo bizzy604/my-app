@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma';
-import { Notification, NotificationType } from '@prisma/client'
-import { sendEmail } from './email-actions'
+import { Notification } from '@prisma/client'
+import { sendEmail } from '@/lib/email-utils'
 
 export async function createNotification(data: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
   const notification = await prisma.notification.create({
@@ -43,4 +43,3 @@ export async function markNotificationAsRead(id: string) {
   revalidatePath(`/notifications/${notification.userId}`)
   return notification
 }
-

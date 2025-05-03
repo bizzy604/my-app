@@ -6,6 +6,25 @@ import { emailTemplates } from './email-templates'
 import { createAppUrl } from './app-url';
 import nodemailer from 'nodemailer';
 
+interface EmailData {
+  recipientName: string
+  tenderTitle: string
+  message: string
+  bidAmount: number
+  companyName: string
+  tenderReference: string
+  evaluationScore?: number
+  evaluationComments?: string
+  nextSteps?: string
+}
+
+interface EmailNotification {
+  to: string
+  subject: string
+  ticketId?: string
+  tenderId?: string
+  status?: string
+}
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
@@ -13,6 +32,10 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  secure: true, // Use secure: true for port 465 (SSL)
+  tls: {
+    rejectUnauthorized: true, // Validate certificates
+  }
 });
 
 function logEmailEvent(type: 'sent' | 'failed', email: string, context?: any) {
@@ -174,13 +197,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return true
 }
 
-interface EmailNotification {
-  to: string
-  subject: string
-  ticketId?: string
-  tenderId?: string
-  status?: string
-}
+
 
 export async function sendSupportNotificationEmail({ to, subject, ticketId }: EmailNotification) {
   try {
@@ -214,17 +231,7 @@ export async function sendSupportNotificationEmail({ to, subject, ticketId }: Em
   }
 }
 
-interface EmailData {
-  recipientName: string
-  tenderTitle: string
-  message: string
-  bidAmount: number
-  companyName: string
-  tenderReference: string
-  evaluationScore?: number
-  evaluationComments?: string
-  nextSteps?: string
-}
+
 
 export async function sendTenderAwardEmail({ to, subject, data }: { to: string; subject: string; data: EmailData }) {
   try {
@@ -295,6 +302,32 @@ export async function sendBidStatusEmail(
   } catch (error) {
     console.error('Detailed SMTP Error:', error);
     logEmailEvent('failed', to, { status, error: error instanceof Error ? error.message : 'Unknown error' });
+    return false;
+  }
+}
+
+export async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  html: string
+): Promise<boolean> {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Innobid" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text,
+      html
+    });
+    logEmailEvent('sent', to, { type: 'notification', response: info });
+    return true;
+  } catch (error) {
+    console.error('Detailed SMTP Error:', error);
+    logEmailEvent('failed', to, { 
+      type: 'notification', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
     return false;
   }
 }

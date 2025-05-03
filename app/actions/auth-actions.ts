@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { User } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { generateEmailVerificationToken, sendVerificationEmail } from '@/lib/email-utils'
 
 export async function CreateUser(

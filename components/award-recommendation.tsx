@@ -36,8 +36,12 @@ export function AwardRecommendation({ bid, onAward }: AwardRecommendationProps) 
           </div>
           <Badge
             variant={
-              recommendationStatus === 'highly-recommended' ? 'success' :
-              recommendationStatus === 'recommended' ? 'warning' : 'destructive'
+              recommendationStatus === 'highly-recommended' ? 'secondary' :
+              recommendationStatus === 'recommended' ? 'outline' : 'destructive'
+            }
+            className={
+              recommendationStatus === 'highly-recommended' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+              recommendationStatus === 'recommended' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' : ''
             }
           >
             {recommendationStatus === 'highly-recommended' && (

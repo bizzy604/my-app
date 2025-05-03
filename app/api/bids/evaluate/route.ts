@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { createSecureHandler } from '@/lib/api-middleware'
 export const dynamic = "force-dynamic";
 import { ApiToken } from '@/lib/api-auth'
-
-import { BidStatus } from '@prisma/client';
+import { determineStage, determineBidStatus } from '@/lib/bidUtils';
 
 const NotificationType = {
   BID_SUBMITTED: 'BID_SUBMITTED',
@@ -14,36 +13,6 @@ const NotificationType = {
 } as const;
 
 type NotificationType = typeof NotificationType[keyof typeof NotificationType];
-
-function determineStage(scores: { 
-  technicalScore: number, 
-  financialScore: number, 
-  experienceScore: number 
-}): string {
-  const totalScore = (
-    (scores.technicalScore * 0.4) +
-    (scores.financialScore * 0.4) +
-    (scores.experienceScore * 0.2)
-  )
-  
-  if (totalScore >= 80) return 'FINAL'
-  if (totalScore >= 70) return 'FINANCIAL'
-  if (totalScore >= 60) return 'TECHNICAL'
-  return 'INITIAL'
-}
-
-function determineBidStatus(stage: string): BidStatus {
-  switch (stage) {
-    case 'FINAL':
-      return BidStatus.FINAL_EVALUATION
-    case 'FINANCIAL':
-      return BidStatus.SHORTLISTED
-    case 'TECHNICAL':
-      return BidStatus.TECHNICAL_EVALUATION
-    default:
-      return BidStatus.UNDER_REVIEW
-  }
-}
 
 export const POST = createSecureHandler(async (req: NextRequest, token: ApiToken) => {
   try {
@@ -165,5 +134,3 @@ export const POST = createSecureHandler(async (req: NextRequest, token: ApiToken
     )
   }
 })
-
-export { determineStage, determineBidStatus };

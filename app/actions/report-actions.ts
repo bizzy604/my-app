@@ -118,7 +118,7 @@ export async function createReport(data: CreateReportInput) {
     const report = await prisma.report.create({
       data: {
         tenderId: data.tenderId,
-        reporterId: data.reporterId,
+        reporterId: parseInt(data.reporterId, 10),
         type: data.type,
         description: data.description,
         status: ReportStatus.PENDING,

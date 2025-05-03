@@ -67,8 +67,8 @@ export default function TendersPage() {
   // Debug logging - remove in production
   console.log('Pagination info:', {
     currentPage,
-    totalPages: tendersData?.pagination?.totalPages,
-    hasMultiplePages: tendersData?.pagination?.totalPages > 1,
+    totalPages: tendersData?.pagination?.totalPages || 1,
+    hasMultiplePages: (tendersData?.pagination?.totalPages || 1) > 1,
     tenderCount: tenders.length
   });
 
