@@ -50,12 +50,10 @@ export default function LoginPage() {
       const savedPath = sessionStorage.getItem('redirectPath');
       if (savedPath) {
         sessionStorage.removeItem('redirectPath');
-        console.log(`Redirecting to saved path: ${savedPath}`);
         router.push(savedPath);
       } else {
         // Fall back to role-based redirect
         const redirectPath = getUserRedirectPath(session.user.role);
-        console.log(`Redirecting to role-based path: ${redirectPath}`);
         router.push(redirectPath);
       }
     }
@@ -81,7 +79,6 @@ export default function LoginPage() {
     event.preventDefault()
     setError("")
     setIsLoading(true)
-    console.log('------- LOGIN PROCESS STARTED -------');
 
     try {
       // Get user role first for redirection
@@ -96,20 +93,16 @@ export default function LoginPage() {
 
       if (response.ok) {
         const userData = await response.json();
-        console.log('Retrieved user role for redirection:', userData.role);
         
         if (userData.role) {
           redirectPath = getUserRedirectPath(userData.role.toLowerCase());
-          console.log(`Will redirect to: ${redirectPath} after successful login`);
         }
       } else {
-        console.error('Failed to get user role:', await response.text());
         setError("Failed to get user role");
         setIsLoading(false);
         return;
       }
       
-      console.log('Calling NextAuth v5 signIn...');
       const result = await signIn('credentials', {
         email,
         password,
@@ -117,8 +110,6 @@ export default function LoginPage() {
         callbackUrl: `http://localhost:3000${redirectPath}`
       });
       
-      console.log('Sign-in result:', result);
-
       if (result?.error) {
         setError(result.error);
         setIsLoading(false);
@@ -134,7 +125,6 @@ export default function LoginPage() {
       }
       
     } catch (error) {
-      console.error('Unhandled login error:', error)
       setError("An unexpected error occurred")
       setIsLoading(false)
     }
