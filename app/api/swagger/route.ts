@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 import { getApiDocs } from '@/lib/swagger';
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   // Check for authenticated user
-  const session = await getServerAuthSession();
+  const session = await auth();
   
   // Only allow authenticated users to access the API docs
   if (!session?.user) {

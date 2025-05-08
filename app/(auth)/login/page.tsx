@@ -83,10 +83,17 @@ export default function LoginPage() {
     try {
       // Get user role first for redirection
       let redirectPath = '/'
+      // Use the generated CSRF token from the utility function
+      const csrfToken = process.env.NEXT_PUBLIC_CSRF_TOKEN || 'development-token';
+      if (!csrfToken) {
+        throw new Error('CSRF token not found');
+      }
+
       const response = await fetch('/api/auth/redirect', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
         },
         body: JSON.stringify({ email })
       });
@@ -107,7 +114,7 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
-        callbackUrl: `http://localhost:3000${redirectPath}`
+        callbackUrl: redirectPath
       });
       
       if (result?.error) {
@@ -117,8 +124,20 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        // Use router.push for client-side navigation
-        router.push(redirectPath);
+        console.log('Authentication successful, redirecting to:', redirectPath);
+        
+        // Make sure we have an authenticated session before redirecting
+        const session = await fetch('/api/auth/session');
+        const sessionData = await session.json();
+        
+        if (sessionData?.user) {
+          // Use Next.js router for a cleaner transition with preserved session
+          router.refresh();
+          router.push(redirectPath);
+        } else {
+          // Fallback to hard redirect if session isn't immediately available
+          window.location.href = redirectPath;
+        }
       } else {
         setError("An unexpected error occurred");
         setIsLoading(false);

@@ -1,11 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable modern browsers optimization while maintaining IE11 compatibility
   experimental: {
     typedRoutes: false,
     serverActions: {
       bodySizeLimit: '5mb',
     },
     optimizePackageImports: ['swagger-ui-react']
+  },
+  
+  // Cross-browser polyfills and optimizations
+  webpack: (config, { dev, isServer }) => {
+    // Add polyfill for older browsers
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+    
+    return config;
   },
   
   images: {

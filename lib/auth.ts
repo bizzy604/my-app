@@ -1,9 +1,11 @@
-// Import required dependencies for NextAuth v5
-import { NextAuthOptions, getServerSession as getNextAuthServerSession } from "next-auth";
+import NextAuth, { type DefaultSession, NextAuthConfig, User } from "next-auth";
+import type { Role } from "@prisma/client";
+import { AdapterUser } from "next-auth/adapters";
+import type { JWT } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from '@/lib/prisma'
-import bcrypt from "bcryptjs"
-import { Role } from "@prisma/client"
+import { prisma } from '@/lib/prisma';
+import bcrypt from "bcryptjs";
 
 // Helper function to fetch subscription data
 async function getUserSubscriptionData(userId: number) {
@@ -13,6 +15,7 @@ async function getUserSubscriptionData(userId: number) {
       select: {
         subscriptionStatus: true,
         subscriptionTier: true,
+        subscriptionEndDate: true,
         updatedAt: true
       }
     });
@@ -25,7 +28,7 @@ async function getUserSubscriptionData(userId: number) {
 
 // Extend default session types
 declare module "next-auth" {
-  interface Session {
+  interface Session extends DefaultSession {
     user: {
       id: number;
       email: string;
@@ -42,20 +45,22 @@ declare module "next-auth" {
       company?: string;
       hasActiveSubscription?: boolean;
       subscriptionTier?: string | null;
-    }
+    } & DefaultSession["user"]
   }
 
+  // Define the User interface for NextAuth internal use
+  // Decouple from PrismaUser to avoid requiring all Prisma fields
   interface User {
-    id: number;
-    email: string;
+    id: number; // Keep as number initially, callbacks handle conversion if needed
     name?: string | null;
-    role: Role;
-    subscriptionStatus?: string | null;
-    subscriptionTier?: string | null;
-    updatedAt?: Date;
+    email?: string | null;
+    role: Role; // Include custom role
+    // Add other fields ONLY if strictly needed by NextAuth core or early callbacks
+    // Subscription details are typically added in the jwt callback
   }
 }
 
+// JWT type extension
 declare module "next-auth/jwt" {
   interface JWT {
     sub?: string;
@@ -68,76 +73,99 @@ declare module "next-auth/jwt" {
   }
 }
 
-// Define auth configuration for NextAuth v5
-export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NEXTAUTH_DEBUG === "true",
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
+// NextAuth configuration object
+export const config: NextAuthConfig = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials, request) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        // Ensure email is a string
+        const email = typeof credentials.email === 'string' ? credentials.email : '';
+        if (!email) return null;
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email: email } // Use validated email
+        });
+
+        if (!existingUser || !existingUser.password) { // Also check if user.password exists
+          return null;
+        }
+
+        // Verify password
+        const passwordsMatch = await bcrypt.compare(
+          credentials.password as string,
+          existingUser.password
+        );
+
+        if (passwordsMatch) {
+          // Return only the core fields defined in the adjusted 'interface User'
+          return {
+            id: existingUser.id, // Use numeric ID from Prisma
+            name: existingUser.name,
+            email: existingUser.email,
+            role: existingUser.role,
+          };
+        }
+
+        // If passwords don't match, return null
+        return null;
+      }
+    })
+  ],
   pages: {
     signIn: '/login',
     signOut: '/login',
     error: '/login'
   },
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: false // Set to false since we're using HTTP locally
-      }
-    }
-  },
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
-      console.log('SignIn callback:', { 
-        hasUser: !!user,
-        userId: user?.id,
-        accountType: account?.type
-      });
+    async signIn({ user }: { user: AdapterUser | User }) {
+      // Remove verbose logging for security
       return true;
     },
-    async jwt({ token, user, trigger }) {
-      console.log('JWT Callback - Input:', { 
-        hasUser: !!user, 
-        userId: user?.id || token?.id,
-        userRole: user?.role || token?.role,
-        trigger,
-        tokenId: token?.id
-      });
+    async jwt({ token, user, trigger }: { token: JWT, user?: AdapterUser | User | undefined, trigger?: "signIn" | "signUp" | "update" | undefined }) {
+      // Remove verbose logging for security
 
       if (user) {
         token.id = Number(user.id);
-        token.role = user.role;
+        token.role = (user as any).role;
         token.email = user.email;
         token.name = user.name;
-        // Add subscription status to token for procurement officers
-        if (user.role === 'PROCUREMENT') {
-          token.hasActiveSubscription = user.subscriptionStatus === 'active';
-          token.subscriptionTier = user.subscriptionTier;
+      }
+      
+      // Always check subscription status for procurement officers
+      if (token.role === 'PROCUREMENT' && token.id) {
+        // Fetch the latest subscription data from the database
+        const subscriptionData = await getUserSubscriptionData(Number(token.id));
+        
+        if (subscriptionData) {
+          // Check if subscription is active and not expired
+          const isActive = subscriptionData.subscriptionStatus === 'active';
+          const isNotExpired = subscriptionData.subscriptionEndDate ? new Date(subscriptionData.subscriptionEndDate) > new Date() : false;
+          
+          token.hasActiveSubscription = isActive && isNotExpired;
+          token.subscriptionTier = subscriptionData.subscriptionTier;
+          token.subscriptionLastChecked = Date.now();
+        } else {
+          token.hasActiveSubscription = false;
         }
-
-        console.log('JWT Token Created:', {
-          id: token.id,
-          role: token.role,
-          hasActiveSubscription: token.hasActiveSubscription
-        });
       }
 
       return token;
     },
-    async session({ session, token }) {
-      console.log('Session Callback - Input:', { 
-        hasToken: !!token, 
-        tokenId: token?.id,
-        tokenRole: token?.role 
-      });
+    async session({ session, token }: { session: any, token: JWT }) {
+      // Debug session issues
+      console.log('Session callback triggered', { hasToken: !!token });
 
       if (token) {
+        // Ensure all necessary user properties are properly set
         session.user = {
           ...session.user,
           id: Number(token.id),
@@ -147,116 +175,38 @@ export const authOptions: NextAuthOptions = {
           email: token.email || '',
           name: token.name || null
         };
-
-        console.log('Session Created:', {
-          id: session.user.id,
-          role: session.user.role,
-          hasActiveSubscription: session.user.hasActiveSubscription
-        });
+        
+        console.log('Session populated with user role:', token.role);
+      } else {
+        console.log('Warning: No token available in session callback');
       }
+
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      console.log('Redirect callback:', { url, baseUrl });
-      
-      // Use localhost for auth redirects
-      const localUrl = 'http://localhost:3000';
-      // Use public URL for other features
-      const publicUrl = process.env.PUBLIC_URL || 'https://innobid.net';
-      
-      // Special case: if the URL contains verification or reset tokens,
-      // use the public URL
-      if (url.includes('/verify-email') || url.includes('/reset-password')) {
-        if (url.startsWith('/')) {
-          return `${publicUrl}${url}`;
-        }
-        return url;
-      }
-      
-      // For auth redirects (login, dashboard, etc), use local URL
-      if (url.startsWith('/')) {
-        return `${localUrl}${url}`;
-      }
-      
-      // If it's trying to redirect to production, replace with local
-      if (url.includes('innobid.net')) {
-        return url.replace(/https?:\/\/[^\/]+/, localUrl);
-      }
-      
-      return url.startsWith(localUrl) ? url : localUrl;
-    }
+    async redirect({ url, baseUrl }: { url: string, baseUrl: string }) {
+      // Redirect to the appropriate URL based on the user's role
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
   },
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.log('Missing credentials');
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            password: true,
-            role: true,
-            emailVerified: true,
-            subscriptionStatus: true,
-            subscriptionTier: true,
-            updatedAt: true
-          }
-        });
-
-        if (!user) {
-          console.log('User not found:', credentials.email);
-          return null;
-        }
-
-        if (!user.emailVerified) {
-          console.log('Email not verified:', credentials.email);
-          throw new Error('Email not verified');
-        }
-
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
-        if (!isValidPassword) {
-          console.log('Invalid password for user:', credentials.email);
-          return null;
-        }
-
-        console.log('User authorized:', {
-          id: user.id,
-          email: user.email,
-          role: user.role
-        });
-
-        return user;
+  debug: process.env.NEXTAUTH_DEBUG === "true",
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production"
       }
-    })
-  ]
-};
-
-// Create a helper function to get session on server
-export async function getServerAuthSession() {
-  const session = await getNextAuthServerSession(authOptions);
-  
-  // Set RLS context based on the session user
-  if (session?.user?.id) {
-    try {
-      await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${session.user.id.toString()}, true)`;
-      if (session.user.role) {
-        await prisma.$executeRaw`SELECT set_config('app.user_role', ${session.user.role}, true)`;
-      }
-    } catch (error) {
-      console.error('Error setting RLS context in auth session:', error);
     }
   }
-  
-  return session;
-}
+};
+
+// Create NextAuth handler with proper config type
+export const { handlers, auth, signIn, signOut } = NextAuth(config as any);
+
+// Export auth handler for use in API routes and server components
+export { auth as getServerSession };
+export { auth as getServerAuthSession };

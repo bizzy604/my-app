@@ -1,11 +1,10 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import PricingPlans from '@/components/pricing-plans';
 import { redirect } from 'next/navigation';
 
 export default async function PricingPage() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   
   if (!session) {
     redirect('/login?callbackUrl=/pricing');

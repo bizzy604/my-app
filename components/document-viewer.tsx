@@ -49,11 +49,14 @@ export function DocumentViewer({ documents }: DocumentViewerProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:text-blue-700"
+                aria-label={`Open ${doc.fileName} in new tab`}
+                title={`Open ${doc.fileName} in new tab`}
                 onClick={(e) => {
                   e.stopPropagation()
                 }}
               >
                 <ExternalLinkIcon className="h-5 w-5" />
+                <span className="sr-only">Open document in new tab</span>
               </a>
             </div>
           </Card>

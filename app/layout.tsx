@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { QueryProvider } from '@/providers/query-provider'
 import { Providers } from './providers'
+import { BrowserCompatibilityProvider } from '@/components/browser-compatibility-provider'
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -39,8 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
             <QueryProvider>
               <NextAuthProvider>
-                {children}
-                <SpeedInsights />
+                <BrowserCompatibilityProvider>
+                  {children}
+                  <SpeedInsights />
+                </BrowserCompatibilityProvider>
               </NextAuthProvider>
             </QueryProvider>
         </Providers>
