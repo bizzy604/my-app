@@ -18,7 +18,8 @@ async function getUserSubscriptionData(userId: number) {
       try {
         // Use direct database query via serverless adapter instead of Prisma ORM
         // This is a simplified approach that should work in edge runtime
-        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user/subscription?userId=${userId}`, {
+        // Use relative URL to ensure it works in both development and production
+        const response = await fetch(`/api/user/subscription?userId=${userId}`, {
           headers: {
             // Add internal API key or other authorization
             'x-internal-api-key': process.env.INTERNAL_API_KEY || 'innobid-internal',

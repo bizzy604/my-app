@@ -5,28 +5,28 @@
 
 /**
  * Get the base URL for the application based on environment and context
- * - For auth redirects: Uses localhost:3000 in production (behind nginx)
- * - For email links and public URLs: Uses PUBLIC_URL in production
- * - For development: Uses NEXT_PUBLIC_APP_URL for email links, NEXTAUTH_URL for auth
+ * - For external/public links (emails, etc.), uses PUBLIC_URL in production
+ * - For internal links, determines URL dynamically from request headers when possible
+ * - Falls back to appropriate environment variables when headers aren't available
  */
 export function getAppBaseUrl(forEmailLink = false): string {
-  // For production environment
-  if (process.env.NODE_ENV === 'production') {
-    // For email links and public URLs, use PUBLIC_URL
-    if (forEmailLink) {
-      return process.env.PUBLIC_URL || 'https://innobid.net';
-    }
-    // For auth redirects, use localhost when behind nginx
-    return 'http://localhost:3000';
+  // For email links in production, always use the public URL
+  if (forEmailLink && process.env.NODE_ENV === 'production') {
+    return process.env.PUBLIC_URL || 'https://innobid.net';
   }
   
-  // For development environment
+  // For development environment email links
   if (forEmailLink && process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
+
+  // For internal application links, we'll use relative URLs when possible
+  // in API handlers and server components, and the code that actually sends
+  // requests will determine the correct base URL dynamically
   
-  // Default fallback for local development
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  // Default fallback when no better option is available
+  // This is mainly used when we need an absolute URL but don't have request headers
+  return process.env.PUBLIC_URL || process.env.NEXTAUTH_URL || 'https://innobid.net';
 }
 
 /**

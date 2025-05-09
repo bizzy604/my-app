@@ -116,14 +116,23 @@ export async function POST(req: Request) {
         }
       });
       
+      // Get the request host header for proper URL detection
+      const host = req.headers.get('host') || '';
+      const protocol = host.includes('localhost') || host.includes('127.0.0.1') 
+        ? 'http' 
+        : 'https';
+      
+      // Construct base URL using the host header
+      const baseUrl = `${protocol}://${host}`;
+
       return NextResponse.json({ 
         message: 'Subscription updated successfully',
         subscription: {
           tier: targetTier,
           status: 'active'
         },
-        // Redirect to success page
-        url: `${process.env.NEXTAUTH_URL}/subscription/success`
+        // Redirect to success page using detected URL
+        url: `${baseUrl}/subscription/success`
       });
     } catch (stripeError) {
       console.error('Stripe API error:', stripeError);
@@ -139,14 +148,23 @@ export async function POST(req: Request) {
           }
         });
         
+        // Use the same URL detection method for consistency
+        const host = req.headers.get('host') || '';
+        const protocol = host.includes('localhost') || host.includes('127.0.0.1') 
+          ? 'http' 
+          : 'https';
+        
+        // Construct base URL using the host header
+        const baseUrl = `${protocol}://${host}`;
+
         return NextResponse.json({ 
           message: 'Subscription updated in database only',
           subscription: {
             tier: targetTier,
             status: 'active'
           },
-          // Redirect to success page
-          url: `${process.env.NEXTAUTH_URL}/subscription/success`
+          // Redirect to success page using detected URL
+          url: `${baseUrl}/subscription/success`
         });
       }
       
