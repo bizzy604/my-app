@@ -1,17 +1,18 @@
 import { getBidById } from "@/app/actions/tender-actions"
 import { notFound, redirect } from 'next/navigation'
 import { BidDetailsWrapper } from './bid-details-wrapper'
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
+import { getServerAuthSession } from "@/lib/auth"
 
 export default async function Page({ params }: { params: { id: string, bidId: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerAuthSession()
   
   if (!session) {
     redirect('/login')
   }
 
-  const bid = await getBidById(params.bidId)
+  // Ensure params is fully resolved before accessing properties
+  const resolvedParams = await Promise.resolve(params)
+  const bid = await getBidById(resolvedParams.bidId)
   
   if (!bid) {
     notFound()
@@ -22,7 +23,7 @@ export default async function Page({ params }: { params: { id: string, bidId: st
 
   return (
     <BidDetailsWrapper 
-      params={params} 
+      params={resolvedParams} 
       bid={bid} 
       evaluationScores={evaluationScores} 
       documents={documents} 

@@ -33,10 +33,14 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
     
     setLoadingStates(prev => ({ ...prev, [plan]: true }));
     try {
+      // Get CSRF token from cookie if using Next-Auth's CSRF protection
+      const csrfToken = await fetch('/api/csrf').then(res => res.json()).then(data => data.csrfToken);
+      
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken, // Add CSRF token to headers
         },
         body: JSON.stringify({ priceId }),
       });
@@ -63,10 +67,14 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
   const handleUpdateSubscription = async (targetTier: 'standard' | 'ai') => {
     setLoadingStates(prev => ({ ...prev, upgrade: true }));
     try {
+      // Get CSRF token for security
+      const csrfToken = await fetch('/api/csrf').then(res => res.json()).then(data => data.csrfToken);
+
       const response = await fetch('/api/update-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken,
         },
         body: JSON.stringify({ targetTier }),
       });
@@ -93,8 +101,14 @@ export default function PricingPlans({ currentSubscription, subscriptionStatus }
   const handleManageSubscription = async () => {
     setLoadingStates(prev => ({ ...prev, portal: true }));
     try {
+      // Get CSRF token for security
+      const csrfToken = await fetch('/api/csrf').then(res => res.json()).then(data => data.csrfToken);
+
       const response = await fetch('/api/customer-portal', {
         method: 'POST',
+        headers: {
+          'x-csrf-token': csrfToken,
+        },
       });
 
       const data = await response.json();

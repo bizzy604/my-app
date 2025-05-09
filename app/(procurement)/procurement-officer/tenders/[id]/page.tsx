@@ -4,8 +4,10 @@ import { TenderDetailsContent } from "@/components/tender-details-content"
 import { notFound } from 'next/navigation'
 
 export default async function TenderDetailsPage({ params }: { params: { id: string } }) {
-  const tender = await getTenderById(params.id)
-  const shortlistedBids = await getShortlistedBids(params.id)
+  // Ensure params is fully resolved before accessing properties
+  const resolvedParams = await Promise.resolve(params)
+  const tender = await getTenderById(resolvedParams.id)
+  const shortlistedBids = await getShortlistedBids(resolvedParams.id)
 
   if (!tender) {
     notFound()

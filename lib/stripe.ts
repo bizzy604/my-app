@@ -29,6 +29,6 @@ export function getStripeClient(): Stripe {
   return stripeInstance;
 }
 
-// Use the actual price IDs
-export const INNOBID_STANDARD_PRICE_ID = process.env.STANDARD_PRICE_ID;
-export const INNOBID_AI_PRICE_ID = process.env.AI_PRICE_ID;
+// Use the actual price IDs with NEXT_PUBLIC_ prefix for client-side access
+export const INNOBID_STANDARD_PRICE_ID = process.env.NEXT_PUBLIC_STANDARD_PRICE_ID || process.env.STANDARD_PRICE_ID;
+export const INNOBID_AI_PRICE_ID = process.env.NEXT_PUBLIC_AI_PRICE_ID || process.env.AI_PRICE_ID;

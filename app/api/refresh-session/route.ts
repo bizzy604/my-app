@@ -61,60 +61,36 @@ export async function GET(req: NextRequest) {
       });
       
       // Create an updated token with fresh subscription data
-      const cookieStore = cookies();
+      // In newer Next.js, cookies() returns a Promise
+      const cookieStore = await cookies();
       const sessionToken = cookieStore.get('next-auth.session-token')?.value;
       
       if (sessionToken) {
         // Try to decode the token
         try {
-          const token = await decode({
-            token: sessionToken,
-            secret
-          });
+          // NextAuth v5 approach: Instead of manipulating the token directly,
+          // let's use a more reliable approach to force a complete session refresh
+          console.log('Using enhanced approach for session refresh with latest subscription data');
           
-          if (token) {
-            console.log('Existing token decoded successfully');
-            
-            // Update the token with fresh subscription data
-            const updatedToken = {
-              ...token,
-              hasActiveSubscription: user.subscriptionStatus === 'active',
-              subscriptionTier: user.subscriptionTier,
-              userUpdatedAt: user.updatedAt?.getTime() || Date.now(),
-              subscriptionLastChecked: Date.now(),
-            };
-            
-            console.log('Token updated with subscription data:', {
-              hasActiveSubscription: user.subscriptionStatus === 'active',
-              subscriptionTier: user.subscriptionTier
-            });
-            
-            // Encode the updated token
-            const newToken = await encode({
-              token: updatedToken,
-              secret
-            });
-            
-            // Create a response with redirect to the requested URL
-            const baseUrl = process.env.NEXTAUTH_URL || req.nextUrl.origin;
-            const fullRedirectUrl = new URL(redirectUrl, baseUrl).toString();
-            console.log(`Redirecting to: ${fullRedirectUrl}`);
-            
-            const response = NextResponse.redirect(fullRedirectUrl);
-            
-            // Set the updated session cookie
-            response.cookies.set({
-              name: 'next-auth.session-token',
-              value: newToken,
-              httpOnly: true,
-              path: '/',
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              maxAge: 30 * 24 * 60 * 60 // 30 days
-            });
-            
-            console.log('------- REFRESH SESSION COMPLETED SUCCESSFULLY -------');
-            return response;
+          // Double-check subscription status before redirecting
+          if (user && user.subscriptionStatus === 'active') {
+            console.log('User has ACTIVE subscription status - ensure dashboard access');
+            // Use special URL parameter for middleware to recognize active subscription
+            const targetUrl = new URL(redirectUrl, req.nextUrl.origin);
+            targetUrl.searchParams.set('subscription_active', 'true');
+            targetUrl.searchParams.set('session_refreshed', Date.now().toString());
+            console.log(`Redirecting to dashboard with active status: ${targetUrl.toString()}`);
+            console.log('------- REFRESH SESSION COMPLETED WITH ACTIVE SUBSCRIPTION -------');
+            return NextResponse.redirect(targetUrl.toString());
+          } else {
+            // Standard redirect for normal flow
+            console.log('Standard redirect for session refresh');
+            // Add timestamp to force fresh session and bypass cache
+            const targetUrl = new URL(redirectUrl, req.nextUrl.origin);
+            targetUrl.searchParams.set('t', Date.now().toString());
+            console.log(`Redirecting to: ${targetUrl.toString()}`);
+            console.log('------- REFRESH SESSION COMPLETED WITH REDIRECT -------');
+            return NextResponse.redirect(targetUrl.toString());
           }
         } catch (tokenError) {
           console.error('Error decoding token:', tokenError);

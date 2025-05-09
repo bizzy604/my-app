@@ -40,7 +40,7 @@ export default function TenderHistoryDetailClient({
 }: { 
   tender: any; 
   history: any; 
-  bids: any;
+  bids: any[];
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
@@ -162,7 +162,7 @@ export default function TenderHistoryDetailClient({
           <TabsContent value="bids">
             {bids && bids.length > 0 ? (
               <BidSummary 
-                bids={bids.map((bid): BidDetailsType => ({
+                bids={bids.map((bid: any): BidDetailsType => ({
                   id: bid.id,
                   amount: bid.amount,
                   status: bid.status.toString(),

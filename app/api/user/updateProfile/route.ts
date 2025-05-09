@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
+import { getServerAuthSession } from "@/lib/auth"
 export const dynamic = "force-dynamic";
 
 interface ProfileFormData {
@@ -23,7 +22,7 @@ interface ProfileFormData {
 export async function POST(request: NextRequest) {
     try {
         // Get the session to verify the user
-        const session = await getServerSession(authOptions)
+        const session = await getServerAuthSession()
         
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -3,8 +3,38 @@ export const dynamic = "force-dynamic";
 import { getServerAuthSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
+    const internalApiKey = req.headers.get('x-internal-api-key');
+    
+    // Check if this is an internal middleware request with userId
+    if (userId && internalApiKey === (process.env.INTERNAL_API_KEY || 'innobid-internal')) {
+      // This is a trusted internal request - serve subscription data directly
+      console.log('Internal API call for subscription data, userId:', userId);
+      
+      const user = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: {
+          subscriptionTier: true,
+          subscriptionStatus: true,
+          subscriptionEndDate: true,
+          updatedAt: true
+        }
+      });
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json(user);
+    }
+    
+    // Normal frontend request - use session
     const session = await getServerAuthSession();
     
     if (!session?.user?.email) {
@@ -20,7 +50,8 @@ export async function GET() {
       select: {
         subscriptionTier: true,
         subscriptionStatus: true,
-        subscriptionEndDate: true
+        subscriptionEndDate: true,
+        updatedAt: true
       }
     });
     

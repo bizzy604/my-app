@@ -1,0 +1,15 @@
+import { getTenderById, getTenderHistory, getTenderBids } from "@/app/actions/tender-actions"
+import TenderHistoryDetailClient from './client'
+
+/**
+ * Page component for the tender history detail view
+ */
+export default async function Page({ params }: { params: { id: string } }) {
+  // Get data for this tender
+  const tender = await getTenderById(params.id)
+  const history = await getTenderHistory(params.id)
+  const bids = await getTenderBids(params.id)
+  
+  // Render the client component
+  return <TenderHistoryDetailClient tender={tender} history={history} bids={bids} />
+}

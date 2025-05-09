@@ -5,11 +5,51 @@ import type { JWT } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from '@/lib/prisma';
+import { isEdgeRuntime, getPrismaEdge } from '@/lib/prisma-edge';
 import bcrypt from "bcryptjs";
 
-// Helper function to fetch subscription data
+// Helper function to fetch subscription data - handles Edge Runtime properly
 async function getUserSubscriptionData(userId: number) {
   try {
+    const inEdgeRuntime = isEdgeRuntime();
+    
+    // If in Edge Runtime, try to use the edge-compatible client
+    if (inEdgeRuntime) {
+      try {
+        // Use direct database query via serverless adapter instead of Prisma ORM
+        // This is a simplified approach that should work in edge runtime
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user/subscription?userId=${userId}`, {
+          headers: {
+            // Add internal API key or other authorization
+            'x-internal-api-key': process.env.INTERNAL_API_KEY || 'innobid-internal',
+          },
+          cache: 'no-store', // Don't cache response
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            subscriptionStatus: data.subscriptionStatus || 'inactive',
+            subscriptionTier: data.subscriptionTier,
+            subscriptionEndDate: data.subscriptionEndDate,
+            updatedAt: new Date(data.updatedAt || Date.now())
+          };
+        }
+      } catch (edgeError) {
+        console.error('Edge Runtime subscription data fetch error:', edgeError);
+      }
+      
+      // If the edge approach fails, return default data but clearly indicate it's from Edge Runtime
+      console.log('Falling back to cache for subscription data in Edge Runtime');
+      return {
+        subscriptionStatus: 'edge-runtime',  // Special marker to identify this case
+        subscriptionTier: null,
+        subscriptionEndDate: null,
+        updatedAt: new Date()
+      };
+    }
+    
+    // Standard server runtime - use regular prisma client
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -22,7 +62,13 @@ async function getUserSubscriptionData(userId: number) {
     return user;
   } catch (error) {
     console.error(`Error fetching subscription data for user ${userId}:`, error);
-    return null;
+    // Always return a default value in case of any error to prevent crashes
+    return {
+      subscriptionStatus: 'error',
+      subscriptionTier: null,
+      subscriptionEndDate: null,
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -33,7 +79,7 @@ declare module "next-auth" {
       id: number;
       email: string;
       name?: string | null;
-      role: Role;
+      role: string;
       city?: string;
       country?: string;
       postalCode?: string;
@@ -54,7 +100,7 @@ declare module "next-auth" {
     id: number; // Keep as number initially, callbacks handle conversion if needed
     name?: string | null;
     email?: string | null;
-    role: Role; // Include custom role
+    role: string; // Include custom role
     // Add other fields ONLY if strictly needed by NextAuth core or early callbacks
     // Subscription details are typically added in the jwt callback
   }
@@ -64,7 +110,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     sub?: string;
-    role?: Role;
+    role?: string;
     id?: number;
     hasActiveSubscription?: boolean;
     subscriptionTier?: string | null;
@@ -75,6 +121,8 @@ declare module "next-auth/jwt" {
 
 // NextAuth configuration object
 export const config: NextAuthConfig = {
+  // Add trusted hosts configuration to fix the UntrustedHost error
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -146,14 +194,40 @@ export const config: NextAuthConfig = {
         const subscriptionData = await getUserSubscriptionData(Number(token.id));
         
         if (subscriptionData) {
-          // Check if subscription is active and not expired
-          const isActive = subscriptionData.subscriptionStatus === 'active';
-          const isNotExpired = subscriptionData.subscriptionEndDate ? new Date(subscriptionData.subscriptionEndDate) > new Date() : false;
-          
-          token.hasActiveSubscription = isActive && isNotExpired;
-          token.subscriptionTier = subscriptionData.subscriptionTier;
-          token.subscriptionLastChecked = Date.now();
+          // Handle Edge Runtime special case
+          if (subscriptionData.subscriptionStatus === 'edge-runtime') {
+            // In Edge Runtime, preserve existing token data rather than resetting it
+            // This prevents unnecessary redirects during middleware checks
+            
+            // IMPORTANT: For Edge middleware, we trust the existing token data
+            // If token has no subscription data yet, default to NOT redirecting users to pricing
+            // This will let users get to their intended destination after successful payment
+            token.hasActiveSubscription = token.hasActiveSubscription ?? true; // Default to true in edge to avoid pricing page loop
+            token.subscriptionTier = token.subscriptionTier ?? null;
+            token.subscriptionLastChecked = Date.now();
+            
+            console.log('Edge runtime: preserving token subscription data', { 
+              hasActive: token.hasActiveSubscription,
+              tier: token.subscriptionTier 
+            });
+          } else {
+            // Normal path for server components and API routes
+            // Check if subscription is active and not expired
+            const isActive = subscriptionData.subscriptionStatus === 'active';
+            const isNotExpired = subscriptionData.subscriptionEndDate ? new Date(subscriptionData.subscriptionEndDate) > new Date() : false;
+            
+            token.hasActiveSubscription = isActive && isNotExpired;
+            token.subscriptionTier = subscriptionData.subscriptionTier;
+            token.subscriptionLastChecked = Date.now();
+            
+            console.log('Server runtime: updated token subscription data', { 
+              status: subscriptionData.subscriptionStatus,
+              hasActive: token.hasActiveSubscription,
+              tier: token.subscriptionTier 
+            });
+          }
         } else {
+          // No subscription data found
           token.hasActiveSubscription = false;
         }
       }

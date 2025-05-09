@@ -1,23 +1,16 @@
 import { getTenderById, getTenderHistory, getTenderBids } from "@/app/actions/tender-actions"
 import TenderHistoryDetailClient from './client'
-import { TenderHistoryDetailPageProps } from './types'
 
-/**
- * Server Component for the Tender History Detail Page
- * 
- * This component fetches data on the server and passes it to a client component
- * for rendering. This pattern helps resolve the type inference issue with the
- * params prop in Next.js 13+.
- */
-export default async function TenderHistoryDetailPage({ params }: TenderHistoryDetailPageProps) {
-  // Server-side data fetching
-  const tenderId = params.id;
+// This is a simple Next.js page component with dynamic route parameters
+export default async function Page(props: any) {
+  // Extract the ID from the route parameters
+  const id = props.params.id
   
-  // Fetch data directly without hooks
-  const tender = await getTenderById(tenderId);
-  const history = await getTenderHistory(tenderId);
-  const bids = await getTenderBids(tenderId);
+  // Fetch the data we need
+  const tender = await getTenderById(id)
+  const history = await getTenderHistory(id)
+  const bids = await getTenderBids(id)
   
-  // Render the client component with the fetched data
-  return <TenderHistoryDetailClient tender={tender} history={history} bids={bids} />;
+  // Render the client component with the data
+  return <TenderHistoryDetailClient tender={tender} history={history} bids={bids} />
 }

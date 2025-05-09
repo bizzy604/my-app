@@ -22,11 +22,27 @@ export default function SubscriptionSuccessPage() {
       }
       
       try {
+        // Get CSRF token to use for the activation request - with better error handling
+        let csrfToken;
+        try {
+          const csrfResponse = await fetch('/api/csrf');
+          if (!csrfResponse.ok) {
+            throw new Error(`Failed to get CSRF token: ${csrfResponse.status} ${csrfResponse.statusText}`);
+          }
+          const csrfData = await csrfResponse.json();
+          csrfToken = csrfData.csrfToken;
+          console.log('Successfully obtained CSRF token for activation:', csrfToken ? 'Token received' : 'No token in response');
+        } catch (csrfError) {
+          console.error('CSRF token fetch error:', csrfError);
+          setMessage('Having trouble with authentication. Trying to proceed anyway...');
+        }
+        
         // First, directly update the subscription status
         const updateResponse = await fetch('/api/subscription/activate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken || '',  // Include CSRF token
           },
           body: JSON.stringify({ 
             sessionId,

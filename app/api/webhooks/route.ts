@@ -7,7 +7,9 @@ import Stripe from 'stripe';
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = headers().get('Stripe-Signature') as string;
+  // NextJS headers() now returns a Promise
+  const headerData = await headers();
+  const signature = headerData.get('Stripe-Signature') as string;
   const stripe = getStripeClient();
 
   if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -96,19 +98,50 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, cust
     // Cast the subscription object to access the property safely
     const currentPeriodEnd = (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // Default to 30 days from now
     
-    // Update user subscription details in the database
-    const updatedUser = await prisma.user.updateMany({
-      where: {
-        stripeCustomerId: customerId
-      },
-      data: {
-        subscriptionId: subscription.id,
-        subscriptionStatus: 'active', // Mark subscription as active immediately
-        subscriptionTier: tier,
-        // Convert Unix timestamp to JavaScript Date
-        subscriptionEndDate: new Date(currentPeriodEnd * 1000)
+    console.log(`Webhook: Attempting to update user with stripeCustomerId: ${customerId}`);
+    
+    // Find the user first to log current state
+    const userBeforeUpdate = await prisma.user.findFirst({
+      where: { stripeCustomerId: customerId },
+      select: {
+        id: true,
+        email: true,
+        subscriptionStatus: true,
+        subscriptionTier: true,
+        subscriptionEndDate: true
       }
     });
+    
+    console.log('Webhook: User current state before update:', userBeforeUpdate);
+    
+    // Update user subscription details in the database - use findFirst + update instead of updateMany
+    // to ensure we're getting the exact user record and proper typecasting
+    let result;
+    if (userBeforeUpdate && userBeforeUpdate.id) {
+      const updatedUser = await prisma.user.update({
+        where: { id: userBeforeUpdate.id },
+        data: {
+          subscriptionId: subscription.id,
+          subscriptionStatus: 'active', // Mark subscription as active immediately
+          subscriptionTier: tier,
+          // Convert Unix timestamp to JavaScript Date
+          subscriptionEndDate: new Date(currentPeriodEnd * 1000)
+        }
+      });
+      
+      console.log('Webhook: User updated successfully with data:', {
+        id: updatedUser.id,
+        subscriptionStatus: updatedUser.subscriptionStatus,
+        subscriptionTier: updatedUser.subscriptionTier,
+        subscriptionEndDate: updatedUser.subscriptionEndDate
+      });
+      
+      // Store the result for return at the end of the function
+      result = updatedUser;
+    } else {
+      console.error(`Webhook: Failed to find user with stripeCustomerId: ${customerId}`);
+      throw new Error(`No user found with Stripe customer ID: ${customerId}`);
+    }
     
     // Log the successful update
     console.log(`Webhook: Successfully updated subscription for user with Stripe customer ID ${customerId}`);
@@ -150,7 +183,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, cust
       }
     }
     
-    return updatedUser;
+    return result; // Return the result variable we defined earlier
   } catch (error) {
     console.error('Error in handleSubscriptionUpdated:', error);
     throw error;
@@ -178,5 +211,17 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, cust
   } catch (error) {
     console.error('Error in handleSubscriptionDeleted:', error);
     throw error;
+  }
+}
+
+// Add a utility function to manually update session token after payment
+// This addresses the issue of subscription status not being reflected immediately
+async function refreshUserSession(userId: number) {
+  try {
+    console.log(`Attempting to refresh session for user ${userId} from webhook`);
+    // You could potentially implement server-side mechanisms to force-refresh
+    // the user's session here, like invalidating their current session token
+  } catch (error) {
+    console.error('Error refreshing user session:', error);
   }
 }

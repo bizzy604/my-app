@@ -88,7 +88,4 @@ export interface TimelineEventType {
   }
 }
 
-// Define the props interface for the page component
-export interface TenderHistoryDetailPageProps {
-  params: { id: string };
-}
+// Note: Page props are now defined inline in the page component

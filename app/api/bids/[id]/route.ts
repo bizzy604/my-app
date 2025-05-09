@@ -7,7 +7,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const bid = await getBidById(params.id)
+    // Ensure params is fully resolved before accessing properties
+    const resolvedParams = await Promise.resolve(params)
+    const bid = await getBidById(resolvedParams.id)
     return NextResponse.json(bid)
   } catch (error) {
     return NextResponse.json(
