@@ -34,10 +34,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // Get the request host header for proper URL detection
+    const host = req.headers.get('host') || '';
+    const protocol = host.includes('localhost') || host.includes('127.0.0.1') 
+      ? 'http' 
+      : 'https';
+    
+    // Construct base URL using the host header to ensure it works both locally and in production
+    const baseUrl = `${protocol}://${host}`;
+
     // Create a Stripe customer portal session
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
-      return_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/procurement-officer`,
+      return_url: `${baseUrl}/procurement-officer`,
     });
 
     return NextResponse.json({ url: portalSession.url });

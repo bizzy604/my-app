@@ -68,7 +68,9 @@ export default function SubscriptionSuccessPage() {
         setMessage('Refreshing your session...');
         
         // Use the payment-success endpoint to handle environment detection and redirection
-        window.location.href = '/api/payment-success?redirect=/procurement-officer';
+        // Use the current origin to ensure we maintain the same domain
+        const origin = window.location.origin;
+        window.location.href = `${origin}/api/payment-success?redirect=/procurement-officer`;
         
       } catch (error) {
         console.error('Error processing subscription:', error);

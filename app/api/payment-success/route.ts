@@ -23,10 +23,9 @@ export async function GET(req: NextRequest) {
   
   console.log(`Requested redirect path: ${redirectPath}, Session ID: ${sessionId || 'Not provided'}`);
   
-  // Determine the base URL based on the environment
-  const baseUrl = isLocalhost 
-    ? `http://${host}`
-    : process.env.NEXTAUTH_URL || 'https://innobid.net';
+  // Determine the base URL based on the environment - always use the actual host
+  const protocol = isLocalhost ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
   
   try {
     // Get the current auth session to identify the user

@@ -88,14 +88,14 @@ export async function POST(req: Request) {
       );
     }
     
-    // Get base URL from environment with no fallback
-    const baseUrl = process.env.NEXTAUTH_URL;
-    if (!baseUrl) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    // Get the request host header for proper URL detection
+    const host = req.headers.get('host') || '';
+    const protocol = host.includes('localhost') || host.includes('127.0.0.1') 
+      ? 'http' 
+      : 'https';
+    
+    // Construct base URL using the host header to ensure it works both locally and in production
+    const baseUrl = `${protocol}://${host}`;
     
     // Create checkout session with validated parameters
     const checkoutSession = await stripe.checkout.sessions.create({
